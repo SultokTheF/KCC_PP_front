@@ -10,6 +10,7 @@ const endpoints = {
 
   // Subjects
   SUBJECTS: `api/subjects/`,
+  CALCULATE_P2: `/api/subjects/calculate_p2/`,
 
   // Objects 
   OBJECTS: `api/objects/`,
@@ -17,6 +18,7 @@ const endpoints = {
   // Days
   DAYS: `api/days/`,
   PLANS_CREATE: (day) => `/api/days/${day}/plansCreate/`,
+  ACCEPT_PLAN: (day) => `/api/days/${day}/accept/`,
 
   // Hours
   HOURS: `api/hours/`,

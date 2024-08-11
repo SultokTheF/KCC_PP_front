@@ -6,6 +6,7 @@ import {
 
 import {
   Profile as DispatcherProfile,
+  Dashboard as DispatcherDashboard
 } from "./dispatcher";
 
 export {
@@ -15,5 +16,6 @@ export {
 }
 
 export {
-  DispatcherProfile
+  DispatcherProfile,
+  DispatcherDashboard
 }
