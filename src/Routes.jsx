@@ -13,6 +13,7 @@ import {
   UserGraphs,
 
   // Dispatcher
+  DispatcherProfile
 
   // Admin
 } from "./modules";
@@ -40,6 +41,8 @@ const Router = ({ userRole }) => {
 
       {userRole === "DISPATCHER" && (
         <>
+          <Route path="/" element={<DispatcherProfile />} />
+          <Route path="*" element={<PageNotFound />} />
         </>
       )}
 
