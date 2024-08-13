@@ -9,6 +9,11 @@ import {
   Dashboard as DispatcherDashboard
 } from "./dispatcher";
 
+import {
+  Profile as AdminProfile,
+  Holiday as AdminHoliday
+} from "./admin";
+
 export {
   UserDashboard,
   UserProfile,
@@ -18,4 +23,9 @@ export {
 export {
   DispatcherProfile,
   DispatcherDashboard
+}
+
+export {
+  AdminProfile,
+  AdminHoliday
 }

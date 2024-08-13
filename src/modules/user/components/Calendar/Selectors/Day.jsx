@@ -12,6 +12,7 @@ const Day = ({ date, setDate, holidays }) => {
     const holidaysForDay = holidays.filter(holiday => holiday.date === formattedDate);
     const kazakhstanHolidays = holidaysForDay.filter(holiday => holiday.country === "Kazakhstan");
     const russiaHolidays = holidaysForDay.filter(holiday => holiday.country === "Russia");
+    const weekendHolidays = holidaysForDay.filter(holiday => holiday.country === "WEEKEND");
     const newDate = `${date.year}-${date.month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
     const selectedDay = date.selectedDate;
     if (selectedDay === newDate) {
@@ -22,7 +23,10 @@ const Day = ({ date, setDate, holidays }) => {
       return "bg-green-100";
     } else if (russiaHolidays.length > 0) {
       return "bg-red-100";
+    } else if (weekendHolidays.length > 0) {
+      return "bg-yellow-100";
     }
+    
     return "";
   };
 
@@ -43,7 +47,15 @@ const Day = ({ date, setDate, holidays }) => {
             {daysInMonth.map((day, index) => (
               <td
                 scope="col"
-                className={`text-center border w-10 p-2 cursor-pointer hover:bg-blue-100 ${day ? getHolidayStyle(day) : ""}`}
+                className={`
+                  text-center 
+                  border 
+                  w-10 
+                  p-2 
+                  cursor-pointer 
+                  hover:bg-blue-100 
+                  ${day ? getHolidayStyle(day) : ""}
+                `}
                 key={index}
                 onClick={() =>
                   setDate((prevData) => ({

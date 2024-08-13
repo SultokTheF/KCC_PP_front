@@ -17,6 +17,8 @@ import {
   DispatcherDashboard,
 
   // Admin
+  AdminProfile,
+  AdminHoliday
 } from "./modules";
 
 const Router = ({ userRole }) => {
@@ -50,6 +52,10 @@ const Router = ({ userRole }) => {
 
       {userRole === "ADMIN" && (
         <>
+          <Route path="/" element={<AdminProfile />} />
+          <Route path="/holidays" element={<AdminHoliday />} />
+
+          <Route path="*" element={<PageNotFound />} />
         </>
       )}
 
