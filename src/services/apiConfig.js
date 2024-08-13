@@ -15,10 +15,14 @@ const endpoints = {
   // Objects 
   OBJECTS: `api/objects/`,
 
+  // Providers
+  PROVIDERS: `api/provider/`,
+
   // Days
   DAYS: `api/days/`,
   PLANS_CREATE: (day) => `/api/days/${day}/plansCreate/`,
   ACCEPT_PLAN: (day) => `/api/days/${day}/accept/`,
+  DIRECTIONS_CREATE: `api/days/directionCreate/`,
 
   // Hours
   HOURS: `api/hours/`,

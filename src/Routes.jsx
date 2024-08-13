@@ -18,7 +18,8 @@ import {
 
   // Admin
   AdminProfile,
-  AdminHoliday
+  AdminHoliday,
+  AdminDirections
 } from "./modules";
 
 const Router = ({ userRole }) => {
@@ -54,6 +55,7 @@ const Router = ({ userRole }) => {
         <>
           <Route path="/" element={<AdminProfile />} />
           <Route path="/holidays" element={<AdminHoliday />} />
+          <Route path="/tariffs/directions" element={<AdminDirections />} />
 
           <Route path="*" element={<PageNotFound />} />
         </>
