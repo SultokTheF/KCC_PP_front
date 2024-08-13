@@ -20,7 +20,9 @@ import {
   AdminProfile,
   AdminHoliday,
   AdminDirections,
-  AdminPredictionTariffs
+  AdminPredictionTariffs,
+  AdminIndProvTariffs
+
 } from "./modules";
 
 const Router = ({ userRole }) => {
@@ -58,13 +60,11 @@ const Router = ({ userRole }) => {
           <Route path="/holidays" element={<AdminHoliday />} />
           <Route path="/tariffs/directions" element={<AdminDirections />} />
           <Route path="/tariffs/prediction" element={<AdminPredictionTariffs />} />
+          <Route path="/tariffs/ind-prov" element={<AdminIndProvTariffs />} />
 
           <Route path="*" element={<PageNotFound />} />
         </>
       )}
-
-      {/* Default route for unknown roles or unauthorized access */}
-      {/* <Route path="*" element={<PageNotFound />} /> */}
     </Routes>
   );
 };

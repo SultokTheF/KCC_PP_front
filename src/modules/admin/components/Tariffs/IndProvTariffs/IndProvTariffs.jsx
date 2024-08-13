@@ -4,9 +4,9 @@ import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 import Sidebar from "../../Sidebar/Sidebar";
 import Calendar from "./Calendar/Calendar";
 
-import PredictionTariffsTable from "./PredictionTariffsTable";
+import IndProvTariffsTable from "./IndProvTariffsTable";
 
-const PredictionTariffs = () => {
+const IndProvTariffs = () => {
   const [selectedMonth, setSelectedMonth] = useState({
     year: new Date().getFullYear(),
     month: new Date().getMonth(),
@@ -19,8 +19,7 @@ const PredictionTariffs = () => {
     provider: 0,
     providers: [],
     days: [],
-    hours: [],
-    tariffType: "EZ_T",
+    hours: []
   });
 
   const fetchData = async () => {
@@ -32,10 +31,10 @@ const PredictionTariffs = () => {
 
       setData((prevData) => ({
         ...prevData,
-        subjects: subjectsResponse.data,
+        subjects: subjectsResponse.data.filter(subject => subject.subject_type === "ЭПО"),
         providers: providersResponse.data,
         provider: providersResponse.data.length > 0 ? providersResponse?.data[0].id : 0,
-        subject: subjectsResponse.data.length > 0 ? subjectsResponse?.data[0].id : 0,
+        subject: subjectsResponse.data.filter(subject => subject.subject_type === "ЭПО").length > 0 ? subjectsResponse?.data[0].id : 0,
       }));
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -104,7 +103,7 @@ const PredictionTariffs = () => {
         // Map the found hours to the correct index in the array
         dayHours.forEach((hour) => {
           const hourIndex = parseInt(hour.hour) - 1;
-          hoursData[hourIndex] = hour[data.tariffType];
+          hoursData[hourIndex] = hour.Ind_Prov_T;
         });
       }
 
@@ -128,7 +127,7 @@ const PredictionTariffs = () => {
 
   useEffect(() => {
     fetchDays();
-  }, [selectedMonth, data.subject, data.tariffType]);
+  }, [selectedMonth, data.subject]);
 
   return (
     <div className="flex">
@@ -141,7 +140,7 @@ const PredictionTariffs = () => {
           setData={setData}
         />
 
-        <PredictionTariffsTable
+        <IndProvTariffsTable
           selectedMonth={selectedMonth}
           data={data}
           setData={setData}
@@ -151,4 +150,4 @@ const PredictionTariffs = () => {
   );
 };
 
-export default PredictionTariffs;
+export default IndProvTariffs;

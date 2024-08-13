@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const PredictionTariffsTable = ({ data, setData }) => {
+const IndProvTariffsTable = ({ data, setData }) => {
   const [editingCell, setEditingCell] = useState({ day: null, hour: null });
   const [inputValue, setInputValue] = useState('');
 
@@ -79,4 +79,4 @@ const PredictionTariffsTable = ({ data, setData }) => {
   );
 };
 
-export default PredictionTariffsTable;
+export default IndProvTariffsTable;

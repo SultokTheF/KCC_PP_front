@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const DirectionsTable = ({ selectedMonth, data, setData }) => {
+const DirectionsTable = ({ data, setData }) => {
   const [editingCell, setEditingCell] = useState({ day: null, hour: null });
 
   const numberOfHours = 24;
