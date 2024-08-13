@@ -51,7 +51,7 @@ const Navbar = ({ date, setDate, data, setData }) => {
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
-    const fileName = `Фактическе_тариффы_${data.tariffType}_${date.year}-${String(date.month + 1).padStart(2, '0')}.csv`;
+    const fileName = `Фактическе_тарифы_${data.tariffType}_${date.year}-${String(date.month + 1).padStart(2, '0')}.csv`;
 
     if (navigator.msSaveBlob) { // For IE 10+
       navigator.msSaveBlob(blob, fileName);
@@ -115,7 +115,7 @@ const Navbar = ({ date, setDate, data, setData }) => {
 
   return (
     <div className="flex w-full justify-between items-center px-6 py-4 bg-gray-100 border-b shadow">
-      <span className="text-lg font-semibold text-gray-700">Предельные Тариффы</span>
+      <span className="text-lg font-semibold text-gray-700">Предельные Тарифы</span>
       <div className="flex items-center ml-24 space-x-4">
         <Year date={date} setDate={setDate} />
 

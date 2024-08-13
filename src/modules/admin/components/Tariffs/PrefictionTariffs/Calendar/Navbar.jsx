@@ -115,7 +115,7 @@ const Navbar = ({ date, setDate, data, setData }) => {
 
   return (
     <div className="flex w-full justify-between items-center px-6 py-4 bg-gray-100 border-b shadow">
-      <span className="text-lg font-semibold text-gray-700">Фактические Тариффы</span>
+      <span className="text-lg font-semibold text-gray-700">Фактические Тарифы</span>
       <div className="flex items-center ml-24 space-x-4">
         <Year date={date} setDate={setDate} />
 
