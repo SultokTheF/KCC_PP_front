@@ -12,7 +12,8 @@ import {
 import {
   Profile as AdminProfile,
   Holiday as AdminHoliday,
-  Directions as AdminDirections
+  Directions as AdminDirections,
+  PredictionTariffs as AdminPredictionTariffs
 } from "./admin";
 
 export {
@@ -29,5 +30,6 @@ export {
 export {
   AdminProfile,
   AdminHoliday,
-  AdminDirections
+  AdminDirections,
+  AdminPredictionTariffs
 }

@@ -23,6 +23,7 @@ const endpoints = {
   PLANS_CREATE: (day) => `/api/days/${day}/plansCreate/`,
   ACCEPT_PLAN: (day) => `/api/days/${day}/accept/`,
   DIRECTIONS_CREATE: `api/days/directionCreate/`,
+  CALCULATE_TARIFFS: `api/days/calculateTariffs/`,
 
   // Hours
   HOURS: `api/hours/`,
