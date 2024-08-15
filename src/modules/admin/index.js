@@ -6,6 +6,7 @@ import Holiday from './components/Actions/AddHoliday/Holiday';
 import Directions from './components/Tariffs/Directions/Directions';
 import PredictionTariffs from './components/Tariffs/PrefictionTariffs/PredictionTariffs';
 import IndProvTariffs from './components/Tariffs/IndProvTariffs/IndProvTariffs';
+import Providers from './components/Tariffs/Providers/Providers';
 
 export {
   Profile,
@@ -15,5 +16,6 @@ export {
   // Tariffs
   Directions,
   PredictionTariffs,
-  IndProvTariffs
+  IndProvTariffs,
+  Providers
 }

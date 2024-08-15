@@ -14,7 +14,8 @@ import {
   Holiday as AdminHoliday,
   Directions as AdminDirections,
   PredictionTariffs as AdminPredictionTariffs,
-  IndProvTariffs as AdminIndProvTariffs
+  IndProvTariffs as AdminIndProvTariffs,
+  Providers as AdminProviders
 } from "./admin";
 
 export {
@@ -33,5 +34,6 @@ export {
   AdminHoliday,
   AdminDirections,
   AdminPredictionTariffs,
-  AdminIndProvTariffs
+  AdminIndProvTariffs,
+  AdminProviders
 }
