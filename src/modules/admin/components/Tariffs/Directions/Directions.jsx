@@ -43,21 +43,24 @@ const Directions = () => {
 
   const fetchDays = async () => {
     try {
-      const daysResponse = await axiosInstance.get(endpoints.DAYS);
-      const days = daysResponse.data.filter(day => {
-        const date = new Date(day.date);
-        return date.getFullYear() === selectedMonth.year && date.getMonth() === selectedMonth.month;
-      });
+      const startDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-01`;
+      const endDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-${new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate()}`;
 
-      const filteredDays = days.filter(day => day.subject === data.subject);
+      const daysResponse = await axiosInstance.get(endpoints.DAYS, {
+        params: {
+          start_date: startDate,
+          end_date: endDate,
+          subject: data.subject,
+        },
+      });
 
       setData((prevData) => ({
         ...prevData,
-        days: filteredDays,
+        days: daysResponse.data,
       }));
 
-      // Generate the table data regardless of whether filteredDays has data
-      fetchHours(filteredDays);
+      // Fetch hours after fetching days
+      fetchHours(daysResponse.data);
     } catch (error) {
       console.error('Error fetching days:', error);
     }
@@ -65,49 +68,50 @@ const Directions = () => {
 
   const fetchHours = async (filteredDays) => {
     try {
-      const hoursResponse = await axiosInstance.get(endpoints.HOURS);
-      const hours = hoursResponse.data.filter(hour => filteredDays.some(day => day.id === hour.day));
+      const startDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-01`;
+      const endDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-${new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate()}`;
+
+      const hoursResponse = await axiosInstance.get(endpoints.HOURS, {
+        params: {
+          start_date: startDate,
+          end_date: endDate,
+          sub: data.subject,
+        },
+      });
 
       setData((prevData) => ({
         ...prevData,
-        hours: hours,
+        hours: hoursResponse.data,
       }));
 
-      // Generate table data after hours have been fetched or if there are no days
-      generateTableData(filteredDays, hours);
+      generateTableData(filteredDays, hoursResponse.data);
     } catch (error) {
-      console.error('Error fetching hours:', error);
+      if (error.response && error.response.data.error === "No hours found with the provided criteria.") {
+        console.warn('No hours found, filling table data with "NONE".');
+        generateTableData(filteredDays, []);
+      } else {
+        console.error('Error fetching hours:', error);
+      }
     }
   };
 
   const generateTableData = (filteredDays, hours) => {
     const tableData = [];
-
-    // Get the total number of days in the selected month
     const daysInMonth = new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate();
 
-    // Loop through each day of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const formattedDay = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-
-      // Find the day data that matches the formatted day
       const dayData = filteredDays.find(d => d.date.split('T')[0] === formattedDay);
-
-      // Initialize an array of "NONE" for 24 hours
       const hoursData = new Array(24).fill("NONE");
 
       if (dayData) {
-        // Find all hours for this specific day
         const dayHours = hours.filter(hour => hour.day === dayData.id);
-
-        // Map the found hours to the correct index in the array
         dayHours.forEach((hour) => {
           const hourIndex = parseInt(hour.hour) - 1;
           hoursData[hourIndex] = hour.direction;
         });
       }
 
-      // Push the formatted day and its hours data to tableData
       tableData.push({
         [formattedDay]: hoursData
       });
@@ -124,7 +128,9 @@ const Directions = () => {
   }, []);
 
   useEffect(() => {
-    fetchDays();
+    if (data.subject) {
+      fetchDays();
+    }
   }, [selectedMonth, data.subject]);
 
   return (

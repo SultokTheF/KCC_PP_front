@@ -120,25 +120,6 @@ const Navbar = ({ date, setDate, data, setData }) => {
         <Year date={date} setDate={setDate} />
 
         <select
-          id="provider"
-          value={data.provider}
-          onChange={(e) => {
-            setData((prevData) => ({
-              ...prevData,
-              provider: parseInt(e.target.value)
-            }));
-          }}
-          className="text-center border rounded-lg px-4 py-2 bg-white shadow focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Провайдер</option>
-          {data.providers.map((provider, index) => (
-            <option key={index} value={parseInt(provider.id)}>
-              {provider.name}
-            </option>
-          ))}
-        </select>
-
-        <select
           id="subject"
           value={data.subject}
           onChange={(e) => {

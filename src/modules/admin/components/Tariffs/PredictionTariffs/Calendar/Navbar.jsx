@@ -119,25 +119,6 @@ const Navbar = ({ date, setDate, data, setData }) => {
       <div className="flex items-center ml-24 space-x-4">
         <Year date={date} setDate={setDate} />
 
-        <select
-          id="provider"
-          value={data.provider}
-          onChange={(e) => {
-            setData((prevData) => ({
-              ...prevData,
-              provider: parseInt(e.target.value)
-            }));
-          }}
-          className="text-center border rounded-lg px-4 py-2 bg-white shadow focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Провайдер</option>
-          {data.providers.map((provider, index) => (
-            <option key={index} value={parseInt(provider.id)}>
-              {provider.name}
-            </option>
-          ))}
-        </select>
-
         <select 
           name="tariffType" 
           id="tariffType"
@@ -154,25 +135,6 @@ const Navbar = ({ date, setDate, data, setData }) => {
           <option value="EZ_Base_T">EZ_Base_T</option>
           <option value="OD_T">OD_T</option>
           <option value="BE_T">BE_T</option>
-        </select>
-
-        <select
-          id="subject"
-          value={data.subject}
-          onChange={(e) => {
-            setData((prevData) => ({
-              ...prevData,
-              subject: parseInt(e.target.value)
-            }));
-          }}
-          className="text-center border rounded-lg px-4 py-2 bg-white shadow focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Субъект</option>
-          {data.subjects.map((subject, index) => (
-            <option key={index} value={parseInt(subject.id)}>
-              {subject.subject_name}
-            </option>
-          ))}
         </select>
       </div>
       <div className="flex items-center space-x-4">
