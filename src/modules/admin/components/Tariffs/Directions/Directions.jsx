@@ -48,8 +48,6 @@ const Directions = () => {
 
       const daysResponse = await axiosInstance.get(endpoints.DAYS, {
         params: {
-          start_date: startDate,
-          end_date: endDate,
           subject: data.subject,
         },
       });

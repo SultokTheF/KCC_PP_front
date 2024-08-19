@@ -8,6 +8,9 @@ import PredictionTariffs from './components/Tariffs/PredictionTariffs/Prediction
 import IndProvTariffs from './components/Tariffs/IndProvTariffs/IndProvTariffs';
 import Providers from './components/Tariffs/Providers/Providers';
 
+// Reports
+import ReportTariffs from './components/Reports/ReportTariffs/ReportTariffs';
+
 export {
   Profile,
 
@@ -17,5 +20,8 @@ export {
   Directions,
   PredictionTariffs,
   IndProvTariffs,
-  Providers
+  Providers,
+
+  // Reports
+  ReportTariffs
 }

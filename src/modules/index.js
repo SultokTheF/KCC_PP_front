@@ -15,7 +15,8 @@ import {
   Directions as AdminDirections,
   PredictionTariffs as AdminPredictionTariffs,
   IndProvTariffs as AdminIndProvTariffs,
-  Providers as AdminProviders
+  Providers as AdminProviders,
+  ReportTariffs as AdminReportTariffs
 } from "./admin";
 
 export {
@@ -35,5 +36,6 @@ export {
   AdminDirections,
   AdminPredictionTariffs,
   AdminIndProvTariffs,
-  AdminProviders
+  AdminProviders,
+  AdminReportTariffs
 }
