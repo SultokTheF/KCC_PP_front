@@ -5,6 +5,7 @@ import {
   CloudArrowDownIcon,
   ArrowUpOnSquareIcon
 } from "@heroicons/react/24/solid";
+import * as XLSX from 'xlsx';
 
 import { axiosInstance, endpoints } from "../../../../../../services/apiConfig";
 
@@ -32,7 +33,7 @@ const Navbar = ({ date, setDate, data, setData }) => {
       });
   };
 
-  const exportToCSV = () => {
+  const exportToXLSX = () => {
     setLoading(prev => ({ ...prev, export: true }));
     console.log('Экспорт данных...');
 
@@ -44,74 +45,57 @@ const Navbar = ({ date, setDate, data, setData }) => {
       return row;
     });
 
-    const csvContent = [
-      headers.join(","), 
-      ...rows.map(row => row.join(","))
-    ].join("\n");
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Фактические Тарифы");
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const fileName = `Фактическе_тариффы_${data.tariffType}_${date.year}-${String(date.month + 1).padStart(2, '0')}.csv`;
-
-    if (navigator.msSaveBlob) { // For IE 10+
-      navigator.msSaveBlob(blob, fileName);
-    } else {
-      link.href = URL.createObjectURL(blob);
-      link.setAttribute("download", fileName);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    const fileName = `Фактическе_тариффы_${data.tariffType}_${date.year}-${String(date.month + 1).padStart(2, '0')}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
 
     console.log('Экспорт завершен');
     setLoading(prev => ({ ...prev, export: false }));
   };
 
-  const importFromCSV = (event) => {
+  const importFromXLSX = (event) => {
     setLoading(prev => ({ ...prev, import: true }));
     console.log('Импорт данных...');
-  
+
     const file = event.target.files[0];
     const reader = new FileReader();
-  
+
     reader.onload = (e) => {
-      const text = e.target.result;
-      const lines = text.split("\n").filter(line => line.trim());
-      const headers = lines[0].split(","); // Get headers to check structure
-  
-      const newTableData = lines.slice(1).map(line => {
-        const [day, ...hours] = line.split(",");
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      const newTableData = rows.slice(1).map(row => {
+        const [day, ...hours] = row;
         const [dayNumber, monthNumber, yearNumber] = day.split('.').map(Number);
         const dayString = `${yearNumber}-${String(monthNumber).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
         return { [dayString]: hours };
       });
-  
+
       // Update table data
       setData(prevData => ({
         ...prevData,
         tableData: newTableData
       }));
-  
-      // Extract the year and month from the first date in the imported data
-      if (newTableData.length > 0) {
-        const firstDate = Object.keys(newTableData[0])[0];
-        const [year, month] = firstDate.split('-').map(Number);
-        
-      }
-  
+
       console.log('Импорт завершен');
     };
-  
+
     reader.onerror = () => {
       console.error('Ошибка при импорте файла');
     };
-  
+
     reader.onloadend = () => {
       setLoading(prev => ({ ...prev, import: false }));
     };
-  
-    reader.readAsText(file);
-  };  
+
+    reader.readAsArrayBuffer(file);
+  };
 
   return (
     <div className="flex w-full justify-between items-center px-6 py-4 bg-gray-100 border-b shadow">
@@ -138,7 +122,7 @@ const Navbar = ({ date, setDate, data, setData }) => {
         </select>
       </div>
       <div className="flex items-center space-x-4">
-        <button onClick={exportToCSV} className="flex items-center text-blue-600 hover:text-blue-800 focus:outline-none">
+        <button onClick={exportToXLSX} className="flex items-center text-blue-600 hover:text-blue-800 focus:outline-none">
           {loading.export ? (
             <span>Экспорт...</span>
           ) : (
@@ -150,8 +134,8 @@ const Navbar = ({ date, setDate, data, setData }) => {
         </button>
         <input
           type="file"
-          accept=".csv"
-          onChange={importFromCSV}
+          accept=".xlsx"
+          onChange={importFromXLSX}
           className="hidden"
           id="import-file"
         />
