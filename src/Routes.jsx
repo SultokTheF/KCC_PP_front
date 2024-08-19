@@ -23,7 +23,17 @@ import {
   AdminPredictionTariffs,
   AdminIndProvTariffs,
   AdminProviders,
-  AdminReportTariffs
+  AdminReportTariffs,
+  AdminGraphs,
+  AdminDisbalance,
+  AdminHistory,
+  AdminSubjectsList,
+  AdminSingleSubject,
+  AdminObjectsList,
+  AdminSingleObject,
+  AdminSubjectPlans,
+  AdminUsersList,
+  AdminSingleUser
 } from "./modules";
 
 const Router = ({ userRole }) => {
@@ -64,6 +74,17 @@ const Router = ({ userRole }) => {
           <Route path="/tariffs/ind-prov" element={<AdminIndProvTariffs />} />
           <Route path="/tariffs/providers" element={<AdminProviders />} />
           <Route path="/reports/hour-report" element={<AdminReportTariffs />} />
+          <Route path="/reports/graphs" element={<AdminGraphs />} />
+          <Route path="/reports/disbalance" element={<AdminDisbalance />} />
+          <Route path="/reports/history" element={<AdminHistory />} />
+
+          <Route path="/subjects" element={<AdminSubjectsList />} />
+          <Route path="/subjects/:id" element={<AdminSingleSubject />} />
+          <Route path="/objects" element={<AdminObjectsList />} />
+          <Route path="/objects/:id" element={<AdminSingleObject />} />
+          <Route path="/subjects/plan/:subjectId" element={<AdminSubjectPlans />} />
+          <Route path="/users" element={<AdminUsersList />} />
+          <Route path="/users/:id" element={<AdminSingleUser />} />
 
           <Route path="*" element={<PageNotFound />} />
         </>

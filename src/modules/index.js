@@ -16,7 +16,17 @@ import {
   PredictionTariffs as AdminPredictionTariffs,
   IndProvTariffs as AdminIndProvTariffs,
   Providers as AdminProviders,
-  ReportTariffs as AdminReportTariffs
+  ReportTariffs as AdminReportTariffs,
+  Graphs as AdminGraphs,
+  Disbalance as AdminDisbalance,
+  History as AdminHistory,
+  SubjectsList as AdminSubjectsList,
+  SingleSubject as AdminSingleSubject,
+  ObjectsList as AdminObjectsList,
+  SingleObject as AdminSingleObject,
+  SubjectPlans as AdminSubjectPlans,
+  UsersList as AdminUsersList,
+  SingleUser as AdminSingleUser
 } from "./admin";
 
 export {
@@ -37,5 +47,15 @@ export {
   AdminPredictionTariffs,
   AdminIndProvTariffs,
   AdminProviders,
-  AdminReportTariffs
+  AdminReportTariffs,
+  AdminGraphs,
+  AdminDisbalance,
+  AdminHistory,
+  AdminSubjectsList,
+  AdminSingleSubject,
+  AdminObjectsList,
+  AdminSingleObject,
+  AdminSubjectPlans,
+  AdminUsersList,
+  AdminSingleUser
 }

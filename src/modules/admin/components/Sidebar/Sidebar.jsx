@@ -68,7 +68,7 @@ export default function Sidebar() {
           </ListItem>
           <AccordionBody className="py-1">
             <List className="p-0">
-              <a href="/reports">
+              <a href="/reports/graphs">
                 <ListItem>
                   <ListItemPrefix>
                     <ChevronRightIcon strokeWidth={3} className="h-3 w-5" />
@@ -76,7 +76,7 @@ export default function Sidebar() {
                   Графики
                 </ListItem>
               </a>
-              <a href="/reports/forms">
+              <a href="/reports/disbalance">
                 <ListItem>
                   <ListItemPrefix>
                     <ChevronRightIcon strokeWidth={3} className="h-3 w-5" />

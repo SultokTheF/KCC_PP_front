@@ -10,6 +10,20 @@ import Providers from './components/Tariffs/Providers/Providers';
 
 // Reports
 import ReportTariffs from './components/Reports/ReportTariffs/ReportTariffs';
+import Graphs from './components/Reports/Graphs/Graphs';
+import Disbalance from './components/Reports/Disbalance/Disbalance';
+import History from './components/Reports/History/History';
+
+// Entities
+import SubjectsList from './components/Entities/Subjects/SubjectsList';
+import SingleSubject from './components/Entities/Subjects/SingleSubject';
+import ObjectsList from './components/Entities/Objects/ObjectsList';
+import SingleObject from './components/Entities/Objects/SingleObject';
+
+import SubjectPlans from './components/Plans/SubjectPlans';
+
+import UsersList from './components/Users/UserList';
+import SingleUser from './components/Users/SingleUser';
 
 export {
   Profile,
@@ -23,5 +37,17 @@ export {
   Providers,
 
   // Reports
-  ReportTariffs
+  ReportTariffs,
+  Graphs,
+  Disbalance,
+  History,
+
+  // Entities
+  SubjectsList,
+  SingleSubject,
+  ObjectsList,
+  SingleObject,
+  SubjectPlans,
+  UsersList,
+  SingleUser
 }
