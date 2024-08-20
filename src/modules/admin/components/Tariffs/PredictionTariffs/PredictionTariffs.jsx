@@ -3,7 +3,6 @@ import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 
 import Sidebar from "../../Sidebar/Sidebar";
 import Calendar from "./Calendar/Calendar";
-
 import PredictionTariffsTable from "./PredictionTariffsTable";
 
 const PredictionTariffs = () => {
@@ -57,83 +56,67 @@ const PredictionTariffs = () => {
         days: daysResponse.data,
       }));
 
-      // Fetch hours after fetching days
-      fetchHours(daysResponse.data);
+      // Fetch hours for each day separately
+      const daysInMonth = new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate();
+      for (let day = 1; day <= daysInMonth; day++) {
+        const formattedDay = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        await fetchHoursForDay(formattedDay);
+      }
     } catch (error) {
       console.error('Error fetching days:', error);
     }
   };
 
-  const fetchHours = async (days) => {
+  const fetchHoursForDay = async (day) => {
     try {
-      const startDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-01`;
-      const endDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-${new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate()}`;
-
       const hoursResponse = await axiosInstance.get(endpoints.HOURS, {
         params: {
-          start_date: startDate,
-          end_date: endDate,
+          day,
           sub: data.subject,
         },
       });
 
-      // If hours are found, update the state with the response
-      setData((prevData) => ({
-        ...prevData,
-        hours: hoursResponse.data,
-      }));
-
-      generateTableData(days, hoursResponse.data);
+      updateTableDataForDay(day, hoursResponse.data);
     } catch (error) {
-      // If no hours are found, set the table data to zeroes
       if (error.response && error.response.data.error === "No hours found with the provided criteria.") {
-        console.warn('No hours found, filling table data with zeroes.');
-        generateTableData(days, []);
+        console.warn(`No hours found for day ${day}, filling table data with zeroes.`);
+        updateTableDataForDay(day, []);
       } else {
-        console.error('Error fetching hours:', error);
+        console.error(`Error fetching hours for day ${day}:`, error);
       }
     }
   };
 
-  const generateTableData = (days, hours) => {
-    const tableData = [];
-
-    // Get the total number of days in the selected month
-    const daysInMonth = new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate();
-
-    // Loop through each day of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-      const formattedDay = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-
-      // Find the day data that matches the formatted day
-      const dayData = days.find(d => d.date.split('T')[0] === formattedDay);
-
-      // Initialize an array of "0" for 24 hours
+  const updateTableDataForDay = (day, hours) => {
+    setData((prevData) => {
+      const tableData = [...prevData.tableData];
+      const dayData = prevData.days.find(d => d.date.split('T')[0] === day);
       const hoursData = new Array(24).fill(0);
 
       if (dayData) {
-        // Find all hours for this specific day
-        const dayHours = hours.filter(hour => hour.day === dayData.id);
-
-        // Map the found hours to the correct index in the array
-        dayHours.forEach((hour) => {
+        hours.forEach((hour) => {
           const hourIndex = parseInt(hour.hour) - 1;
           hoursData[hourIndex] = hour[data.tariffType];
         });
       }
 
-      // Push the formatted day and its hours data to tableData
-      tableData.push({
-        [formattedDay]: hoursData
-      });
-    }
+      // Update or add the day data in the tableData array
+      const existingDayIndex = tableData.findIndex(item => item[day]);
+      if (existingDayIndex !== -1) {
+        tableData[existingDayIndex][day] = hoursData;
+      } else {
+        tableData.push({
+          [day]: hoursData,
+        });
+      }
 
-    setData((prevData) => ({
-      ...prevData,
-      tableData: tableData,
-    }));
+      console.log(`Updated table data for day ${day}:`, hoursData);
 
-    console.log('Table data generated:', tableData);
+      return {
+        ...prevData,
+        tableData,
+      };
+    });
   };
 
   useEffect(() => {
@@ -142,6 +125,11 @@ const PredictionTariffs = () => {
 
   useEffect(() => {
     if (data.subject) {
+      // Clear old tableData when month, year, subject, or tariffType changes
+      setData((prevData) => ({
+        ...prevData,
+        tableData: [],
+      }));
       fetchDays();
     }
   }, [selectedMonth, data.subject, data.tariffType]);
