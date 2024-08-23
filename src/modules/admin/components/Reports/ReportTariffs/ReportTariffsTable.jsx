@@ -8,9 +8,11 @@ const ReportTariffsTable = ({ data, selectedHour }) => {
   };
 
   // Helper function to render table rows for a single hour object
-  const renderTableRow = (hourData) => {
+  const renderTableRow = (hourData, subjectName, subjectType) => {
     return (
       <tr key={hourData.id} className="bg-white border-b hover:bg-gray-100 transition duration-200">
+        <td className="p-3 text-sm text-gray-700">{subjectName}</td>
+        <td className="p-3 text-sm text-gray-700">{subjectType}</td>
         <td className="p-3 text-sm text-gray-700">{hourData.hour}</td>
         <td className="p-3 text-sm text-gray-700">{hourData.P1}</td>
         <td className="p-3 text-sm text-gray-700">{hourData.P2}</td>
@@ -26,6 +28,22 @@ const ReportTariffsTable = ({ data, selectedHour }) => {
         <td className="p-3 text-sm text-gray-700">{hourData.BE_Down}</td>
         <td className="p-3 text-sm text-gray-700">{hourData.OD_Up}</td>
         <td className="p-3 text-sm text-gray-700">{hourData.OD_Down}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.BE_Up_V1}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.BE_Down_V1}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.OD_Up_V1}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.OD_Down_V1}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.BE_Up_V2}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.BE_Down_V2}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.OD_Up_V2}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.OD_Down_V2}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.BE_Up_V3}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.BE_Down_V3}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.OD_Up_V3}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.OD_Down_V3}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.BE_Up_V4}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.BE_Down_V4}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.OD_Up_V4}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.OD_Down_V4}</td>
         <td className="p-3 text-sm text-gray-700">{hourData.EZ_T}</td>
         <td className="p-3 text-sm text-gray-700">{hourData.EZ_Base_T}</td>
         <td className="p-3 text-sm text-gray-700">{hourData.Ind_Prov_T}</td>
@@ -33,7 +51,16 @@ const ReportTariffsTable = ({ data, selectedHour }) => {
         <td className="p-3 text-sm text-gray-700">{hourData.OD_T}</td>
         <td className="p-3 text-sm text-gray-700">{hourData.Ind_T}</td>
         <td className="p-3 text-sm text-gray-700">{hourData.Prov_T}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.Ind_T_V1}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.Prov_T_V1}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.Ind_T_V2}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.Prov_T_V2}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.Ind_T_V3}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.Prov_T_V3}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.Ind_T_V4}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.Prov_T_V4}</td>
         <td className={`p-3 text-sm text-gray-700 ${hourData.direction === "DOWN" ? "bg-green-100" : hourData.direction === "UP" ? "bg-red-100" : ""}`}>{formatDirection(hourData.direction)}</td>
+        <td className="p-3 text-sm text-gray-700">{hourData.message}</td>
       </tr>
     );
   };
@@ -43,7 +70,9 @@ const ReportTariffsTable = ({ data, selectedHour }) => {
       <table className="min-w-full bg-white text-center table-auto border-collapse">
         <thead className="bg-gray-200">
           <tr>
-          <th className="p-3 text-sm font-semibold text-gray-700">Час</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">Subject Name</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">Subject Type</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">Час</th>
             <th className="p-3 text-sm font-semibold text-gray-700">П1</th>
             <th className="p-3 text-sm font-semibold text-gray-700">П2</th>
             <th className="p-3 text-sm font-semibold text-gray-700">П3</th>
@@ -58,6 +87,22 @@ const ReportTariffsTable = ({ data, selectedHour }) => {
             <th className="p-3 text-sm font-semibold text-gray-700">BE down</th>
             <th className="p-3 text-sm font-semibold text-gray-700">OD up</th>
             <th className="p-3 text-sm font-semibold text-gray-700">OD down</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">BE up V1</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">BE down V1</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">OD up V1</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">OD down V1</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">BE up V2</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">BE down V2</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">OD up V2</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">OD down V2</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">BE up V3</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">BE down V3</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">OD up V3</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">OD down V3</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">BE up V4</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">BE down V4</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">OD up V4</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">OD down V4</th>
             <th className="p-3 text-sm font-semibold text-gray-700">Тариф ЕЗ</th>
             <th className="p-3 text-sm font-semibold text-gray-700">Базовый ЕЗ</th>
             <th className="p-3 text-sm font-semibold text-gray-700">Тариф Пров. Инд.</th>
@@ -65,11 +110,22 @@ const ReportTariffsTable = ({ data, selectedHour }) => {
             <th className="p-3 text-sm font-semibold text-gray-700">Тариф ОД</th>
             <th className="p-3 text-sm font-semibold text-gray-700">Тариф Инд.</th>
             <th className="p-3 text-sm font-semibold text-gray-700">Тариф Пров.</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">Инд Тариф V1</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">Пров. Тариф V1</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">Инд Тариф V2</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">Пров. Тариф V2</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">Инд Тариф V3</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">Пров. Тариф V3</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">Инд Тариф V4</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">Пров. Тариф V4</th>
             <th className="p-3 text-sm font-semibold text-gray-700">Направление</th>
+            <th className="p-3 text-sm font-semibold text-gray-700">Сообщение</th>
           </tr>
         </thead>
         <tbody>
-          {hoursData.map(renderTableRow)}
+          {hoursData.map((hourData) =>
+            renderTableRow(hourData, hourData.subjectName, hourData.subjectType)
+          )}
         </tbody>
       </table>
     </div>
