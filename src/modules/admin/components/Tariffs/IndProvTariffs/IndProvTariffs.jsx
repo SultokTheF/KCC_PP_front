@@ -3,6 +3,7 @@ import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 
 import Sidebar from "../../Sidebar/Sidebar";
 import Calendar from "./Calendar/Calendar";
+
 import IndProvTariffsTable from "./IndProvTariffsTable";
 
 const IndProvTariffs = () => {
@@ -21,6 +22,8 @@ const IndProvTariffs = () => {
     hours: [],
   });
 
+  const [loading, setLoading] = useState(false); // Add loading state
+
   const fetchData = async () => {
     try {
       const [subjectsResponse, providersResponse] = await Promise.all([
@@ -36,17 +39,21 @@ const IndProvTariffs = () => {
         subject: subjectsResponse.data.length > 0 ? subjectsResponse?.data[0].id : 0,
       }));
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error("Error fetching data:", error);
     }
   };
 
   const fetchDays = async () => {
+    setLoading(true); // Start loading
     try {
+      const startDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-01`;
+      const endDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-${new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate()}`;
+
       const daysResponse = await axiosInstance.get(endpoints.DAYS, {
         params: {
-          year: selectedMonth.year,
-          month: selectedMonth.month + 1, // API expects 1-based month
-          subject: data.subject,
+          start_date: startDate,
+          end_date: endDate,
+          sub: data.subject,
         },
       });
 
@@ -55,67 +62,100 @@ const IndProvTariffs = () => {
         days: daysResponse.data,
       }));
 
-      // Fetch hours for each day separately
-      const daysInMonth = new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate();
-      for (let day = 1; day <= daysInMonth; day++) {
-        const formattedDay = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        await fetchHoursForDay(formattedDay);
-      }
+      // Fetch hours after fetching days
+      await fetchHours(daysResponse.data);
     } catch (error) {
-      console.error('Error fetching days:', error);
+      if (error.response && error.response.data.error === "No days found with the provided criteria.") {
+        console.warn("No days found, filling table data with zeroes.");
+        const daysInMonth = new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate();
+        const emptyDays = [];
+
+        // Generate an empty list of days to fill with zeroes
+        for (let day = 1; day <= daysInMonth; day++) {
+          const formattedDay = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          emptyDays.push({ date: formattedDay });
+        }
+
+        // Generate table data with zeroes
+        generateTableData(emptyDays, []);
+      } else {
+        console.error("Error fetching days:", error);
+      }
+    } finally {
+      setLoading(false); // End loading
     }
   };
 
-  const fetchHoursForDay = async (day) => {
+  const fetchHours = async (days) => {
     try {
+      const startDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, "0")}-01`;
+      const endDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, "0")}-${new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate()}`;
+
       const hoursResponse = await axiosInstance.get(endpoints.HOURS, {
         params: {
-          day,
+          start_date: startDate,
+          end_date: endDate,
           sub: data.subject,
         },
       });
 
-      updateTableDataForDay(day, hoursResponse.data);
+      // If hours are found, update the state with the response
+      setData((prevData) => ({
+        ...prevData,
+        hours: hoursResponse.data,
+      }));
+
+      generateTableData(days, hoursResponse.data);
     } catch (error) {
+      // If no hours are found, set the table data to zeroes
       if (error.response && error.response.data.error === "No hours found with the provided criteria.") {
-        console.warn(`No hours found for day ${day}, filling table data with zeroes.`);
-        updateTableDataForDay(day, []);
+        console.warn("No hours found, filling table data with zeroes.");
+        generateTableData(days, []);
       } else {
-        console.error(`Error fetching hours for day ${day}:`, error);
+        console.error("Error fetching hours:", error);
       }
     }
   };
 
-  const updateTableDataForDay = (day, hours) => {
-    setData((prevData) => {
-      const tableData = [...prevData.tableData];
-      const dayData = prevData.days.find(d => d.date.split('T')[0] === day);
+  const generateTableData = (days, hours) => {
+    const tableData = [];
+
+    // Get the total number of days in the selected month
+    const daysInMonth = new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate();
+
+    // Loop through each day of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const formattedDay = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+      // Find the day data that matches the formatted day
+      const dayData = days.find((d) => d.date.split("T")[0] === formattedDay);
+
+      // Initialize an array of "0" for 24 hours
       const hoursData = new Array(24).fill(0);
 
       if (dayData) {
-        hours.forEach((hour) => {
+        // Find all hours for this specific day
+        const dayHours = hours.filter((hour) => hour.day === dayData.id);
+
+        // Map the found hours to the correct index in the array
+        dayHours.forEach((hour) => {
           const hourIndex = parseInt(hour.hour) - 1;
           hoursData[hourIndex] = hour.Ind_Prov_T;
         });
       }
 
-      // Update or add the day data in the tableData array
-      const existingDayIndex = tableData.findIndex(item => item[day]);
-      if (existingDayIndex !== -1) {
-        tableData[existingDayIndex][day] = hoursData;
-      } else {
-        tableData.push({
-          [day]: hoursData,
-        });
-      }
+      // Push the formatted day and its hours data to tableData
+      tableData.push({
+        [formattedDay]: hoursData,
+      });
+    }
 
-      console.log(`Updated table data for day ${day}:`, hoursData);
+    setData((prevData) => ({
+      ...prevData,
+      tableData: tableData,
+    }));
 
-      return {
-        ...prevData,
-        tableData,
-      };
-    });
+    console.log("Table data generated:", tableData);
   };
 
   useEffect(() => {
@@ -124,11 +164,6 @@ const IndProvTariffs = () => {
 
   useEffect(() => {
     if (data.subject) {
-      // Clear old tableData when month, year, or subject changes
-      setData((prevData) => ({
-        ...prevData,
-        tableData: [],
-      }));
       fetchDays();
     }
   }, [selectedMonth, data.subject]);
@@ -148,6 +183,7 @@ const IndProvTariffs = () => {
           selectedMonth={selectedMonth}
           data={data}
           setData={setData}
+          loading={loading} // Pass the loading state to the table
         />
       </div>
     </div>

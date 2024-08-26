@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://127.0.0.1:8000/';
-// const API_BASE_URL = 'http://34.159.60.222:8000/';
+// const API_BASE_URL = 'http://127.0.0.1:8000/';
+const API_BASE_URL = 'http://34.159.60.222:8000/';
 
 const endpoints = {
   // Users
@@ -9,7 +9,7 @@ const endpoints = {
   USERS: `user/users/`,
   GET_USER: `user/token/get`,
 
-  // Subjects
+  // Subjects   
   SUBJECTS: `api/subjects/`,
   CALCULATE_P2: `api/subjects/calculate_p2/`,
 
