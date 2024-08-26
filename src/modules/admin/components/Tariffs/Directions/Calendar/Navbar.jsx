@@ -58,43 +58,73 @@ const Navbar = ({ date, setDate, data, setData }) => {
   const importFromXLSX = (event) => {
     setLoading(prev => ({ ...prev, import: true }));
     console.log('Импорт данных...');
-
+  
     const file = event.target.files[0];
     const reader = new FileReader();
-
+  
     reader.onload = (e) => {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
       const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
+  
+      // The first row contains headers, so we skip it
       const newTableData = rows.slice(1).map(row => {
-        const [day, ...hours] = row;
-        const [dayNumber, monthNumber, yearNumber] = day.split('.').map(Number);
-        const dayString = `${yearNumber}-${String(monthNumber).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
-        return { [dayString]: hours };
-      });
-
-      // Update table data
+        let [day, ...hours] = row;
+  
+        // Check if day is a serialized Excel date (a number)
+        if (typeof day === 'number') {
+          const excelStartDate = new Date(1900, 0, 1); // Excel's start date
+          day = new Date(excelStartDate.getTime() + (day - 1) * 24 * 60 * 60 * 1000);
+          
+          // Convert to YYYY-MM-DD format
+          const dayNumber = String(day.getDate()).padStart(2, '0');
+          const monthNumber = String(day.getMonth() + 1).padStart(2, '0'); // Months are zero-indexed
+          const yearNumber = day.getFullYear();
+          day = `${yearNumber}-${monthNumber}-${dayNumber}`;
+        } else if (day instanceof Date) {
+          // Convert Date object to YYYY-MM-DD
+          const dayNumber = String(day.getDate()).padStart(2, '0');
+          const monthNumber = String(day.getMonth() + 1).padStart(2, '0'); // Months are zero-indexed
+          const yearNumber = day.getFullYear();
+          day = `${yearNumber}-${monthNumber}-${dayNumber}`;
+        } else if (typeof day === 'string') {
+          if (day.includes('.')) {
+            // Convert dd.mm.yyyy format to YYYY-MM-DD
+            const [dayNumber, monthNumber, yearNumber] = day.split('.').map(Number);
+            day = `${yearNumber}-${String(monthNumber).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
+          } 
+          // Else case for YYYY-MM-DD format, leave as is
+        } else {
+          console.error('Не удалось обработать дату:', day);
+          return null;
+        }
+  
+        // Create an object for each day's data
+        return { [day]: hours };
+      }).filter(row => row !== null); // Filter out any rows that failed to process
+  
+      // Update table data in state
       setData(prevData => ({
         ...prevData,
         tableData: newTableData
       }));
-
+  
       console.log('Импорт завершен');
     };
-
+  
     reader.onerror = () => {
       console.error('Ошибка при импорте файла');
     };
-
+  
     reader.onloadend = () => {
       setLoading(prev => ({ ...prev, import: false }));
     };
-
+  
     reader.readAsArrayBuffer(file);
   };
+  
 
   return (
     <div className="flex w-full justify-between items-center px-6 py-4 bg-gray-100 border-b shadow">
