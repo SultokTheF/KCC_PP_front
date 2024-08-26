@@ -41,46 +41,57 @@ const ReportTariffs = () => {
     try {
       if (parseInt(data.subject) === 0 && subjects.length > 0) {
         // Fetch hours for all subjects if subject is 0
-        const hoursPromises = subjects.map((subject) =>
-          axiosInstance.get(endpoints.HOURS, {
-            params: {
-              sub: subject.id,
-              day: selectedDate,
-            },
-          }).then(response => ({ subject: subject.id, hours: response.data }))
-        );
-
+        const hoursPromises = subjects.map(async (subject) => {
+          try {
+            const response = await axiosInstance.get(endpoints.HOURS, {
+              params: {
+                sub: subject.id,
+                day: selectedDate,
+              },
+            });
+            return { subject: subject.id, hours: response.data };
+          } catch (error) {
+            console.error(`Error fetching hours for subject ${subject.id}:`, error);
+            return null; // Return null for failed requests
+          }
+        });
+  
         const hoursResponses = await Promise.all(hoursPromises);
-        const combinedHours = hoursResponses.flatMap((response) => response);
-
+  
+        // Filter out any null responses (failed requests)
+        const successfulResponses = hoursResponses.filter((response) => response !== null);
+  
+        const combinedHours = successfulResponses.flatMap((response) => response);
+  
         setData((prevData) => ({
           ...prevData,
           hours: combinedHours,
         }));
-
-        console.log('Combined hours with subjects:', combinedHours);
       } else if (data.subject !== 0) {
         // Fetch hours for the selected subject only
-        const hoursResponse = await axiosInstance.get(endpoints.HOURS, {
-          params: {
-            sub: data.subject,
-            day: selectedDate,
-          },
-        });
-
-        const combinedHours = [{ subject: parseInt(data.subject), hours: hoursResponse.data }];
-
-        setData((prevData) => ({
-          ...prevData,
-          hours: combinedHours,
-        }));
-
-        console.log('Hours with subject:', combinedHours);
+        try {
+          const hoursResponse = await axiosInstance.get(endpoints.HOURS, {
+            params: {
+              sub: data.subject,
+              day: selectedDate,
+            },
+          });
+  
+          const combinedHours = [{ subject: parseInt(data.subject), hours: hoursResponse.data }];
+  
+          setData((prevData) => ({
+            ...prevData,
+            hours: combinedHours,
+          }));
+        } catch (error) {
+          console.error('Error fetching hours for the selected subject:', error);
+        }
       }
     } catch (error) {
-      console.error('Error fetching hours:', error);
+      console.error('Error in fetchHours:', error);
     }
   };
+  
 
   useEffect(() => {
     fetchData();
