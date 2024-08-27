@@ -62,23 +62,23 @@ const SubjectPlans = () => {
       <div className="flex">
         <Sidebar />
         <div className="flex-1 p-4">
-          <input 
-            type="file" 
-            accept=".xlsx, .xls" 
-            onChange={handleFileChange} 
-            className="mb-4 p-2 border rounded" 
+          <input
+            type="file"
+            accept=".xlsx, .xls"
+            onChange={handleFileChange}
+            className="mb-4 p-2 border rounded"
           />
-          <input 
+          <input
             type="date"
-            value={startDate}  
-            onChange={(e) => setStartDate(e.target.value)} 
-            className="mb-4 p-2 mx-2 border rounded" 
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="mb-4 p-2 mx-2 border rounded"
           />
-          <input 
+          <input
             type="date"
-            value={endDate}  
-            onChange={(e) => setEndDate(e.target.value)} 
-            className="mb-4 p-2 mx-2 border rounded" 
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="mb-4 p-2 mx-2 border rounded"
           />
           <select name="plan" id="plan" value={plan} onChange={e => setPlan(e.target.value)} className="mb-4 p-2 mx-2 border rounded">
             <option value="P1">P1</option>
@@ -91,12 +91,22 @@ const SubjectPlans = () => {
             <option value="F1_Gen">F1_Gen</option>
             <option value="F2">F2</option>
             <option value="F2_Gen">F2_Gen</option>
+            <option value="BE_Up">BE_Up</option>
+            <option value="BE_Down">BE_Down</option>
+            <option value="OD_Up">OD_Up</option>
+            <option value="OD_Down">OD_Down</option>
+            <option value="EZ_T">EZ_T</option>
+            <option value="EZ_Base_T">EZ_Base_T</option>
+            <option value="BE_T">BE_T</option>
+            <option value="OD_T">OD_T</option>
+            <option value="Ind_T">Ind_T</option>
+            <option value="Prov_T">Prov_T</option>
           </select>
           {loading ? (
             <p>Loading...</p>
           ) : (
-            <button 
-              onClick={handleImport} 
+            <button
+              onClick={handleImport}
               className="mb-4 p-2 bg-blue-500 text-white rounded"
             >
               Импортировать

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// const API_BASE_URL = 'http://127.0.0.1:8000/';
-const API_BASE_URL = 'http://34.159.60.222:8000/';
+const API_BASE_URL = 'http://127.0.0.1:8000/';
+// const API_BASE_URL = 'http://34.159.60.222:8000/';
 
 const endpoints = {
   // Users
@@ -19,7 +19,7 @@ const endpoints = {
   // Providers
   PROVIDERS: `api/provider/`,
 
-  // Days
+  // Days 
   DAYS: `api/days/`,
   PLANS_CREATE: (day) => `api/days/${day}/plansCreate/`,
   ACCEPT_PLAN: (day) => `api/days/${day}/accept/`,
