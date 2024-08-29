@@ -1,37 +1,16 @@
 import { useState, useEffect } from "react";
-import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 
 const timeIntervals = [
-  '00 - 01',
-  '01 - 02',
-  '02 - 03',
-  '03 - 04',
-  '04 - 05',
-  '05 - 06',
-  '06 - 07',
-  '07 - 08',
-  '08 - 09',
-  '09 - 10',
-  '10 - 11',
-  '11 - 12',
-  '12 - 13',
-  '13 - 14',
-  '14 - 15',
-  '15 - 16',
-  '16 - 17',
-  '17 - 18',
-  '18 - 19',
-  '19 - 20',
-  '20 - 21',
-  '21 - 22',
-  '22 - 23',
-  '23 - 00'
-]
+  '00 - 01', '01 - 02', '02 - 03', '03 - 04', '04 - 05', '05 - 06',
+  '06 - 07', '07 - 08', '08 - 09', '09 - 10', '10 - 11', '11 - 12',
+  '12 - 13', '13 - 14', '14 - 15', '15 - 16', '16 - 17', '17 - 18',
+  '18 - 19', '19 - 20', '20 - 21', '21 - 22', '22 - 23', '23 - 00'
+];
 
 const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, hoursList, selectedDate }) => {
   const selectedSubject = subjectsList.find(subject => subject.id === selectedData.selectedSubject);
-  const dayPlan = daysList.find(day => day.subject === selectedSubject?.id && day.date.split('T')[0] === selectedDate.split('T')[0]);
-  const hourPlan = hoursList.filter(hour => hour.day === dayPlan?.id);
+  const dayPlan = daysList?.find(day => day.subject === selectedSubject?.id && day.date.split('T')[0] === selectedDate.split('T')[0]) || null;
+  const hourPlan = dayPlan ? hoursList.filter(hour => hour.day === dayPlan?.id) : [];
 
   const [coefficients, setCoefficients] = useState([]);
   const [volumes, setVolumes] = useState([]);
@@ -41,7 +20,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
   const [warningMessage, setWarningMessage] = useState('');
 
   const getStatus = (subject) => {
-    const day = daysList.find(day => day.subject === subject && day.date.split('T')[0] === selectedDate.split('T')[0]);
+    const day = daysList?.find(day => day.subject === subject.id && day.date.split('T')[0] === selectedDate.split('T')[0]);
 
     if (day?.status === "PRIMARY_PLAN") {
       return "-П1-";
@@ -71,8 +50,8 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
 
   useEffect(() => {
     if (selectedSubject) {
-      setCoefficients(selectedSubject.coefficient[0] || []);
-      setVolumes(selectedSubject.volume[0] || []);
+      setCoefficients(selectedSubject.coefficient?.[0] || []);
+      setVolumes(selectedSubject.volume?.[0] || []);
       setMessages(hourPlan.map(hour => hour.message || ""));
     }
   }, [selectedSubject]);
@@ -117,7 +96,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
 
   const handleApprove = async () => {
     try {
-      const acceptResponse = await axiosInstance.post(endpoints.ACCEPT_PLAN(dayPlan.id));
+      const acceptResponse = await axiosInstance.post(endpoints.ACCEPT_PLAN(dayPlan?.id));
       if (acceptResponse.status === 201) {
         console.log('План успешно утвержден:', acceptResponse.data);
 
@@ -169,7 +148,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
                   selectedSubject: subject.id
                 })}
               >
-                {getStatus(subject.id)}
+                {getStatus(subject)}
               </td>
             ))}
           </tr>

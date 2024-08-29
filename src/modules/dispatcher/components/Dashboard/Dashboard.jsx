@@ -4,30 +4,9 @@ import { axiosInstance, endpoints } from "../../../../services/apiConfig";
 
 import Sidebar from "../Sidebar/Sidebar";
 import Calendar from "../Calendar/Calendar";
-
 import SubjectTable from "./SubjectsTable/SubjectsTable";
 
 const Dashboard = () => {
-  const getStatus = (subject) => {
-    const day = daysList.find(day => day.subject === subject && day.date.split('T')[0] === selectedDate.split('T')[0])
-
-    if (day?.status === "PRIMARY_PLAN") {
-      return "-П1-"
-    } else if (day?.status === "KCCPP_PLAN") {
-      return "-П1-П2-"
-    } else if (day?.status === "KEGOS_PLAN") {
-      return "-П1-П2-П3-"
-    } else if (day?.status === "FACT1") {
-      return "-П1-П2-П3-Ф-"
-    } else if (day?.status === "FACT2") {
-      return "-П1-П2-П3-Ф-"
-    } else if (day?.status === "COMPLETED") {
-      return "-П1-П2-П3-Ф-"
-    }
-
-    return "-";
-  }
-
   const { user } = useAuth();
 
   const [subjectsList, setSubjectsList] = useState([]);
@@ -45,30 +24,74 @@ const Dashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [subjectsResponse, objectsResponse, daysResponse, hoursResponse, holidaysResponse] = await Promise.all([
+      const [subjectsResponse, objectsResponse, holidaysResponse] = await Promise.all([
         axiosInstance.get(endpoints.SUBJECTS),
         axiosInstance.get(endpoints.OBJECTS),
-        axiosInstance.get(endpoints.DAYS),
-        axiosInstance.get(endpoints.HOURS),
         axiosInstance.get(endpoints.HOLIDAYS)
       ]);
 
       setSubjectsList(subjectsResponse.data);
-
       const filteredObjects = objectsResponse.data.filter((object) => object.users.includes(user.id));
       setObjectsList(filteredObjects);
-
-      setDaysList(daysResponse.data);
-      setHoursList(hoursResponse.data);
       setHolidaysList(holidaysResponse.data);
     } catch (error) {
       console.error('Error fetching data:', error);
     }
   };
 
+  const fetchDaysAndHours = async () => {
+    if (selectedDate) {
+      try {
+        const dayPromises = subjectsList.map(subject =>
+          axiosInstance.get(endpoints.DAYS, {
+            params: {
+              day: selectedDate,
+              sub: subject.id,
+            }
+          }).catch((error) => {
+            if (error.response && error.response.status === 404) {
+              return { data: [] };  // Return an empty array if no days are found
+            }
+            throw error;
+          })
+        );
+
+        const daysResponses = await Promise.all(dayPromises);
+        const allDays = daysResponses.map(response => response.data).flat();
+
+        if (selectedData.selectedSubject) {
+          const hoursResponse = await axiosInstance.get(endpoints.HOURS, {
+            params: {
+              day: selectedDate,
+              sub: selectedData.selectedSubject,
+            }
+          }).catch((error) => {
+            if (error.response && error.response.status === 404) {
+              return { data: [] };  // Return an empty array if no hours are found
+            }
+            throw error;
+          });
+          setHoursList(hoursResponse.data);
+        } else {
+          setHoursList([]);  // Set empty if no selected subject
+        }
+
+        setDaysList(allDays);
+      } catch (error) {
+        console.error('Error fetching days and hours:', error);
+        setDaysList([]);  // Reset days list to empty on error
+        setHoursList([]);  // Reset hours list to empty on error
+      }
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    fetchDaysAndHours();
+  }, [selectedDate, selectedData.selectedSubject, subjectsList]);
 
   return (
     <div className="flex">
@@ -93,6 +116,6 @@ const Dashboard = () => {
       </div>
     </div>
   );
-}
+};
 
 export default Dashboard;
