@@ -13,6 +13,7 @@ import ReportTariffs from './components/Reports/ReportTariffs/ReportTariffs';
 import Graphs from './components/Reports/Graphs/Graphs';
 import Disbalance from './components/Reports/Disbalance/Disbalance';
 import History from './components/Reports/History/History';
+import HoursTable from './components/Reports/HoursTable/HoursTable';
 
 // Entities
 import SubjectsList from './components/Entities/Subjects/SubjectsList';
@@ -41,6 +42,7 @@ export {
   Graphs,
   Disbalance,
   History,
+  HoursTable,
 
   // Entities
   SubjectsList,

@@ -26,7 +26,8 @@ import {
   SingleObject as AdminSingleObject,
   SubjectPlans as AdminSubjectPlans,
   UsersList as AdminUsersList,
-  SingleUser as AdminSingleUser
+  SingleUser as AdminSingleUser,
+  HoursTable as AdminHoursTable
 } from "./admin";
 
 export {
@@ -56,6 +57,7 @@ export {
   AdminObjectsList,
   AdminSingleObject,
   AdminSubjectPlans,
+  AdminHoursTable,
   AdminUsersList,
   AdminSingleUser
 }

@@ -100,6 +100,14 @@ export default function Sidebar() {
                   Отчетные тарифы
                 </ListItem>
               </a>
+              <a href="/reports/hour-table">
+                <ListItem>
+                  <ListItemPrefix>
+                    <ChevronRightIcon strokeWidth={3} className="h-3 w-5" />
+                  </ListItemPrefix>
+                  Просмотр данных
+                </ListItem>
+              </a>
             </List>
           </AccordionBody>
         </Accordion>
