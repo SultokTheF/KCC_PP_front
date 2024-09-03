@@ -10,7 +10,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { axiosInstance } from '../../../../../services/apiConfig';
+import { axiosInstance, endpoints } from '../../../../../services/apiConfig';
 import Sidebar from '../../Sidebar/Sidebar';
 
 // Register necessary components
@@ -42,6 +42,7 @@ const Graphs = () => {
     P2: true,
     P3: true,
     F1: true,
+    F2: true,
   });
 
   const fetchData = async () => {
@@ -49,74 +50,61 @@ const Graphs = () => {
       const accessToken = localStorage.getItem('accessToken');
 
       const [subjectsResponse, objectsResponse] = await Promise.all([
-        axiosInstance.get('api/subjects/', { headers: { Authorization: `Bearer ${accessToken}` } }),
-        axiosInstance.get('api/objects/', { headers: { Authorization: `Bearer ${accessToken}` } }),
+        axiosInstance.get(endpoints.SUBJECTS, { headers: { Authorization: `Bearer ${accessToken}` } }),
+        axiosInstance.get(endpoints.OBJECTS, { headers: { Authorization: `Bearer ${accessToken}` } }),
       ]);
 
       setSubjectsList(subjectsResponse.data);
       setObjectsList(objectsResponse.data);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Ошибка при получении данных:', error);
     }
   };
 
   const fetchDays = async (subjectId) => {
     try {
       const accessToken = localStorage.getItem('accessToken');
-      const daysResponse = await axiosInstance.get('api/days/', { headers: { Authorization: `Bearer ${accessToken}` } });
+      const daysResponse = await axiosInstance.get(endpoints.DAYS, { headers: { Authorization: `Bearer ${accessToken}` } });
       const filteredDays = daysResponse.data.filter(day => day.subject === subjectId);
       setDaysList(filteredDays);
     } catch (error) {
-      console.error('Error fetching days:', error);
+      console.error('Ошибка при получении дней:', error);
     }
   };
 
-  const fetchHours = async (startDate, endDate) => {
+  const fetchHours = async (startDate, endDate, subject) => {
     try {
       const accessToken = localStorage.getItem('accessToken');
-      const hoursResponse = await axiosInstance.get('api/hours/', { headers: { Authorization: `Bearer ${accessToken}` } });
-      const filteredHours = hoursResponse.data.filter(hour => {
-        const day = daysList.find(d => d.id === hour.day);
-        return day && new Date(day.date) >= new Date(startDate) && new Date(day.date) <= new Date(endDate);
-        console.log(new Date(day.date) >= new Date(startDate))
+      const response = await axiosInstance.get(endpoints.HOURS, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        params: {
+          start_date: startDate,
+          end_date: endDate,
+          sub: subject,
+        },
       });
 
-      const dateArray = [];
-      let currentDate = new Date(startDate);
-      const endDateObj = new Date(endDate);
-
-      while (currentDate <= endDateObj) {
-        dateArray.push(currentDate.toISOString().split('T')[0]);
-        currentDate.setDate(currentDate.getDate() + 1);
+      if (!response.data || response.data.error || response.data.length === 0) {
+        console.error('Ошибка при получении часов:', response.data.error || 'Часы не найдены с указанными критериями.');
+        setHoursList([]);
+        return;
       }
 
-      // console.log("initial: ", (dayHourMap))
+      const hoursData = response.data;
 
-      const dayHourMap = {};
-      dateArray.forEach(date => {
-        dayHourMap[date] = Array(24).fill().map((_, hour) => ({ hour, P1: 0, P2: 0, P3: 0, F1: 0 }));
-      });
+      const processedHours = hoursData.map(hour => ({
+        ...hour,
+        F1: hour.F1 - hour.F1_Gen,
+        F2: hour.F2 - hour.F2_Gen,
+        P1: hour.P1 - hour.P1_Gen,
+        P2: hour.P2 - hour.P2_Gen,
+        P3: hour.P3 - hour.P3_Gen,
+      }));
 
-      console.log((dayHourMap))
-
-      filteredHours.forEach(hour => {
-        const day = daysList.find(d => d.id === hour.day);
-        const dayDate = new Date(day.date).toISOString().split('T')[0];
-        dayHourMap[dayDate][hour.hour - 1] = hour;
-      });
-
-      // console.log("filtered: ", (filteredHours))
-
-      const flattenedHours = [];
-      Object.keys(dayHourMap).forEach(dayDate => {
-        dayHourMap[dayDate].forEach(hour => {
-          flattenedHours.push(hour);
-        });
-      });
-
-      setHoursList(flattenedHours);
+      setHoursList(processedHours);
     } catch (error) {
-      console.error('Error fetching hours:', error);
+      console.error('Ошибка при получении часов:', error);
+      setHoursList([]);
     }
   };
 
@@ -132,9 +120,9 @@ const Graphs = () => {
 
   useEffect(() => {
     if (formData.startDate && formData.endDate && formData.subject) {
-      fetchHours(formData.startDate, formData.endDate);
+      fetchHours(formData.startDate, formData.endDate, formData.subject);
     }
-  }, [formData.startDate, formData.endDate, formData.subject, daysList]);
+  }, [formData.startDate, formData.endDate, formData.subject]);
 
   const handleChange = (name, value) => {
     setFormData(prevData => ({
@@ -143,21 +131,12 @@ const Graphs = () => {
     }));
   };
 
-  const handleCheckboxChange = (name) => {
-    setSelectedParameters(prevParams => ({
-      ...prevParams,
-      [name]: !prevParams[name]
-    }));
-  };
-
-  const generateDataSet = (parameter, label, color) => {
-    return {
-      label,
-      data: hoursList.map(hour => hour[parameter] || 0),
-      fill: false,
-      borderColor: color,
-    };
-  };
+  const generateDataSet = (parameter, label, color) => ({
+    label,
+    data: hoursList.map(hour => hour[parameter] || 0),
+    fill: false,
+    borderColor: color,
+  });
 
   const chartData = {
     labels: hoursList.map((_, index) => index + 1), // X-axis labels
@@ -165,24 +144,28 @@ const Graphs = () => {
       selectedParameters.P1 && generateDataSet('P1', 'P1', 'rgba(75,192,192,1)'),
       selectedParameters.P2 && generateDataSet('P2', 'P2', 'rgba(153,102,255,1)'),
       selectedParameters.P3 && generateDataSet('P3', 'P3', 'rgba(255,159,64,1)'),
-      selectedParameters.F1 && generateDataSet('F1', 'F1', 'rgba(255,99,132,1)')
-    ].filter(Boolean)
+      selectedParameters.F1 && generateDataSet('F1', 'F1', 'rgba(255,99,132,1)'),
+      selectedParameters.F2 && generateDataSet('F2', 'F2', 'rgba(54,162,235,1)'),
+    ].filter(Boolean),
   };
 
   return (
-    <div className="flex">
-      <Sidebar/>
-      <div className='flex-1 p-4'>
-        <Line data={chartData} />
-        <div className="flex ml-10">
-          <div className="w-1/4">
+    <div className="flex flex-col lg:flex-row">
+      <Sidebar />
+      <div className="flex-1 p-6">
+        <h1 className="text-2xl font-semibold text-gray-800 mb-6">Графики</h1>
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <Line data={chartData} />
+        </div>
+        <div className="flex flex-col md:flex-row justify-between mt-8 space-y-4 md:space-y-0 md:space-x-4">
+          <div className="w-full md:w-1/3">
             <label htmlFor="subject" className="block text-gray-700 font-medium mb-2">
               Выберите субъект
             </label>
             <select
               name="subject"
               id="subject"
-              className="block h-10 border rounded focus:outline-none focus:border-blue-500 w-11/12 text-gray-700 font-medium mb-2"
+              className="block h-10 border rounded focus:outline-none focus:border-blue-500 w-full text-gray-700 font-medium mb-2"
               value={formData.subject}
               onChange={(e) => handleChange('subject', e.target.value)}
               required
@@ -195,53 +178,38 @@ const Graphs = () => {
               ))}
             </select>
           </div>
-          <div className="w-1/4">
+          <div className="w-full md:w-1/3">
             <label htmlFor="startDate" className="block text-gray-700 font-medium mb-2">
-              Выберите дату начала
+              Дата начала
             </label>
             <input
               type="date"
               name="startDate"
               id="startDate"
-              className="h-10 border border-gray-300 rounded px-4 focus:outline-none focus:border-blue-500"
+              className="h-10 border border-gray-300 rounded px-4 focus:outline-none focus:border-blue-500 w-full"
               value={formData.startDate}
               onChange={(e) => handleChange('startDate', e.target.value)}
               required
             />
           </div>
-          <div className="w-1/4">
+          <div className="w-full md:w-1/3">
             <label htmlFor="endDate" className="block text-gray-700 font-medium mb-2">
-              Выберите дату окончания
+              Дата окончания
             </label>
             <input
               type="date"
               name="endDate"
               id="endDate"
-              className="h-10 border border-gray-300 rounded px-4 focus:outline-none focus:border-blue-500"
+              className="h-10 border border-gray-300 rounded px-4 focus:outline-none focus:border-blue-500 w-full"
               value={formData.endDate}
               onChange={(e) => handleChange('endDate', e.target.value)}
               required
             />
           </div>
         </div>
-        <div className="flex ml-10 mt-4">
-          {["P1", "P2", "P3", "F1"].map(param => (
-            <div className="w-1/4" key={param}>
-              <label className="block text-gray-700 font-medium mb-2">
-                <input
-                  type="checkbox"
-                  className="mr-2"
-                  checked={selectedParameters[param]}
-                  onChange={() => handleCheckboxChange(param)}
-                />
-                {param}
-              </label>
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );
-}
+};
 
 export default Graphs;
