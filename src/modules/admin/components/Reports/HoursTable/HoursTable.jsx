@@ -167,6 +167,14 @@ const HoursTable = () => {
                     <th className="px-2 py-1 border">BE_Down</th>
                     <th className="px-2 py-1 border">OD_Up</th>
                     <th className="px-2 py-1 border">OD_Down</th>
+                    <th className="px-2 py-1 border">BE_Up_V1</th>
+                    <th className="px-2 py-1 border">BE_Down_V1</th>
+                    <th className="px-2 py-1 border">OD_Up_V1</th>
+                    <th className="px-2 py-1 border">OD_Down_V1</th>
+                    <th className="px-2 py-1 border">BE_Up_V2</th>
+                    <th className="px-2 py-1 border">BE_Down_V2</th>
+                    <th className="px-2 py-1 border">OD_Up_V2</th>
+                    <th className="px-2 py-1 border">OD_Down_V2</th>
                     <th className="px-2 py-1 border">EZ_T</th>
                     <th className="px-2 py-1 border">EZ_Base_T</th>
                     <th className="px-2 py-1 border">Ind_Prov_T</th>
@@ -174,6 +182,19 @@ const HoursTable = () => {
                     <th className="px-2 py-1 border">OD_T</th>
                     <th className="px-2 py-1 border">Ind_T</th>
                     <th className="px-2 py-1 border">Prov_T</th>
+                    <th className="px-2 py-1 border">EZ_T_ВИЭ</th>
+                    <th className="px-2 py-1 border">Ind_T_V1</th>
+                    <th className="px-2 py-1 border">Prov_T_V1</th>
+                    <th className="px-2 py-1 border">Ind_T_V2</th>
+                    <th className="px-2 py-1 border">Prov_T_V2</th>
+                    <th className="px-2 py-1 border">Ind_T_V3</th>
+                    <th className="px-2 py-1 border">Prov_T_V3</th>
+                    <th className="px-2 py-1 border">Ind_T_V4</th>
+                    <th className="px-2 py-1 border">Prov_T_V4</th>
+                    <th className="px-2 py-1 border">Money_V1</th>
+                    <th className="px-2 py-1 border">Money_V2</th>
+                    <th className="px-2 py-1 border">Money_V3</th>
+                    <th className="px-2 py-1 border">Money_V4</th>
                     <th className="px-2 py-1 border">Сообщение</th>
                   </tr>
                 </thead>
@@ -195,6 +216,14 @@ const HoursTable = () => {
                       <td className="px-2 py-1 border">{hour.BE_Down}</td>
                       <td className="px-2 py-1 border">{hour.OD_Up}</td>
                       <td className="px-2 py-1 border">{hour.OD_Down}</td>
+                      <td className="px-2 py-1 border">{hour.BE_Up_V1}</td>
+                      <td className="px-2 py-1 border">{hour.BE_Down_V1}</td>
+                      <td className="px-2 py-1 border">{hour.OD_Up_V1}</td>
+                      <td className="px-2 py-1 border">{hour.OD_Down_V1}</td>
+                      <td className="px-2 py-1 border">{hour.BE_Up_V2}</td>
+                      <td className="px-2 py-1 border">{hour.BE_Down_V2}</td>
+                      <td className="px-2 py-1 border">{hour.OD_Up_V2}</td>
+                      <td className="px-2 py-1 border">{hour.OD_Down_V2}</td>
                       <td className="px-2 py-1 border">{hour.EZ_T}</td>
                       <td className="px-2 py-1 border">{hour.EZ_Base_T}</td>
                       <td className="px-2 py-1 border">{hour.Ind_Prov_T}</td>
@@ -202,6 +231,19 @@ const HoursTable = () => {
                       <td className="px-2 py-1 border">{hour.OD_T}</td>
                       <td className="px-2 py-1 border">{hour.Ind_T}</td>
                       <td className="px-2 py-1 border">{hour.Prov_T}</td>
+                      <td className="px-2 py-1 border">{hour.EZ_T_ВИЭ}</td>
+                      <td className="px-2 py-1 border">{hour.Ind_T_V1}</td>
+                      <td className="px-2 py-1 border">{hour.Prov_T_V1}</td>
+                      <td className="px-2 py-1 border">{hour.Ind_T_V2}</td>
+                      <td className="px-2 py-1 border">{hour.Prov_T_V2}</td>
+                      <td className="px-2 py-1 border">{hour.Ind_T_V3}</td>
+                      <td className="px-2 py-1 border">{hour.Prov_T_V3}</td>
+                      <td className="px-2 py-1 border">{hour.Ind_T_V4}</td>
+                      <td className="px-2 py-1 border">{hour.Prov_T_V4}</td>
+                      <td className="px-2 py-1 border">{hour.Money_V1}</td>
+                      <td className="px-2 py-1 border">{hour.Money_V2}</td>
+                      <td className="px-2 py-1 border">{hour.Money_V3}</td>
+                      <td className="px-2 py-1 border">{hour.Money_V4}</td>
                       <td className="px-2 py-1 border">{hour.message}</td>
                     </tr>
                   ))}
