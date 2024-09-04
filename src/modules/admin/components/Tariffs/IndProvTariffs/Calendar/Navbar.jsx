@@ -36,25 +36,30 @@ const Navbar = ({ date, setDate, data, setData }) => {
   const exportToXLSX = () => {
     setLoading(prev => ({ ...prev, export: true }));
     console.log('Экспорт данных...');
-
+  
     const headers = ["Дата", ...Array.from({ length: 24 }, (_, i) => `Час ${i + 1}`)];
+    
+    const getRandomValue = () => Math.floor(Math.random() * (50 - 10 + 1)) + 10;
+  
     const rows = data.tableData.map(dayData => {
       const day = Object.keys(dayData)[0];
       const row = [day.split('-').reverse().join('.')]; // Date in format dd.mm.yyyy
-      row.push(...dayData[day]);
+      // row.push(...dayData[day].map(hourValue => hourValue === 0 ? getRandomValue() : hourValue));
+      row.push(...dayData[day].map(hourValue => hourValue === 0 ? hourValue : hourValue));
       return row;
     });
-
+  
     const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Предельные Тарифы");
-
-    const fileName = `Предельные_тарифы_${data.tariffType}_${date.year}-${String(date.month + 1).padStart(2, '0')}.xlsx`;
+  
+    const fileName = `Предельные_тарифы_${data.subject_type}_${date.year}-${String(date.month + 1).padStart(2, '0')}.xlsx`;
     XLSX.writeFile(workbook, fileName);
-
+  
     console.log('Экспорт завершен');
     setLoading(prev => ({ ...prev, export: false }));
   };
+  
 
   const importFromXLSX = (event) => {
     setLoading(prev => ({ ...prev, import: true }));
@@ -126,6 +131,22 @@ const Navbar = ({ date, setDate, data, setData }) => {
     <div className="flex w-full justify-between items-center px-6 py-4 bg-gray-100 border-b shadow">
       <span className="text-lg font-semibold text-gray-700">Предельные Тарифы</span>
       <div className="flex items-center ml-24 space-x-4">
+        <select 
+          name="subject_type" 
+          id="subject_type"
+          className="text-center border rounded-lg px-4 py-2 bg-white shadow focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={data.subject_type}
+          onChange={(e) => {
+            setData((prevData) => ({
+              ...prevData,
+              subject_type: e.target.value
+            }));
+          }}
+        >
+          <option value="ЭПО">ЭПО</option>
+          <option value="ГП">ГП</option>
+        </select>
+
         <Year date={date} setDate={setDate} />
 
         <select
@@ -140,7 +161,7 @@ const Navbar = ({ date, setDate, data, setData }) => {
           className="text-center border rounded-lg px-4 py-2 bg-white shadow focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Субъект</option>
-          {data.subjects.map((subject, index) => (
+          {data.subjects.filter(s => s.subject_type === data.subject_type).map((subject, index) => (
             <option key={index} value={parseInt(subject.id)}>
               {subject.subject_name}
             </option>

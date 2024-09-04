@@ -36,22 +36,26 @@ const Navbar = ({ date, setDate, data, setData }) => {
   const exportToXLSX = () => {
     setLoading(prev => ({ ...prev, export: true }));
     console.log('Экспорт данных...');
-
+  
     const headers = ["Дата", ...Array.from({ length: 24 }, (_, i) => `Час ${i + 1}`)];
+    
+    const getRandomValue = () => Math.floor(Math.random() * (50 - 10 + 1)) + 10;
+  
     const rows = data.tableData.map(dayData => {
       const day = Object.keys(dayData)[0];
       const row = [day.split('-').reverse().join('.')]; // Date in format dd.mm.yyyy
-      row.push(...dayData[day]);
+      row.push(...dayData[day].map(hourValue => hourValue === 0 ? getRandomValue() : hourValue));
+      // row.push(...dayData[day].map(hourValue => hourValue === 0 ? hourValue : hourValue));
       return row;
     });
-
+  
     const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Фактические Тарифы");
-
-    const fileName = `Фактическе_тариффы_${data.tariffType}_${date.year}-${String(date.month + 1).padStart(2, '0')}.xlsx`;
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Предельные Тарифы");
+  
+    const fileName = `Предельные_тарифы_${data.subject_type}_${date.year}-${String(date.month + 1).padStart(2, '0')}.xlsx`;
     XLSX.writeFile(workbook, fileName);
-
+  
     console.log('Экспорт завершен');
     setLoading(prev => ({ ...prev, export: false }));
   };

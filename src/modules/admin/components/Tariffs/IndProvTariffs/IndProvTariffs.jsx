@@ -18,6 +18,7 @@ const IndProvTariffs = () => {
     tableData: [],
     provider: 0,
     providers: [],
+    subject_type: "ЭПО",
     days: [],
     hours: [],
   });
