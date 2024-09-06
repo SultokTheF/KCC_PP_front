@@ -21,9 +21,8 @@ const CreateSubjectModal = ({ isOpen, closeModal, onSubmit }) => {
     // Fetch users from the API
     const fetchUsers = async () => {
       try {
-        const [subjectResponse, usersResponse] = await Promise.all([
-          axiosInstance.get('api/subjects/'),
-          axiosInstance.get('user/users/')
+        const [usersResponse] = await Promise.all([
+          axiosInstance.get('user/users/'),
         ]);
         setUsers(usersResponse.data);
       } catch (error) {

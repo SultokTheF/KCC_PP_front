@@ -7,6 +7,7 @@ import Directions from './components/Tariffs/Directions/Directions';
 import PredictionTariffs from './components/Tariffs/PredictionTariffs/PredictionTariffs';
 import IndProvTariffs from './components/Tariffs/IndProvTariffs/IndProvTariffs';
 import Providers from './components/Tariffs/Providers/Providers';
+import Volumes from './components/Tariffs/Volumes/Volumes';
 
 // Reports
 import ReportTariffs from './components/Reports/ReportTariffs/ReportTariffs';
@@ -36,6 +37,7 @@ export {
   PredictionTariffs,
   IndProvTariffs,
   Providers,
+  Volumes,
 
   // Reports
   ReportTariffs,

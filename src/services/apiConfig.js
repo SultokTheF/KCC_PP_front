@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// const API_BASE_URL = 'http://127.0.0.1:8000/';
-const API_BASE_URL = 'http://34.159.60.222:8000/';
+const API_BASE_URL = 'http://127.0.0.1:8000/';
+// const API_BASE_URL = 'http://34.159.60.222:8000/';
 
 const endpoints = {
   // Users
@@ -26,6 +26,7 @@ const endpoints = {
   DIRECTIONS_CREATE: `api/days/directionCreate/`,
   CALCULATE_TARIFFS: `api/days/calculateTariffs/`,
   INDPROV_CREATE: `api/days/indprovCreate/`,
+  COEF_CREATE: `api/days/coeftariffCreate/`,
 
   // Hours
   HOURS: `api/hours/`,

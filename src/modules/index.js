@@ -15,6 +15,7 @@ import {
   Directions as AdminDirections,
   PredictionTariffs as AdminPredictionTariffs,
   IndProvTariffs as AdminIndProvTariffs,
+  Volumes as AdminVolumes,
   Providers as AdminProviders,
   ReportTariffs as AdminReportTariffs,
   Graphs as AdminGraphs,
@@ -59,5 +60,6 @@ export {
   AdminSubjectPlans,
   AdminHoursTable,
   AdminUsersList,
-  AdminSingleUser
+  AdminSingleUser,
+  AdminVolumes
 }

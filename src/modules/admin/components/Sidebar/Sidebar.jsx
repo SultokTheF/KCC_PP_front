@@ -164,6 +164,14 @@ export default function Sidebar() {
                     Направления Часов
                 </ListItem>
               </a>
+              <a href="/tariffs/volumes">
+                <ListItem>
+                  <ListItemPrefix>
+                    <ChevronRightIcon strokeWidth={3} className="h-3 w-5" />
+                  </ListItemPrefix>
+                    Объемные тарифы
+                </ListItem>
+              </a>
               <a href="/tariffs/providers">
                 <ListItem>
                   <ListItemPrefix>

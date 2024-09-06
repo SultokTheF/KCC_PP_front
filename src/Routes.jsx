@@ -34,7 +34,8 @@ import {
   AdminSubjectPlans,
   AdminUsersList,
   AdminSingleUser,
-  AdminHoursTable
+  AdminHoursTable,
+  AdminVolumes
 } from "./modules";
 
 const Router = ({ userRole }) => {
@@ -74,6 +75,7 @@ const Router = ({ userRole }) => {
           <Route path="/tariffs/prediction" element={<AdminPredictionTariffs />} />
           <Route path="/tariffs/ind-prov" element={<AdminIndProvTariffs />} />
           <Route path="/tariffs/providers" element={<AdminProviders />} />
+          <Route path="/tariffs/volumes" element={<AdminVolumes />} />
           <Route path="/reports/hour-report" element={<AdminReportTariffs />} />
           <Route path="/reports/graphs" element={<AdminGraphs />} />
           <Route path="/reports/disbalance" element={<AdminDisbalance />} />
