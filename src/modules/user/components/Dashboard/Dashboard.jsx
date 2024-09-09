@@ -26,27 +26,27 @@ const Dashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [subjectsResponse, objectsResponse, daysResponse, hoursResponse, holidaysResponse] = await Promise.all([
-        axiosInstance.get(endpoints.SUBJECTS),
-        axiosInstance.get(endpoints.OBJECTS),
-        axiosInstance.get(endpoints.DAYS),
-        axiosInstance.get(endpoints.HOURS),
-        axiosInstance.get(endpoints.HOLIDAYS)
-      ]);
-
+      const subjectsResponse = await axiosInstance.get(endpoints.SUBJECTS);
       const filteredSubjects = subjectsResponse.data.filter((subject) => subject.users.includes(user.id));
       setSubjectsList(filteredSubjects);
-
+  
+      const objectsResponse = await axiosInstance.get(endpoints.OBJECTS);
       const filteredObjects = objectsResponse.data.filter((object) => object.users.includes(user.id));
       setObjectsList(filteredObjects);
-
+  
+      const daysResponse = await axiosInstance.get(endpoints.DAYS);
       setDaysList(daysResponse.data);
+  
+      const hoursResponse = await axiosInstance.get(endpoints.HOURS);
       setHoursList(hoursResponse.data);
+  
+      const holidaysResponse = await axiosInstance.get(endpoints.HOLIDAYS);
       setHolidaysList(holidaysResponse.data);
+  
     } catch (error) {
       console.error('Error fetching data:', error);
     }
-  };
+  };  
 
   useEffect(() => {
     fetchData();

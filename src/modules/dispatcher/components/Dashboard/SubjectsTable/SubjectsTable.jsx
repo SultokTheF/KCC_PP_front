@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 
 const timeIntervals = [
   '00 - 01', '01 - 02', '02 - 03', '03 - 04', '04 - 05', '05 - 06',
@@ -10,7 +11,9 @@ const timeIntervals = [
 const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, hoursList, selectedDate }) => {
   const selectedSubject = subjectsList.find(subject => subject.id === selectedData.selectedSubject);
   const dayPlan = daysList?.find(day => day.subject === selectedSubject?.id && day.date.split('T')[0] === selectedDate.split('T')[0]) || null;
-  const hourPlan = dayPlan ? hoursList.filter(hour => hour.day === dayPlan?.id) : [];
+
+  // Sort hourPlan by 'hour' in increasing order
+  const hourPlan = dayPlan ? hoursList.filter(hour => hour.day === dayPlan?.id).sort((a, b) => a.hour - b.hour) : [];
 
   const [coefficients, setCoefficients] = useState([]);
   const [volumes, setVolumes] = useState([]);
@@ -28,11 +31,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
       return "-П1-П2-";
     } else if (day?.status === "KEGOS_PLAN") {
       return "-П1-П2-П3-";
-    } else if (day?.status === "FACT1") {
-      return "-П1-П2-П3-Ф-";
-    } else if (day?.status === "FACT2") {
-      return "-П1-П2-П3-Ф-";
-    } else if (day?.status === "COMPLETED") {
+    } else if (day?.status === "FACT1" || day?.status === "FACT2" || day?.status === "COMPLETED") {
       return "-П1-П2-П3-Ф-";
     }
 
@@ -54,7 +53,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
       setVolumes(selectedSubject.volume?.[0] || []);
       setMessages(hourPlan.map(hour => hour.message || ""));
     }
-  }, [selectedSubject]);
+  }, [selectedSubject, hourPlan]);
 
   const handleCoefficientChange = (index, value) => {
     const updatedCoefficients = [...coefficients];
