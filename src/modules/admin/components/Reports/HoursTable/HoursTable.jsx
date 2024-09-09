@@ -5,6 +5,9 @@ import Sidebar from '../../Sidebar/Sidebar';
 const HoursTable = () => {
   const [subjectsList, setSubjectsList] = useState([]);
   const [hoursByDate, setHoursByDate] = useState({});
+  const [providersList, setProvidersList] = useState([]); // New state for providers
+  const [selectedProviderSubjects, setSelectedProviderSubjects] = useState([]); // State for subjects of the selected provider
+  const [providerError, setProviderError] = useState(''); // State for provider fetching error
 
   const [formData, setFormData] = useState({
     object: 0,
@@ -13,6 +16,7 @@ const HoursTable = () => {
     subject: 0,
   });
 
+  // Fetch subjects list
   const fetchData = async () => {
     try {
       const accessToken = localStorage.getItem('accessToken');
@@ -27,6 +31,7 @@ const HoursTable = () => {
     }
   };
 
+  // Fetch hours based on date and subject
   const fetchHours = async (startDate, endDate, subject) => {
     try {
       const accessToken = localStorage.getItem('accessToken');
@@ -70,6 +75,57 @@ const HoursTable = () => {
     }
   };
 
+  // Fetch providers with error handling
+  const fetchProviders = async (startDate, endDate) => {
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      const response = await axiosInstance.get(endpoints.PROVIDERS, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        params: {
+          sub: 1, // Set the subject or modify it based on your logic
+          start_date: startDate.slice(0, 7), // format yyyy-mm
+          end_date: endDate.slice(0, 7),
+        },
+      });
+
+      if (response.data.error) {
+        setProviderError(response.data.error);
+        setProvidersList([]); // Reset providers list
+      } else if (response.data.length === 0) {
+        setProviderError('No providers found with the provided criteria.');
+        setProvidersList([]);
+      } else {
+        setProvidersList(response.data);
+        setProviderError(''); // Clear error message
+      }
+    } catch (error) {
+      console.error('Ошибка при получении провайдеров:', error);
+      setProviderError('Ошибка при получении провайдеров. Попробуйте позже.');
+    }
+  };
+
+  // Fetch subjects belonging to a provider using provider_id
+  const fetchProviderSubjects = async (providerId) => {
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      const response = await axiosInstance.get(endpoints.SUBJECTS, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        params: {
+          provider_id: providerId, // Fetch subjects based on provider ID
+        },
+      });
+      if (response.data && response.data.length > 0) {
+        setSelectedProviderSubjects(response.data);
+      } else {
+        setSelectedProviderSubjects([]);
+        console.error('No subjects found for the selected provider.');
+      }
+    } catch (error) {
+      console.error('Ошибка при получении субъектов для провайдера:', error);
+      setSelectedProviderSubjects([]);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -77,6 +133,7 @@ const HoursTable = () => {
   useEffect(() => {
     if (formData.startDate && formData.endDate && formData.subject) {
       fetchHours(formData.startDate, formData.endDate, formData.subject);
+      fetchProviders(formData.startDate, formData.endDate); // Fetch providers with dates
     }
   }, [formData.startDate, formData.endDate, formData.subject]);
 
@@ -87,6 +144,10 @@ const HoursTable = () => {
     }));
   };
 
+  const handleProviderClick = (providerId) => {
+    fetchProviderSubjects(providerId); // Fetch subjects for selected provider
+  };
+
   return (
     <div className="flex flex-col lg:flex-row">
       <Sidebar />
@@ -94,7 +155,7 @@ const HoursTable = () => {
         <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">Таблица часов</h1>
         <div className="bg-white p-6 rounded-lg shadow-md mb-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Selectors with fixed width inside the container */}
+            {/* Selectors */}
             <div className="w-full">
               <label htmlFor="subject" className="block text-gray-700 font-medium mb-2">
                 Выберите субъект
@@ -146,6 +207,42 @@ const HoursTable = () => {
           </div>
         </div>
 
+        {/* Providers Section */}
+        <div className="bg-white p-6 rounded-lg shadow-md mb-8">
+          <h2 className="text-2xl font-bold text-center text-gray-700 mb-6">Список провайдеров</h2>
+          {providerError ? (
+            <p className="text-red-500 text-center">{providerError}</p> // Display error message
+          ) : (
+            <ul className="space-y-4">
+              {providersList?.map(provider => (
+                <li key={provider.id} className="p-4 bg-gray-100 rounded-lg shadow-md cursor-pointer hover:bg-gray-200"
+                  onClick={() => handleProviderClick(provider.id)}>
+                  <p className="text-lg font-semibold text-gray-800">{provider.name} ({provider.month})</p>
+                  <p className="text-sm text-gray-600">{provider.is_epo ? 'ЭПО' : 'Не ЭПО'}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Selected Provider Subjects */}
+        {selectedProviderSubjects.length > 0 && (
+          <div className="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 className="text-2xl font-bold text-center text-gray-700 mb-6">Субъекты провайдера</h2>
+            <ul className="space-y-4">
+              {selectedProviderSubjects?.map(subject => (
+                <li key={subject.id} className="p-4 bg-gray-100 rounded-lg shadow-md">
+                  <p className="text-lg font-semibold text-gray-800">{subject.subject_name}</p>
+                  <p className="text-sm text-gray-600">BIN: {subject.subject_bin}</p>
+                  <p className="text-sm text-gray-600">Тип: {subject.subject_type}</p>
+                  <p className="text-sm text-gray-600">Email: {subject.email}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Table displaying hours by date */}
         {Object.keys(hoursByDate).map(dayDate => (
           <div key={dayDate} className="mt-8">
             <h2 className="text-xl font-semibold text-center text-gray-700 mb-4">
@@ -251,8 +348,7 @@ const HoursTable = () => {
                       <td className="px-2 py-1 border-b border-gray-200">{hour.Money_V3}</td>
                       <td className="px-2 py-1 border-b border-gray-200">{hour.Money_V4}</td>
 
-                      <td className={`px-2 py-1 border-b border-gray-200 ${
-                        hour.direction === 'DOWN' ? 'bg-green-100' : hour.direction === 'UP' ? 'bg-red-100' : ''
+                      <td className={`px-2 py-1 border-b border-gray-200 ${hour.direction === 'DOWN' ? 'bg-green-100' : hour.direction === 'UP' ? 'bg-red-100' : ''
                         }`}>
                         {hour.direction === 'UP' ? '↑' : hour.direction === 'DOWN' ? '↓' : '-'}
                       </td>
