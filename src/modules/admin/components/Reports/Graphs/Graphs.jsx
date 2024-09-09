@@ -27,6 +27,7 @@ ChartJS.register(
 const Graphs = () => {
   const [subjectsList, setSubjectsList] = useState([]);
   const [objectsList, setObjectsList] = useState([]);
+  const [selectedObjects, setSelectedObjects] = useState([]);
   const [daysList, setDaysList] = useState([]);
   const [hoursList, setHoursList] = useState([]);
 
@@ -45,19 +46,32 @@ const Graphs = () => {
     F2: true,
   });
 
+  // Fetch subjects and objects
   const fetchData = async () => {
     try {
       const accessToken = localStorage.getItem('accessToken');
-
       const [subjectsResponse, objectsResponse] = await Promise.all([
         axiosInstance.get(endpoints.SUBJECTS, { headers: { Authorization: `Bearer ${accessToken}` } }),
-        axiosInstance.get(endpoints.OBJECTS, { headers: { Authorization: `Bearer ${accessToken}` } }),
+        // axiosInstance.get(endpoints.OBJECTS, { headers: { Authorization: `Bearer ${accessToken}` }, params: { sub: 1 } }),
       ]);
 
       setSubjectsList(subjectsResponse.data);
-      setObjectsList(objectsResponse.data);
+      // setObjectsList(objectsResponse.data);
     } catch (error) {
       console.error('Ошибка при получении данных:', error);
+    }
+  };
+
+  const fetchObjects = async (subjectId) => {
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      const objectsResponse = await axiosInstance.get(endpoints.OBJECTS, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        params: { sub: parseInt(subjectId) },
+      });
+      setObjectsList(objectsResponse.data);
+    } catch (error) {
+      console.error('Ошибка при получении объектов:', error);
     }
   };
 
@@ -72,39 +86,17 @@ const Graphs = () => {
     }
   };
 
-  const fetchHours = async (startDate, endDate, subject) => {
+  const fetchHoursForObject = async (objectId, startDate, endDate) => {
     try {
       const accessToken = localStorage.getItem('accessToken');
       const response = await axiosInstance.get(endpoints.HOURS, {
         headers: { Authorization: `Bearer ${accessToken}` },
-        params: {
-          start_date: startDate,
-          end_date: endDate,
-          sub: subject,
-        },
+        params: { obj: objectId, start_date: startDate, end_date: endDate },
       });
-
-      if (!response.data || response.data.error || response.data.length === 0) {
-        console.error('Ошибка при получении часов:', response.data.error || 'Часы не найдены с указанными критериями.');
-        setHoursList([]);
-        return;
-      }
-
-      const hoursData = response.data;
-
-      const processedHours = hoursData.map(hour => ({
-        ...hour,
-        F1: hour.F1 - hour.F1_Gen,
-        F2: hour.F2 - hour.F2_Gen,
-        P1: hour.P1 - hour.P1_Gen,
-        P2: hour.P2 - hour.P2_Gen,
-        P3: hour.P3 - hour.P3_Gen,
-      }));
-
-      setHoursList(processedHours);
+      return response.data;
     } catch (error) {
       console.error('Ошибка при получении часов:', error);
-      setHoursList([]);
+      return [];
     }
   };
 
@@ -114,21 +106,56 @@ const Graphs = () => {
 
   useEffect(() => {
     if (formData.subject) {
+      fetchObjects(parseInt(formData.subject));
+    }
+  }, [formData.subject]);
+
+  useEffect(() => {
+    if (formData.subject) {
       fetchDays(parseInt(formData.subject));
     }
   }, [formData.subject]);
 
   useEffect(() => {
     if (formData.startDate && formData.endDate && formData.subject) {
-      fetchHours(formData.startDate, formData.endDate, formData.subject);
+      handleFetchHoursForObjects();
     }
-  }, [formData.startDate, formData.endDate, formData.subject]);
+  }, [formData.startDate, formData.endDate, selectedObjects]);
+
+  const handleFetchHoursForObjects = async () => {
+    let totalHours = Array(24).fill({ P1: 0, P2: 0, P3: 0, F1: 0, F2: 0 });
+  
+    for (const objectId of selectedObjects) {
+      const objectHours = await fetchHoursForObject(objectId, formData.startDate, formData.endDate);
+  
+      objectHours.forEach((hourData, index) => {
+        totalHours[index] = {
+          P1: totalHours[index].P1 + (hourData.P1 - hourData.P1_Gen),
+          P2: totalHours[index].P2 + (hourData.P2 - hourData.P2_Gen),
+          P3: totalHours[index].P3 + (hourData.P3 - hourData.P3_Gen),
+          F1: totalHours[index].F1 + (hourData.F1 - hourData.F1_Gen),
+          F2: totalHours[index].F2 + (hourData.F2 - hourData.F2_Gen),
+        };
+      });
+    }
+  
+    setHoursList(totalHours);
+  };
+  
 
   const handleChange = (name, value) => {
     setFormData(prevData => ({
       ...prevData,
       [name]: value
     }));
+  };
+
+  const handleObjectSelect = (objectId) => {
+    setSelectedObjects(prevState =>
+      prevState.includes(objectId)
+        ? prevState.filter(id => id !== objectId)
+        : [...prevState, objectId]
+    );
   };
 
   const generateDataSet = (parameter, label, color) => ({
@@ -157,6 +184,8 @@ const Graphs = () => {
         <div className="bg-white p-6 rounded-lg shadow-md">
           <Line data={chartData} />
         </div>
+
+        {/* Subject Selector */}
         <div className="flex flex-col md:flex-row justify-between mt-8 space-y-4 md:space-y-0 md:space-x-4">
           <div className="w-full md:w-1/3">
             <label htmlFor="subject" className="block text-gray-700 font-medium mb-2">
@@ -178,6 +207,8 @@ const Graphs = () => {
               ))}
             </select>
           </div>
+
+          {/* Start Date Selector */}
           <div className="w-full md:w-1/3">
             <label htmlFor="startDate" className="block text-gray-700 font-medium mb-2">
               Дата начала
@@ -192,6 +223,8 @@ const Graphs = () => {
               required
             />
           </div>
+
+          {/* End Date Selector */}
           <div className="w-full md:w-1/3">
             <label htmlFor="endDate" className="block text-gray-700 font-medium mb-2">
               Дата окончания
@@ -205,6 +238,29 @@ const Graphs = () => {
               onChange={(e) => handleChange('endDate', e.target.value)}
               required
             />
+          </div>
+        </div>
+
+        {/* Objects List as Checkboxes */}
+        <div className="mt-4">
+          <label className="block text-gray-700 font-medium mb-2">
+            Выберите объекты
+          </label>
+          <div className="grid grid-cols-2 gap-4">
+            {objectsList.map(obj => (
+              <div key={obj.id} className="flex items-center">
+                <input
+                  type="checkbox"
+                  id={`object_${obj.id}`}
+                  checked={selectedObjects.includes(obj.id)}
+                  onChange={() => handleObjectSelect(obj.id)}
+                  className="mr-2"
+                />
+                <label htmlFor={`object_${obj.id}`} className="text-gray-700">
+                  {obj.object_name}
+                </label>
+              </div>
+            ))}
           </div>
         </div>
       </div>
