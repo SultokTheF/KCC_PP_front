@@ -28,7 +28,9 @@ import {
   SubjectPlans as AdminSubjectPlans,
   UsersList as AdminUsersList,
   SingleUser as AdminSingleUser,
-  HoursTable as AdminHoursTable
+  HoursTable as AdminHoursTable,
+  FormContructor as AdminFormContructor,
+  TableOverview as AdminTableOverview
 } from "./admin";
 
 export {
@@ -61,5 +63,7 @@ export {
   AdminHoursTable,
   AdminUsersList,
   AdminSingleUser,
-  AdminVolumes
+  AdminVolumes,
+  AdminFormContructor,
+  AdminTableOverview
 }

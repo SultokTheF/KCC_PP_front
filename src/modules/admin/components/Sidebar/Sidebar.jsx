@@ -21,8 +21,10 @@ import {
   UserIcon,
   DocumentTextIcon,
   CodeBracketSquareIcon,
-  CurrencyDollarIcon
+  CurrencyDollarIcon,
+  FolderMinusIcon
 } from "@heroicons/react/24/solid";
+
 import { ChevronRightIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 
 import { useAuth } from "../../../../hooks/useAuth";
@@ -250,6 +252,38 @@ export default function Sidebar() {
                     <ChevronRightIcon strokeWidth={3} className="h-3 w-5" />
                   </ListItemPrefix>
                   Добавить праздники
+                </ListItem>
+              </a>
+            </List>
+          </AccordionBody>
+        </Accordion>
+        <Accordion
+          open={open === 5}
+          icon={
+            <ChevronDownIcon
+              strokeWidth={2.5}
+              className={`mx-auto h-4 w-4 transition-transform ${open === 5 ? "rotate-180" : ""}`}
+            />
+          }
+        >
+          <ListItem className="p-0" selected={open === 5}>
+            <AccordionHeader onClick={() => handleOpen(5)} className="border-b-0 p-3">
+              <ListItemPrefix>
+                <FolderMinusIcon className="h-5 w-5" />
+              </ListItemPrefix>
+              <Typography color="blue-gray" className="mr-auto font-normal">
+                Отчетные формы
+              </Typography>
+            </AccordionHeader>
+          </ListItem>
+          <AccordionBody className="py-1">
+            <List className="p-0">
+              <a href="/forms/table">
+                <ListItem>
+                  <ListItemPrefix>
+                    <ChevronRightIcon strokeWidth={3} className="h-3 w-5" />
+                  </ListItemPrefix>
+                    Конструктор отчетов
                 </ListItem>
               </a>
             </List>

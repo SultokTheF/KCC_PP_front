@@ -91,7 +91,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDaysAndHours();
-  }, [selectedDate, selectedData.selectedSubject, subjectsList]);
+  }, [selectedDate]);
 
   return (
     <div className="flex">

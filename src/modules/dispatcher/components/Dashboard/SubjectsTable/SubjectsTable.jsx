@@ -12,15 +12,29 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
   const selectedSubject = subjectsList.find(subject => subject.id === selectedData.selectedSubject);
   const dayPlan = daysList?.find(day => day.subject === selectedSubject?.id && day.date.split('T')[0] === selectedDate.split('T')[0]) || null;
 
-  // Sort hourPlan by 'hour' in increasing order
   const hourPlan = dayPlan ? hoursList.filter(hour => hour.day === dayPlan?.id).sort((a, b) => a.hour - b.hour) : [];
 
-  const [coefficients, setCoefficients] = useState([]);
-  const [volumes, setVolumes] = useState([]);
   const [showMessageCol, setShowMessageCol] = useState(false);
   const [messages, setMessages] = useState([]);
   const [showButtons, setShowButtons] = useState(true);
   const [warningMessage, setWarningMessage] = useState('');
+
+  // Ensure the selected subject is set only once if not already set
+  useEffect(() => {
+    if (subjectsList.length > 0 && !selectedData.selectedSubject) {
+      setSelectedData((prevData) => ({
+        ...prevData,
+        selectedSubject: subjectsList[0].id
+      }));
+    }
+  }, [subjectsList, setSelectedData]);
+
+  // Update messages based on hourPlan
+  useEffect(() => {
+    if (hourPlan.length > 0) {
+      setMessages(hourPlan.map(hour => hour.message || ""));
+    }
+  }, []);
 
   const getStatus = (subject) => {
     const day = daysList?.find(day => day.subject === subject.id && day.date.split('T')[0] === selectedDate.split('T')[0]);
@@ -38,35 +52,6 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
     return "-";
   };
 
-  useEffect(() => {
-    if (subjectsList.length > 0 && !selectedData.selectedSubject) {
-      setSelectedData((prevData) => ({
-        ...prevData,
-        selectedSubject: subjectsList[0].id
-      }));
-    }
-  }, [subjectsList, selectedData, setSelectedData]);
-
-  useEffect(() => {
-    if (selectedSubject) {
-      setCoefficients(selectedSubject.coefficient?.[0] || []);
-      setVolumes(selectedSubject.volume?.[0] || []);
-      setMessages(hourPlan.map(hour => hour.message || ""));
-    }
-  }, [selectedSubject, hourPlan]);
-
-  const handleCoefficientChange = (index, value) => {
-    const updatedCoefficients = [...coefficients];
-    updatedCoefficients[index] = parseFloat(value) || 0;
-    setCoefficients(updatedCoefficients);
-  };
-
-  const handleVolumeChange = (index, value) => {
-    const updatedVolumes = [...volumes];
-    updatedVolumes[index] = parseInt(value) || 0;
-    setVolumes(updatedVolumes);
-  };
-
   const handleMessagesChange = (index, value) => {
     const updatedMessages = [...messages];
     updatedMessages[index] = value;
@@ -74,12 +59,12 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
   };
 
   const calculateP2 = (index, P1) => {
-    const P2 = P1 * (coefficients[index] || 0) + (volumes[index] || 0);
+    const P2 = P1 * 1;
     return P2 < 0 ? "П2 отрицательное" : P2;
   };
 
   const calculateP2Gen = (index, P1Gen) => {
-    const P2Gen = P1Gen * (coefficients[index] || 0) + (volumes[index] || 0);
+    const P2Gen = P1Gen * 1;
     return P2Gen < 0 ? "П2_Gen отрицательное" : P2Gen;
   };
 
@@ -102,8 +87,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
         const calculateP2Response = await axiosInstance.post(endpoints.CALCULATE_P2, {
           subject: selectedSubject.id,
           date: selectedDate,
-          coefficient: [coefficients],
-          volume: [volumes],
+          volume: hourPlan.map(hour => hour.volume || 0), // Example for volumes
           plan: "P2"
         });
 
@@ -178,16 +162,14 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
                   type="number"
                   step="0.01"
                   min="0"
-                  value={coefficients[index] || 0}
-                  onChange={(e) => handleCoefficientChange(index, e.target.value)}
+                  value={hourPlan[index]?.coefficient || ""}
                   className="w-full text-center rounded"
                 />
               </td>
               <td className={`border`}>
                 <input
                   type="number"
-                  value={volumes[index] || 0}
-                  onChange={(e) => handleVolumeChange(index, e.target.value)}
+                  value={hourPlan[index]?.volume || ""}
                   className="w-full text-center rounded"
                 />
               </td>

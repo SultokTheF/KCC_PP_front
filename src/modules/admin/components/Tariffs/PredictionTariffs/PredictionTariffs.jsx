@@ -27,11 +27,10 @@ const PredictionTariffs = () => {
 
   const fetchData = async () => {
     try {
-      const [subjectsResponse, providersResponse] = await Promise.all([
-        axiosInstance.get(endpoints.SUBJECTS),
-        axiosInstance.get(endpoints.PROVIDERS),
-      ]);
-
+      const subjectsResponse = await axiosInstance.get(endpoints.SUBJECTS);
+      
+      const providersResponse = await axiosInstance.get(endpoints.PROVIDERS);
+  
       setData((prevData) => ({
         ...prevData,
         subjects: subjectsResponse.data,
@@ -43,7 +42,7 @@ const PredictionTariffs = () => {
       console.error("Error fetching data:", error);
     }
   };
-
+  
   const fetchDays = async () => {
     setLoading(true); // Start loading
     try {
