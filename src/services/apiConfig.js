@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-// Base API URL (switch to the actual server when needed)
 const API_BASE_URL = 'http://127.0.0.1:8000/';
 // const API_BASE_URL = 'http://34.159.60.222:8000/';
 
