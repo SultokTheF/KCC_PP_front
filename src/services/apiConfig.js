@@ -28,6 +28,8 @@ const endpoints = {
   CALCULATE_TARIFFS: `api/days/calculateTariffs/`,
   INDPROV_CREATE: `api/days/indprovCreate/`,
   COEF_CREATE: `api/days/coeftariffCreate/`,
+  DISBALANSE_CREATE: `/api/days/disbalanceCreate/`,
+  DISBALANSE_SUM: `api/days/disbalanceSum/`,
 
   // Hours
   HOURS: `api/hours/`,

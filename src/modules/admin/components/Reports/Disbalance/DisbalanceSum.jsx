@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { axiosInstance } from "../../../../../services/apiConfig";
+import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 
-const DisbalanceSum = ({ formData, daysList }) => {
+const DisbalanceSum = ({ formData }) => {
   const [sum, setSum] = useState({
     total_BE_Up: 0,
     total_BE_Down: 0,
@@ -11,18 +11,13 @@ const DisbalanceSum = ({ formData, daysList }) => {
 
   const fetchData = async () => {
     try {
-      const accessToken = localStorage.getItem('accessToken');
-
       const { subject, planMode, factMode, date_from, date_to } = formData;
 
-      const response = await axiosInstance.post(`api/days/disbalanceSum/`,
+      const response = await axiosInstance.post(endpoints.DISBALANSE_SUM,
         {
           subject_id: formData.subject,
           date_from,
           date_to,
-        }, 
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
         });
 
       setSum(response.data);
