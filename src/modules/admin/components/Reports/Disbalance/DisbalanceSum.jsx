@@ -14,7 +14,13 @@ const DisbalanceSum = ({ formData, selectedObjects }) => {
       const { subject, date_from, date_to } = formData;
 
       // Check if required parameters are available
-      if (!subject || !date_from || !date_to) {
+      if (!subject || !date_from || !date_to || selectedObjects.length === 0) {
+        setSum({
+          total_BE_Up: 0,
+          total_BE_Down: 0,
+          total_OD_Up: 0,
+          total_OD_Down: 0,
+        });
         return;
       }
 
@@ -45,7 +51,7 @@ const DisbalanceSum = ({ formData, selectedObjects }) => {
     formData.factMode,
     formData.planModeGen,
     formData.factModeGen,
-    selectedObjects, // Include selectedObjects in dependency array
+    selectedObjects,
   ]);
 
   return (

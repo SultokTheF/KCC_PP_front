@@ -1,6 +1,7 @@
 import React from 'react';
 import * as XLSX from 'xlsx';
 
+// Import timeIntervals if it's in a separate module
 const timeIntervals = [
   '00 - 01', '01 - 02', '02 - 03', '03 - 04', '04 - 05', '05 - 06',
   '06 - 07', '07 - 08', '08 - 09', '09 - 10', '10 - 11', '11 - 12',
@@ -20,7 +21,7 @@ const DisbalanceTable = ({
   // Group hoursList by date
   const groupedData = {};
   hoursList.forEach((hourData) => {
-    const date = hourData.date;
+    const date = hourData.date || 'Unknown Date';
     if (!groupedData[date]) {
       groupedData[date] = [];
     }
@@ -39,7 +40,7 @@ const DisbalanceTable = ({
         const hourIndex = index % 24;
         const rowData = {
           Date: date,
-          Time: timeIntervals[hourIndex],
+          Time: hourData.time || timeIntervals[hourIndex],
           Plan: hourData[formData.planMode],
           ...(subject?.subject_type === "ЭПО" && { "Plan Generation": hourData[formData.planModeGen] }),
           Fact: hourData[formData.factMode],
@@ -94,15 +95,17 @@ const DisbalanceTable = ({
             const hours = groupedData[date];
             return hours.map((hourData, index) => {
               const hourIndex = index % 24;
+              const key = `${date}-${hourIndex}`;
+
               return (
                 <tr
-                  key={`${date}-${hourIndex}`}
+                  key={key}
                   className={hourIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
                 >
                   {hourIndex === 0 && (
                     <td className="border border-gray-300 px-4" rowSpan={24}>{date}</td>
                   )}
-                  <td className="border border-gray-300 px-4">{timeIntervals[hourIndex]}</td>
+                  <td className="border border-gray-300 px-4">{hourData.time}</td>
                   <td className="border border-gray-300 px-4">{hourData[formData.planMode]}</td>
                   {subjectsList?.find((subject) => subject.id === formData.subject)?.subject_type === "ЭПО" && (
                     <td className="border border-gray-300 px-4">{hourData[formData.planModeGen]}</td>
