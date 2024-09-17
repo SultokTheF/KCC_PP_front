@@ -20,33 +20,61 @@ const Disbalance = () => {
   });
 
   const [subjectsList, setSubjectsList] = useState([]);
+  const [objectsList, setObjectsList] = useState([]);
+  const [selectedObjects, setSelectedObjects] = useState([]);
   const [daysList, setDaysList] = useState([]);
   const [hoursList, setHoursList] = useState([]);
 
   const fetchData = async () => {
     try {
-
+      // Fetch subjects
       const subjectsResponse = await axiosInstance.get(endpoints.SUBJECTS);
       setSubjectsList(subjectsResponse.data);
 
-      if (formData.subject && formData.date_from && formData.date_to) {
-        const hoursResponse = await axiosInstance.get(endpoints.HOURS, {
+      if (formData.subject) {
+        // Fetch objects for the selected subject
+        const objectsResponse = await axiosInstance.get(endpoints.OBJECTS, {
           params: {
             sub: formData.subject,
-            start_date: formData.date_from,
-            end_date: formData.date_to,
           },
         });
-        const daysResponse = await axiosInstance.get(endpoints.DAYS, {
-          params: {
-            sub: formData.subject,
-            start_date: formData.date_from,
-            end_date: formData.date_to,
-          },
-        });
+        setObjectsList(objectsResponse.data);
 
-        setDaysList(daysResponse.data);
-        setHoursList(hoursResponse.data);
+        // By default, select all objects
+        if (selectedObjects.length === 0) {
+          const allObjectIds = objectsResponse.data.map((obj) => obj.id);
+          setSelectedObjects(allObjectIds);
+        }
+
+        // Fetch hours and days based on selected objects
+        if (selectedObjects.length > 0 && formData.date_from && formData.date_to) {
+          const hoursResponse = await axiosInstance.get(endpoints.HOURS, {
+            params: {
+              obj: selectedObjects.join(','),
+              start_date: formData.date_from,
+              end_date: formData.date_to,
+            },
+          });
+          const daysResponse = await axiosInstance.get(endpoints.DAYS, {
+            params: {
+              obj: selectedObjects.join(','),
+              start_date: formData.date_from,
+              end_date: formData.date_to,
+            },
+          });
+
+          setDaysList(daysResponse.data);
+          setHoursList(hoursResponse.data);
+        } else {
+          setDaysList([]);
+          setHoursList([]);
+        }
+      } else {
+        // Reset data if no subject is selected
+        setObjectsList([]);
+        setSelectedObjects([]);
+        setDaysList([]);
+        setHoursList([]);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -55,31 +83,40 @@ const Disbalance = () => {
 
   useEffect(() => {
     fetchData();
-  }, [formData.subject, formData.date_from, formData.date_to]);
+  }, [formData.subject, formData.date_from, formData.date_to, selectedObjects]);
 
+  // Handle object selection
+  const handleObjectSelection = (e) => {
+    const value = parseInt(e.target.value);
+    if (e.target.checked) {
+      setSelectedObjects((prev) => [...prev, value]);
+    } else {
+      setSelectedObjects((prev) => prev.filter((id) => id !== value));
+    }
+  };
+
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axiosInstance.post(
-        endpoints.DISBALANSE_CREATE,
-        {
-          subject_id: formData.subject,
-          plan: formData.planMode,
-          fact: formData.factMode,
-          plan_gen: formData.planModeGen,
-          fact_gen: formData.factModeGen,
-          date_from: formData.date_from,
-          date_to: formData.date_to,
-          is_submitted: true,
-        }
-      );
+      await axiosInstance.post(endpoints.DISBALANSE_CREATE, {
+        subject_id: formData.subject,
+        object_ids: selectedObjects,
+        plan: formData.planMode,
+        fact: formData.factMode,
+        plan_gen: formData.planModeGen,
+        fact_gen: formData.factModeGen,
+        date_from: formData.date_from,
+        date_to: formData.date_to,
+        is_submitted: true,
+      });
       fetchData();
-      console.log('Response:', response.data);
     } catch (error) {
       console.error('Error submitting data:', error);
     }
   };
 
+  // Generate date array
   const generateDateArray = (startDate, endDate) => {
     const dateArray = [];
     let currentDate = new Date(startDate);
@@ -106,7 +143,7 @@ const Disbalance = () => {
       <Sidebar />
       <div className="w-full flex mx-auto p-6">
         {/* Left Side: Selectors */}
-        <div className="w-1/3 bg-white rounded shadow-lg p-6">
+        <div className="w-1/3 bg-white rounded shadow-lg p-6 space-y-6">
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 gap-6">
               {/* Subject Selector */}
@@ -119,15 +156,17 @@ const Disbalance = () => {
                   id="subject"
                   className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-blue-500"
                   value={formData.subject}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const subjectId = parseInt(e.target.value);
                     setFormData((prevData) => ({
                       ...prevData,
-                      subject: parseInt(e.target.value),
-                    }))
-                  }
+                      subject: subjectId,
+                    }));
+                    setSelectedObjects([]); // Reset selected objects when subject changes
+                  }}
                   required
                 >
-                  <option value={0}>Субъект</option>
+                  <option value="">Субъект</option>
                   {subjectsList.map((subj) => (
                     <option key={subj.id} value={subj.id}>
                       {subj.subject_name}
@@ -135,6 +174,29 @@ const Disbalance = () => {
                   ))}
                 </select>
               </div>
+
+              {/* Objects List */}
+              {objectsList.length > 0 && (
+                <div className="mt-4">
+                  <label className="block text-gray-700 font-semibold mb-2">
+                    Выберите Объекты
+                  </label>
+                  <div className="max-h-40 overflow-y-auto border border-gray-300 rounded p-2 space-y-1">
+                    {objectsList.map((obj) => (
+                      <div key={obj.id} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          value={obj.id}
+                          checked={selectedObjects.includes(obj.id)}
+                          onChange={handleObjectSelection}
+                          className="mr-2"
+                        />
+                        <label>{obj.object_name}</label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Date Range Selectors */}
               <div>
@@ -196,11 +258,11 @@ const Disbalance = () => {
                     }
                     required
                   >
-                    <option value="P1_Gen">Первичный план</option>
-                    <option value="P2_Gen">План KCC PP</option>
-                    <option value="P3_Gen">План KEGOC</option>
-                    <option value="F1_Gen">Факт Генерации</option>
-                    <option value="F2_Gen">Факт 2 Генерации</option>
+                    <option value="P1">Первичный план</option>
+                    <option value="P2">План KCC PP</option>
+                    <option value="P3">План KEGOC</option>
+                    <option value="F1">Факт</option>
+                    <option value="F2">Факт 2</option>
                   </select>
                 </div>
 
@@ -221,11 +283,11 @@ const Disbalance = () => {
                     }
                     required
                   >
-                    <option value="P1_Gen">Первичный план</option>
-                    <option value="P2_Gen">План KCC PP</option>
-                    <option value="P3_Gen">План KEGOC</option>
-                    <option value="F1_Gen">Факт Генерации</option>
-                    <option value="F2_Gen">Факт 2 Генерации</option>
+                    <option value="P1">Первичный план</option>
+                    <option value="P2">План KCC PP</option>
+                    <option value="P3">План KEGOC</option>
+                    <option value="F1">Факт</option>
+                    <option value="F2">Факт 2</option>
                   </select>
                 </div>
               </div>
@@ -290,7 +352,7 @@ const Disbalance = () => {
             <div className="mt-6">
               <button
                 type="submit"
-                className="w-full bg-blue-500 text-white font-semibold py-2 px-4 rounded hover:bg-blue-600"
+                className="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded hover:bg-blue-700 transition-colors duration-200"
               >
                 Отправить
               </button>
@@ -301,11 +363,18 @@ const Disbalance = () => {
         {/* Right Side: Tables and Disbalance Sum */}
         <div className="w-2/3 p-6">
           <div className="mb-10">
-            <DisbalanceSum formData={formData} />
+            <DisbalanceSum formData={formData} selectedObjects={selectedObjects} />
           </div>
 
           <div className="h-[calc(100vh-20rem)] overflow-y-auto">
-            <DisbalanceTable formData={formData} daysList={daysList} subjectsList={subjectsList} hoursList={hoursList} setFormData={setFormData} />
+            <DisbalanceTable
+              formData={formData}
+              daysList={daysList}
+              subjectsList={subjectsList}
+              hoursList={hoursList}
+              setFormData={setFormData}
+              selectedObjects={selectedObjects}
+            />
           </div>
         </div>
       </div>
