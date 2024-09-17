@@ -5,6 +5,13 @@ import Sidebar from "../../Sidebar/Sidebar";
 
 import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 
+const timeIntervals = [
+  '00 - 01', '01 - 02', '02 - 03', '03 - 04', '04 - 05', '05 - 06',
+  '06 - 07', '07 - 08', '08 - 09', '09 - 10', '10 - 11', '11 - 12',
+  '12 - 13', '13 - 14', '14 - 15', '15 - 16', '16 - 17', '17 - 18',
+  '18 - 19', '19 - 20', '20 - 21', '21 - 22', '22 - 23', '23 - 00',
+];
+
 const Disbalance = () => {
   const [formData, setFormData] = useState({
     date_from: new Date().toISOString().split('T')[0],
@@ -14,76 +21,131 @@ const Disbalance = () => {
     planModeGen: 'P1_Gen',
     factMode: 'F1',
     factModeGen: 'F1_Gen',
-    plan: [],
-    fact: [],
     dateArray: [],
   });
 
   const [subjectsList, setSubjectsList] = useState([]);
   const [objectsList, setObjectsList] = useState([]);
   const [selectedObjects, setSelectedObjects] = useState([]);
-  const [daysList, setDaysList] = useState([]);
+  const [objectHours, setObjectHours] = useState({});
   const [hoursList, setHoursList] = useState([]);
 
-  const fetchData = async () => {
-    try {
-      // Fetch subjects
-      const subjectsResponse = await axiosInstance.get(endpoints.SUBJECTS);
-      setSubjectsList(subjectsResponse.data);
+  // Fetch subjects and initialize data when subject changes
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        // Fetch subjects
+        const subjectsResponse = await axiosInstance.get(endpoints.SUBJECTS);
+        setSubjectsList(subjectsResponse.data);
 
-      if (formData.subject) {
-        // Fetch objects for the selected subject
-        const objectsResponse = await axiosInstance.get(endpoints.OBJECTS, {
-          params: {
-            sub: formData.subject,
-          },
-        });
-        setObjectsList(objectsResponse.data);
+        if (formData.subject) {
+          // Fetch objects for the selected subject
+          const objectsResponse = await axiosInstance.get(endpoints.OBJECTS, {
+            params: {
+              sub: formData.subject,
+            },
+          });
+          setObjectsList(objectsResponse.data);
 
-        // By default, select all objects
-        if (selectedObjects.length === 0) {
+          // By default, select all objects
           const allObjectIds = objectsResponse.data.map((obj) => obj.id);
           setSelectedObjects(allObjectIds);
-        }
-
-        // Fetch hours and days based on selected objects
-        if (selectedObjects.length > 0 && formData.date_from && formData.date_to) {
-          const hoursResponse = await axiosInstance.get(endpoints.HOURS, {
-            params: {
-              obj: selectedObjects.join(','),
-              start_date: formData.date_from,
-              end_date: formData.date_to,
-            },
-          });
-          const daysResponse = await axiosInstance.get(endpoints.DAYS, {
-            params: {
-              obj: selectedObjects.join(','),
-              start_date: formData.date_from,
-              end_date: formData.date_to,
-            },
-          });
-
-          setDaysList(daysResponse.data);
-          setHoursList(hoursResponse.data);
         } else {
-          setDaysList([]);
+          // Reset data if no subject is selected
+          setObjectsList([]);
+          setSelectedObjects([]);
+          setObjectHours({});
           setHoursList([]);
         }
-      } else {
-        // Reset data if no subject is selected
-        setObjectsList([]);
-        setSelectedObjects([]);
-        setDaysList([]);
-        setHoursList([]);
+      } catch (error) {
+        console.error('Error fetching initial data:', error);
       }
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    }
-  };
+    };
 
+    fetchInitialData();
+  }, [formData.subject]);
+
+  // Fetch hours data when date range or selected objects change
   useEffect(() => {
-    fetchData();
-  }, [formData.subject, formData.date_from, formData.date_to, selectedObjects]);
+    const fetchHoursData = async () => {
+      try {
+        if (!formData.subject || !formData.date_from || !formData.date_to) {
+          setHoursList([]);
+          return;
+        }
+
+        // Generate date array
+        const dateArray = generateDateArray(formData.date_from, formData.date_to);
+        setFormData((prevData) => ({
+          ...prevData,
+          dateArray: dateArray,
+        }));
+
+        const totalDays = dateArray.length;
+
+        // Fetch hours for each object
+        const hoursPromises = selectedObjects.map((objId) =>
+          axiosInstance
+            .get(endpoints.HOURS, {
+              params: {
+                obj: objId,
+                start_date: formData.date_from,
+                end_date: formData.date_to,
+              },
+            })
+            .then((response) => ({ status: 'fulfilled', objId, hours: response.data }))
+            .catch((error) => {
+              // Handle error, return zeros
+              console.warn(`Error fetching hours for object ${objId}, setting hours to zeros.`);
+              const zeros = [];
+              for (let day = 0; day < totalDays; day++) {
+                const currentDate = new Date(formData.date_from);
+                currentDate.setDate(currentDate.getDate() + day);
+                const dateString = currentDate.toISOString().split('T')[0];
+                for (let hour = 1; hour <= 24; hour++) {
+                  zeros.push({
+                    hour: hour,
+                    time: timeIntervals[hour - 1],
+                    date: dateString,
+                    P1: 0,
+                    P1_Gen: 0,
+                    P2: 0,
+                    P2_Gen: 0,
+                    P3: 0,
+                    P3_Gen: 0,
+                    F1: 0,
+                    F1_Gen: 0,
+                    F2: 0,
+                    F2_Gen: 0,
+                    BE_Up: 0,
+                    BE_Down: 0,
+                    OD_Up: 0,
+                    OD_Down: 0,
+                  });
+                }
+              }
+              return { status: 'rejected', objId, hours: zeros };
+            })
+        );
+
+        const hoursResults = await Promise.all(hoursPromises);
+
+        const newObjectHours = {};
+        hoursResults.forEach(({ objId, hours }) => {
+          newObjectHours[objId] = hours;
+        });
+        setObjectHours(newObjectHours);
+
+        // Sum up the hours for selected objects
+        const totalHoursList = sumHoursForSelectedObjects(newObjectHours);
+        setHoursList(totalHoursList);
+      } catch (error) {
+        console.error('Error fetching hours data:', error);
+      }
+    };
+
+    fetchHoursData();
+  }, [formData.date_from, formData.date_to, selectedObjects]);
 
   // Handle object selection
   const handleObjectSelection = (e) => {
@@ -110,7 +172,7 @@ const Disbalance = () => {
         date_to: formData.date_to,
         is_submitted: true,
       });
-      fetchData();
+      // Do not call fetchData() here to avoid unnecessary API calls
     } catch (error) {
       console.error('Error submitting data:', error);
     }
@@ -130,13 +192,40 @@ const Disbalance = () => {
     return dateArray;
   };
 
-  useEffect(() => {
-    const dateArray = generateDateArray(formData.date_from, formData.date_to);
-    setFormData((prevData) => ({
-      ...prevData,
-      dateArray: dateArray,
-    }));
-  }, [formData.date_from, formData.date_to]);
+  // Function to sum hours for selected objects
+  const sumHoursForSelectedObjects = (objectHoursData) => {
+    const totalHoursList = [];
+
+    // Check if there is any data
+    if (Object.keys(objectHoursData).length === 0) {
+      return [];
+    }
+
+    // Get a sample object to determine the number of records
+    const sampleObjId = Object.keys(objectHoursData)[0];
+    const sampleHours = objectHoursData[sampleObjId];
+    const totalRecords = sampleHours.length;
+
+    for (let i = 0; i < totalRecords; i++) {
+      const aggregatedHour = {};
+      Object.keys(objectHoursData).forEach((objId) => {
+        const objHours = objectHoursData[objId];
+        if (objHours && objHours[i]) {
+          const hourData = objHours[i];
+          for (const field in hourData) {
+            if (typeof hourData[field] === 'number') {
+              aggregatedHour[field] = (aggregatedHour[field] || 0) + hourData[field];
+            } else {
+              aggregatedHour[field] = hourData[field];
+            }
+          }
+        }
+      });
+      totalHoursList.push(aggregatedHour);
+    }
+
+    return totalHoursList;
+  };
 
   return (
     <div className="flex max-h-screen">
@@ -163,6 +252,8 @@ const Disbalance = () => {
                       subject: subjectId,
                     }));
                     setSelectedObjects([]); // Reset selected objects when subject changes
+                    setObjectHours({});
+                    setHoursList([]);
                   }}
                   required
                 >
@@ -363,17 +454,17 @@ const Disbalance = () => {
         {/* Right Side: Tables and Disbalance Sum */}
         <div className="w-2/3 p-6">
           <div className="mb-10">
-            <DisbalanceSum formData={formData} selectedObjects={selectedObjects} />
+            <DisbalanceSum
+              formData={formData}
+              selectedObjects={selectedObjects}
+            />
           </div>
 
           <div className="h-[calc(100vh-20rem)] overflow-y-auto">
             <DisbalanceTable
               formData={formData}
-              daysList={daysList}
               subjectsList={subjectsList}
               hoursList={hoursList}
-              setFormData={setFormData}
-              selectedObjects={selectedObjects}
             />
           </div>
         </div>

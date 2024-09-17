@@ -37,7 +37,16 @@ const DisbalanceSum = ({ formData, selectedObjects }) => {
 
   useEffect(() => {
     fetchData();
-  }, [formData.subject, formData.date_from, formData.date_to, selectedObjects]);
+  }, [
+    formData.subject,
+    formData.date_from,
+    formData.date_to,
+    formData.planMode,
+    formData.factMode,
+    formData.planModeGen,
+    formData.factModeGen,
+    selectedObjects, // Include selectedObjects in dependency array
+  ]);
 
   return (
     <table className="table-auto h-3 text-xs text-center w-full border-collapse border border-gray-400">

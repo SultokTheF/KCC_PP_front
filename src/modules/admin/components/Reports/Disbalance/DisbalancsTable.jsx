@@ -12,7 +12,6 @@ const DisbalanceTable = ({
   formData,
   subjectsList,
   hoursList,
-  selectedObjects,
 }) => {
   if (!hoursList || hoursList.length === 0) {
     return <div>No data available</div>;
