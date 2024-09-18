@@ -10,7 +10,7 @@ const FormConstructor = () => {
   // Operations and Formulas mappings for display and JSON
   const operationMappings = {
     sum: "Сумма",
-    avg: "Среднее",
+    average: "Среднее",
     min: "Минимум",
     max: "Максимум",
     sumif: "Сумма если",
@@ -22,7 +22,7 @@ const FormConstructor = () => {
 
   const reverseOperationMappings = {
     Сумма: "sum",
-    Среднее: "avg",
+    Среднее: "avgerage",
     Минимум: "min",
     Максимум: "max",
     "Сумма если": "sumif",
@@ -34,7 +34,7 @@ const FormConstructor = () => {
 
   const defaultOperations = [
     "sum",
-    "avg",
+    "average",
     "min",
     "max",
     "sumif",

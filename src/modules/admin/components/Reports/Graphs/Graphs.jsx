@@ -139,11 +139,11 @@ const Graphs = () => {
 
     hoursResults.forEach((objectHours) => {
       objectHours.forEach((hourData, idx) => {
-        totalHoursList[idx].P1 = Math.max(totalHoursList[idx].P1 + (hourData.P1 - hourData.P1_Gen), 0);
-        totalHoursList[idx].P2 = Math.max(totalHoursList[idx].P2 + (hourData.P2 - hourData.P2_Gen), 0);
-        totalHoursList[idx].P3 = Math.max(totalHoursList[idx].P3 + (hourData.P3 - hourData.P3_Gen), 0);
-        totalHoursList[idx].F1 = Math.max(totalHoursList[idx].F1 + (hourData.F1 - hourData.F1_Gen), 0);
-        totalHoursList[idx].F2 = Math.max(totalHoursList[idx].F2 + (hourData.F2 - hourData.F2_Gen), 0);
+        totalHoursList[idx].P1 = Math.max(totalHoursList[idx].P1 + Math.abs(hourData.P1 - hourData.P1_Gen), 0);
+        totalHoursList[idx].P2 = Math.max(totalHoursList[idx].P2 + Math.abs(hourData.P2 - hourData.P2_Gen), 0);
+        totalHoursList[idx].P3 = Math.max(totalHoursList[idx].P3 + Math.abs(hourData.P3 - hourData.P3_Gen), 0);
+        totalHoursList[idx].F1 = Math.max(totalHoursList[idx].F1 + Math.abs(hourData.F1 - hourData.F1_Gen), 0);
+        totalHoursList[idx].F2 = Math.max(totalHoursList[idx].F2 + Math.abs(hourData.F2 - hourData.F2_Gen), 0);
       });
     });
 
