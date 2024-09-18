@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router-dom"; // Import useParams for getting URL params
 import { FaTrashAlt, FaPlusCircle, FaCheckCircle } from "react-icons/fa";
 import Sidebar from "../../Sidebar/Sidebar";
 import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 
 const FormConstructor = () => {
-  const { id } = useParams();
+  const { id } = useParams(); // Get id from URL
 
   // Operations and Formulas mappings for display and JSON
   const operationMappings = {
@@ -13,11 +13,8 @@ const FormConstructor = () => {
     avg: "Среднее",
     min: "Минимум",
     max: "Максимум",
-    sumif: "Сумма если",
-    averageif: "Среднее если",
-    countif: "Количество если",
-    formula: "Формула",
     other: "Другое",
+    formula: "Формула"
   };
 
   const reverseOperationMappings = {
@@ -25,79 +22,28 @@ const FormConstructor = () => {
     Среднее: "avg",
     Минимум: "min",
     Максимум: "max",
-    "Сумма если": "sumif",
-    "Среднее если": "averageif",
-    "Количество если": "countif",
-    Формула: "formula",
     Другое: "other",
+    Формула: "formula"
   };
 
-  const defaultOperations = [
-    "sum",
-    "avg",
-    "min",
-    "max",
-    "sumif",
-    "averageif",
-    "countif",
-    "formula",
-    "other",
-  ];
-
-  const conditionOperators = [">", "<", ">=", "<=", "==", "!="];
-
   const hourFields = [
-    "P1",
-    "P2",
-    "P3",
-    "F1",
-    "F2",
-    "P1_Gen",
-    "P2_Gen",
-    "P3_Gen",
-    "F1_Gen",
-    "F2_Gen",
-    "BE_Up",
-    "BE_Down",
-    "OD_Up",
-    "OD_Down",
-    "EZ_T",
-    "EZ_Base_T",
-    "Ind_Prov_T",
-    "BE_T",
-    "OD_T",
-    "Ind_T",
-    "Prov_T",
-    "EZ_T_ВИЭ",
-    "T_Coef",
-    "Money_V1",
-    "Money_V2",
-    "Money_V3",
-    "Money_V4",
+    "P1", "P2", "P3", "F1", "F2", "P1_Gen", "P2_Gen", "P3_Gen", "F1_Gen", "F2_Gen",
+    "BE_Up", "BE_Down", "OD_Up", "OD_Down", "EZ_T", "EZ_Base_T", "Ind_Prov_T", "BE_T", "OD_T",
+    "Ind_T", "Prov_T", "EZ_T_ВИЭ", "T_Coef", "Money_V1", "Money_V2", "Money_V3", "Money_V4"
   ];
+
+  const defaultOperations = ["sum", "avg", "min", "max", "other"];
 
   // State for table information
-  const [tableName, setTableName] = useState("");
-  const [startDate, setStartDate] = useState(
-    () => new Date().toISOString().split("T")[0]
-  );
-  const [endDate, setEndDate] = useState(
-    () => new Date().toISOString().split("T")[0]
-  );
+  const [tableName, setTableName] = useState(""); // To hold the table's name
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [tableConfig, setTableConfig] = useState([]);
   const [subjectList, setSubjectList] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedField, setSelectedField] = useState(hourFields[0]);
-  const [selectedOperation, setSelectedOperation] = useState(
-    defaultOperations[0]
-  );
+  const [selectedOperation, setSelectedOperation] = useState(defaultOperations[0]);
   const [customOperation, setCustomOperation] = useState("");
-
-  // New state variables for parameters
-  const [conditionField, setConditionField] = useState(hourFields[0]);
-  const [conditionOperator, setConditionOperator] = useState(">");
-  const [conditionValue, setConditionValue] = useState("");
-  const [formulaInput, setFormulaInput] = useState("");
 
   // Fetch subjects and initial table data by id
   useEffect(() => {
@@ -120,30 +66,21 @@ const FormConstructor = () => {
     };
 
     fetchInitialData();
-  }, [id]);
+  }, [id]); // Re-fetch when id changes
 
   // Set table data and name from response
   const setTableFromResponse = (tableData) => {
-    setTableName(tableData.name || "Без названия");
-    setStartDate(
-      tableData.start_date
-        ? tableData.start_date
-        : new Date().toISOString().split("T")[0]
-    );
-    setEndDate(
-      tableData.end_date
-        ? tableData.end_date
-        : new Date().toISOString().split("T")[0]
-    );
+    setTableName(tableData.name || "Без названия"); // Set the table's name
+    setStartDate(tableData.start_date ? tableData.start_date : new Date().toISOString().split("T")[0]);
+    setEndDate(tableData.end_date ? tableData.end_date : new Date().toISOString().split("T")[0]);
 
     const updatedTableConfig = tableData.data.map((row) => ({
       subject: row.subject,
       columns: row.columns.map((col) => ({
         plan: col.plan,
         operation: col.operation,
-        params: col.params || [],
-        value: col.value,
-      })),
+        value: col.value
+      }))
     }));
 
     setTableConfig(updatedTableConfig);
@@ -151,20 +88,16 @@ const FormConstructor = () => {
 
   // Add a new row
   const addRow = () => {
-    const subject = subjectList.find(
-      (s) => s.id === parseInt(selectedSubject)
-    );
+    const subject = subjectList.find((s) => s.id === parseInt(selectedSubject));
     const newRow = {
       subject: subject.id,
-      columns:
-        tableConfig.length > 0
-          ? tableConfig[0].columns.map((col) => ({
-              plan: col.plan,
-              operation: col.operation,
-              params: col.params || [],
-              value: 0,
-            }))
-          : [],
+      columns: tableConfig.length > 0
+        ? tableConfig[0].columns.map(col => ({
+          plan: col.plan,
+          operation: col.operation,
+          value: 0
+        }))
+        : [], // Copy the existing column structure with default value 0
     };
 
     setTableConfig((prev) => [...prev, newRow]);
@@ -172,45 +105,13 @@ const FormConstructor = () => {
 
   // Add a new column
   const addColumn = () => {
-    let newColumn = null;
-    const operation =
-      selectedOperation === "other"
-        ? customOperation
-        : selectedOperation.toLowerCase();
-
-    if (
-      selectedOperation === "sumif" ||
-      selectedOperation === "averageif" ||
-      selectedOperation === "countif"
-    ) {
-      newColumn = {
-        plan: selectedField,
-        operation,
-        params: [
-          selectedField,
-          conditionField,
-          conditionOperator + conditionValue,
-        ],
-        value: 0,
-      };
-    } else if (selectedOperation === "formula") {
-      newColumn = {
-        plan: "formula",
-        operation: formulaInput,
-        value: 0,
-      };
-    } else {
-      newColumn = {
-        plan: selectedField,
-        operation,
-        value: 0,
-      };
-    }
+    const operation = selectedOperation === "other" ? customOperation : selectedOperation.toLowerCase();
+    const newColumn = { plan: selectedField, operation, value: 0 };
 
     setTableConfig((prev) =>
       prev.map((row) => ({
         ...row,
-        columns: [...row.columns, newColumn],
+        columns: [...row.columns, newColumn], // Add the new column to each row
       }))
     );
   };
@@ -225,25 +126,37 @@ const FormConstructor = () => {
     setTableConfig((prev) =>
       prev.map((row) => ({
         ...row,
-        columns: row.columns.filter((_, i) => i !== index),
+        columns: row.columns.filter((_, i) => i !== index)
       }))
     );
   };
+
+  // Handle dynamic changes between operation and plan fields
+  useEffect(() => {
+    if (selectedOperation === "other") {
+      setSelectedField("formula");
+    }
+  }, [selectedOperation]);
+
+  useEffect(() => {
+    if (selectedField === "formula") {
+      setSelectedOperation("other");
+    }
+  }, [selectedField]);
 
   // Submit the table data
   const handleSubmit = async () => {
     const finalData = {
       start_date: startDate,
       end_date: endDate,
-      data: tableConfig.map((row) => ({
+      data: tableConfig.map(row => ({
         subject: row.subject,
-        columns: row.columns.map((col) => ({
+        columns: row.columns.map(col => ({
           plan: col.plan,
-          operation: reverseOperationMappings[col.operation] || col.operation,
-          params: col.params || [],
-          value: col.value,
-        })),
-      })),
+          operation: reverseOperationMappings[col.operation] || col.operation, // Use the mapping or fallback to original operation
+          value: col.value
+        }))
+      }))
     };
 
     try {
@@ -270,9 +183,7 @@ const FormConstructor = () => {
       <Sidebar />
 
       <div className="flex-1 p-6 bg-gray-50 min-h-screen">
-        <h1 className="text-2xl font-semibold text-gray-800 mb-6">
-          {tableName}
-        </h1>
+        <h1 className="text-2xl font-semibold text-gray-800 mb-6">{tableName}</h1>
 
         {/* Global Date Inputs */}
         <div className="flex space-x-6 mb-6">
@@ -349,56 +260,7 @@ const FormConstructor = () => {
             ))}
           </select>
 
-          {selectedOperation === "sumif" ||
-          selectedOperation === "averageif" ||
-          selectedOperation === "countif" ? (
-            <div className="flex items-center space-x-4">
-              <label className="block text-gray-700">Поле условия:</label>
-              <select
-                value={conditionField}
-                onChange={(e) => setConditionField(e.target.value)}
-                className="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-              >
-                {hourFields.map((field, index) => (
-                  <option key={index} value={field}>
-                    {field}
-                  </option>
-                ))}
-              </select>
-
-              <label className="block text-gray-700">Оператор:</label>
-              <select
-                value={conditionOperator}
-                onChange={(e) => setConditionOperator(e.target.value)}
-                className="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-              >
-                {conditionOperators.map((operator, index) => (
-                  <option key={index} value={operator}>
-                    {operator}
-                  </option>
-                ))}
-              </select>
-
-              <label className="block text-gray-700">Значение:</label>
-              <input
-                type="text"
-                value={conditionValue}
-                onChange={(e) => setConditionValue(e.target.value)}
-                className="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          ) : selectedOperation === "formula" ? (
-            <div className="flex items-center space-x-4">
-              <label className="block text-gray-700">Введите формулу:</label>
-              <input
-                type="text"
-                placeholder="Например: IF(SUM(F1) > 100, SUM(F1) * 2, 0)"
-                value={formulaInput}
-                onChange={(e) => setFormulaInput(e.target.value)}
-                className="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 w-96"
-              />
-            </div>
-          ) : selectedOperation === "other" && (
+          {selectedOperation === "other" && (
             <input
               type="text"
               placeholder="Введите название операции"
@@ -418,29 +280,22 @@ const FormConstructor = () => {
         </div>
 
         {/* Table structure */}
+        {/* Table structure */}
         <div className="overflow-x-auto mb-6">
           <table className="min-w-full bg-white border border-gray-200 shadow-md">
             <thead>
               <tr className="bg-gray-100">
-                <th className="px-4 py-2 text-left text-gray-700 font-semibold border-b">
-                  Субъекты
-                </th>
+                <th className="px-4 py-2 text-left text-gray-700 font-semibold border-b">Субъекты</th>
                 {tableConfig.length > 0 &&
                   tableConfig[0].columns.map((col, index) => (
-                    <th
-                      key={index}
-                      className="px-4 py-2 text-left text-gray-700 font-semibold border-b"
-                    >
+                    <th key={index} className="px-4 py-2 text-left text-gray-700 font-semibold border-b">
+                      {/* Conditional display logic for column headers */}
                       {col.plan === "formula" ? (
+                        // If it's a formula, display Формула (operation)
                         `Формула (${col.operation})`
-                      ) : col.params && col.params.length > 0 ? (
-                        `${col.plan} (${
-                          operationMappings[col.operation] || col.operation
-                        } ${col.params.join(" ")})`
                       ) : (
-                        `${col.plan} (${
-                          operationMappings[col.operation] || col.operation
-                        })`
+                        // Otherwise, display plan and its corresponding operation
+                        `${col.plan} (${operationMappings[col.operation] || col.operation})`
                       )}
                       <button
                         className="ml-2 text-red-500 hover:text-red-700 flex items-center"
@@ -468,10 +323,7 @@ const FormConstructor = () => {
                   </td>
 
                   {row.columns.map((col, colIndex) => (
-                    <td
-                      key={colIndex}
-                      className="border px-4 py-2 text-gray-600"
-                    >
+                    <td key={colIndex} className="border px-4 py-2 text-gray-600">
                       {col.value}
                     </td>
                   ))}
