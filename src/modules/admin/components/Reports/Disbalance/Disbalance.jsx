@@ -1,29 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-import { axiosInstance, endpoints } from '../../../../../services/apiConfig';
-import Sidebar from '../../Sidebar/Sidebar';
+import React, { useState, useEffect, useCallback } from "react";
+import DisbalanceTable from "./DisbalancsTable";
+import DisbalanceSum from "./DisbalanceSum";
+import Sidebar from "../../Sidebar/Sidebar";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
+import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 
-// Time intervals for hours
+// Moved timeIntervals to a separate module or include it here
 const timeIntervals = [
   '00 - 01', '01 - 02', '02 - 03', '03 - 04', '04 - 05', '05 - 06',
   '06 - 07', '07 - 08', '08 - 09', '09 - 10', '10 - 11', '11 - 12',
@@ -31,55 +13,195 @@ const timeIntervals = [
   '18 - 19', '19 - 20', '20 - 21', '21 - 22', '22 - 23', '23 - 00',
 ];
 
-const Graphs = () => {
+const Disbalance = () => {
+  const [formData, setFormData] = useState({
+    date_from: new Date().toISOString().split('T')[0],
+    date_to: new Date().toISOString().split('T')[0],
+    subject: '',
+    planMode: 'P1',
+    planModeGen: 'P1_Gen',
+    factMode: 'F1',
+    factModeGen: 'F1_Gen',
+    dateArray: [],
+  });
+
   const [subjectsList, setSubjectsList] = useState([]);
   const [objectsList, setObjectsList] = useState([]);
   const [selectedObjects, setSelectedObjects] = useState([]);
+  const [objectHours, setObjectHours] = useState({});
   const [hoursList, setHoursList] = useState([]);
-  const [error, setError] = useState(null);
-  const [isLoadingHours, setIsLoadingHours] = useState(false);
 
-  const [formData, setFormData] = useState({
-    object: 0,
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0],
-    subject: '',
-  });
+  // Fetch subjects and initialize data when subject changes
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        // Fetch subjects
+        const subjectsResponse = await axiosInstance.get(endpoints.SUBJECTS);
+        setSubjectsList(subjectsResponse.data);
 
-  const [selectedParameters, setSelectedParameters] = useState({
-    P1: true,
-    P2: true,
-    P3: true,
-    F1: true,
-    F2: true,
-  });
+        if (formData.subject) {
+          // Fetch objects for the selected subject
+          const objectsResponse = await axiosInstance.get(endpoints.OBJECTS, {
+            params: {
+              sub: formData.subject,
+            },
+          });
+          setObjectsList(objectsResponse.data);
 
-  // Fetch subjects list
-  const fetchSubjects = async () => {
+          // By default, select all objects
+          const allObjectIds = objectsResponse.data.map((obj) => obj.id);
+          setSelectedObjects(allObjectIds);
+        } else {
+          // Reset data if no subject is selected
+          setObjectsList([]);
+          setSelectedObjects([]);
+          setObjectHours({});
+          setHoursList([]);
+        }
+      } catch (error) {
+        console.error('Error fetching initial data:', error);
+      }
+    };
+
+    fetchInitialData();
+  }, [formData.subject]);
+
+  // Fetch hours data when date range or selected objects change
+  const fetchHoursData = useCallback(async () => {
     try {
-      const subjectsResponse = await axiosInstance.get(endpoints.SUBJECTS);
-      setSubjectsList(subjectsResponse.data);
-    } catch (error) {
-      console.error('Error fetching subjects:', error);
-      setError('Failed to load subjects.');
-    }
-  };
+      if (!formData.subject || !formData.date_from || !formData.date_to) {
+        setHoursList([]);
+        return;
+      }
 
-  // Fetch objects based on the selected subject
-  const fetchObjects = async (subjectId) => {
-    try {
-      const objectsResponse = await axiosInstance.get(endpoints.OBJECTS, {
-        params: { sub: subjectId },
+      // Generate date array
+      const dateArray = generateDateArray(formData.date_from, formData.date_to);
+
+      setFormData((prevData) => ({
+        ...prevData,
+        dateArray: dateArray,
+      }));
+
+      const totalDays = dateArray.length;
+      const totalHours = totalDays * 24;
+
+      // Fetch hours for each object
+      const hoursPromises = selectedObjects.map((objId) =>
+        axiosInstance
+          .get(endpoints.HOURS, {
+            params: {
+              obj: objId,
+              start_date: formData.date_from,
+              end_date: formData.date_to,
+            },
+          })
+          .then((response) => {
+            const hours = response.data;
+
+            // Process hours to include date and time
+            const hoursWithDateTime = hours.map((hourData, index) => {
+              const dayIndex = Math.floor(index / 24);
+              const hourIndex = index % 24;
+
+              // Safeguard against index out of bounds
+              const date = dateArray[dayIndex] || formData.date_from;
+              const time = timeIntervals[hourIndex] || timeIntervals[0];
+
+              return {
+                ...hourData,
+                date: hourData.date || date,
+                time: hourData.time || time,
+              };
+            });
+
+            return { status: 'fulfilled', objId, hours: hoursWithDateTime };
+          })
+          .catch((error) => {
+            console.warn(`Error fetching hours for object ${objId}, setting hours to zeros.`);
+            const zeros = [];
+            let currentDate = new Date(formData.date_from);
+            for (let day = 0; day < totalDays; day++) {
+              const dateString = currentDate.toISOString().split('T')[0];
+              for (let hour = 1; hour <= 24; hour++) {
+                zeros.push({
+                  hour: hour,
+                  time: timeIntervals[hour - 1],
+                  date: dateString,
+                  P1: 0,
+                  P1_Gen: 0,
+                  P2: 0,
+                  P2_Gen: 0,
+                  P3: 0,
+                  P3_Gen: 0,
+                  F1: 0,
+                  F1_Gen: 0,
+                  F2: 0,
+                  F2_Gen: 0,
+                  BE_Up: 0,
+                  BE_Down: 0,
+                  OD_Up: 0,
+                  OD_Down: 0,
+                });
+              }
+              currentDate.setDate(currentDate.getDate() + 1);
+            }
+            return { status: 'rejected', objId, hours: zeros };
+          })
+      );
+
+      const hoursResults = await Promise.all(hoursPromises);
+
+      const newObjectHours = {};
+      hoursResults.forEach(({ objId, hours }) => {
+        newObjectHours[objId] = hours;
       });
-      setObjectsList(objectsResponse.data);
-      setSelectedObjects(objectsResponse.data.map((obj) => obj.id)); // Select all objects by default
+      setObjectHours(newObjectHours);
+
+      // Sum up the hours for selected objects
+      const totalHoursList = sumHoursForSelectedObjects(newObjectHours);
+      setHoursList(totalHoursList);
     } catch (error) {
-      console.error('Error fetching objects:', error);
-      setError('Failed to load objects.');
+      console.error('Error fetching hours data:', error);
+    }
+  }, [formData.date_from, formData.date_to, formData.subject, selectedObjects]);
+
+  useEffect(() => {
+    fetchHoursData();
+  }, [fetchHoursData]);
+
+  // Handle object selection
+  const handleObjectSelection = (e) => {
+    const value = parseInt(e.target.value);
+    if (e.target.checked) {
+      setSelectedObjects((prev) => [...prev, value]);
+    } else {
+      setSelectedObjects((prev) => prev.filter((id) => id !== value));
     }
   };
 
-  // Generate date array based on the start and end date
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axiosInstance.post(endpoints.DISBALANSE_CREATE, {
+        subject_id: formData.subject,
+        object_ids: selectedObjects,
+        plan: formData.planMode,
+        fact: formData.factMode,
+        plan_gen: formData.planModeGen,
+        fact_gen: formData.factModeGen,
+        date_from: formData.date_from,
+        date_to: formData.date_to,
+        is_submitted: true,
+      });
+      // Refetch hours data to refresh the table
+      fetchHoursData();
+    } catch (error) {
+      console.error('Error submitting data:', error);
+    }
+  };
+
+  // Generate date array
   const generateDateArray = (startDate, endDate) => {
     const dateArray = [];
     let currentDate = new Date(startDate);
@@ -89,136 +211,310 @@ const Graphs = () => {
       dateArray.push(new Date(currentDate).toISOString().split('T')[0]);
       currentDate.setDate(currentDate.getDate() + 1);
     }
+
     return dateArray;
   };
 
-  // Fetch hours data and aggregate for selected objects
-  const fetchHoursData = useCallback(async () => {
-    if (!formData.subject || !formData.startDate || !formData.endDate) {
-      setHoursList([]);
-      return;
+  // Function to sum hours for selected objects
+  const sumHoursForSelectedObjects = (objectHoursData) => {
+    const totalHoursList = [];
+
+    // Check if there is any data
+    if (Object.keys(objectHoursData).length === 0) {
+      return [];
     }
 
-    setIsLoadingHours(true);
+    // Get the list of object IDs
+    const objIds = Object.keys(objectHoursData);
 
-    try {
-      const dateArray = generateDateArray(formData.startDate, formData.endDate);
-      const totalDays = dateArray.length;
+    // Get the total number of records (assuming all objects have the same length)
+    const totalRecords = objectHoursData[objIds[0]].length;
 
-      // Fetch hours for all selected objects across all days
-      const hoursPromises = selectedObjects.map((objId) =>
-        axiosInstance
-          .get(endpoints.HOURS, {
-            params: {
-              obj: objId,
-              start_date: formData.startDate,
-              end_date: formData.endDate,
-            },
-          })
-          .then((response) => response.data)
-          .catch((error) => {
-            console.warn(`Error fetching hours for object ${objId}, using default zeros.`);
-            // Return zero values if fetching fails
-            const defaultHours = Array.from({ length: totalDays * 24 }, (_, idx) => ({
-              hour: idx % 24 + 1,
-              P1: 0, P1_Gen: 0, P2: 0, P2_Gen: 0, P3: 0, P3_Gen: 0, F1: 0, F1_Gen: 0, F2: 0, F2_Gen: 0,
-            }));
-            return defaultHours;
-          })
-      );
+    for (let i = 0; i < totalRecords; i++) {
+      const aggregatedHour = {};
+      let dateSet = false;
+      let timeSet = false;
 
-      const hoursResults = await Promise.all(hoursPromises);
-
-      // Aggregate and sum up the data
-      const totalHoursList = sumHoursForSelectedObjects(hoursResults, totalDays);
-      setHoursList(totalHoursList);
-    } catch (error) {
-      console.error('Error fetching hours data:', error);
-      setError('Failed to load hourly data.');
-    } finally {
-      setIsLoadingHours(false);
-    }
-  }, [formData.startDate, formData.endDate, formData.subject, selectedObjects]);
-
-  // Aggregate hours across selected objects
-  const sumHoursForSelectedObjects = (hoursResults, totalDays) => {
-    const totalHoursList = Array.from({ length: totalDays * 24 }, () => ({
-      P1: 0, P2: 0, P3: 0, F1: 0, F2: 0,
-    }));
-
-    hoursResults.forEach((objectHours) => {
-      objectHours.forEach((hourData, idx) => {
-        totalHoursList[idx].P1 = Math.max(totalHoursList[idx].P1 + (hourData.P1 - hourData.P1_Gen), 0);
-        totalHoursList[idx].P2 = Math.max(totalHoursList[idx].P2 + (hourData.P2 - hourData.P2_Gen), 0);
-        totalHoursList[idx].P3 = Math.max(totalHoursList[idx].P3 + (hourData.P3 - hourData.P3_Gen), 0);
-        totalHoursList[idx].F1 = Math.max(totalHoursList[idx].F1 + (hourData.F1 - hourData.F1_Gen), 0);
-        totalHoursList[idx].F2 = Math.max(totalHoursList[idx].F2 + (hourData.F2 - hourData.F2_Gen), 0);
+      objIds.forEach((objId) => {
+        const objHours = objectHoursData[objId];
+        if (objHours && objHours[i]) {
+          const hourData = objHours[i];
+          for (const field in hourData) {
+            if (typeof hourData[field] === 'number') {
+              aggregatedHour[field] = (aggregatedHour[field] || 0) + hourData[field];
+            } else {
+              // For 'date' and 'time', set them if not already set
+              if (!dateSet && field === 'date' && hourData[field]) {
+                aggregatedHour[field] = hourData[field];
+                dateSet = true;
+              }
+              if (!timeSet && field === 'time' && hourData[field]) {
+                aggregatedHour[field] = hourData[field];
+                timeSet = true;
+              }
+            }
+          }
+        }
       });
-    });
+
+      // Fallback for 'date' and 'time' if they are still undefined
+      if (!aggregatedHour['date']) {
+        aggregatedHour['date'] = 'Unknown Date';
+      }
+      if (!aggregatedHour['time']) {
+        aggregatedHour['time'] = 'Unknown Time';
+      }
+
+      totalHoursList.push(aggregatedHour);
+    }
 
     return totalHoursList;
   };
 
-  useEffect(() => {
-    fetchSubjects();
-  }, []);
-
-  useEffect(() => {
-    if (formData.subject) {
-      fetchObjects(formData.subject);
-    }
-  }, [formData.subject]);
-
-  useEffect(() => {
-    fetchHoursData();
-  }, [fetchHoursData]);
-
-  const generateDataSet = (parameter, label, color) => ({
-    label,
-    data: hoursList.map((hour) => hour[parameter] || 0),
-    fill: false,
-    borderColor: color,
-  });
-
-  const chartData = {
-    labels: hoursList.map((_, index) => `${Math.floor(index / 24)}:${index % 24}`), // X-axis labels (days and hours)
-    datasets: [
-      selectedParameters.P1 && generateDataSet('P1', 'P1', 'rgba(75,192,192,1)'),
-      selectedParameters.P2 && generateDataSet('P2', 'P2', 'rgba(153,102,255,1)'),
-      selectedParameters.P3 && generateDataSet('P3', 'P3', 'rgba(255,159,64,1)'),
-      selectedParameters.F1 && generateDataSet('F1', 'F1', 'rgba(255,99,132,1)'),
-      selectedParameters.F2 && generateDataSet('F2', 'F2', 'rgba(54,162,235,1)'),
-    ].filter(Boolean),
-  };
-
   return (
-    <div className="flex flex-col lg:flex-row">
+    <div className="flex max-h-screen">
       <Sidebar />
-      <div className="flex-1 p-6">
-        <h1 className="text-2xl font-semibold text-gray-800 mb-6">Графики</h1>
+      <div className="w-full flex mx-auto p-6">
+        {/* Left Side: Selectors */}
+        <div className="w-1/3 bg-white rounded shadow-lg p-6 space-y-6">
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 gap-6">
+              {/* Subject Selector */}
+              <div>
+                <label htmlFor="subject" className="block text-gray-700 font-semibold mb-2">
+                  Выберите Субъект
+                </label>
+                <select
+                  name="subject"
+                  id="subject"
+                  className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-blue-500"
+                  value={formData.subject}
+                  onChange={(e) => {
+                    const subjectId = parseInt(e.target.value);
+                    setFormData((prevData) => ({
+                      ...prevData,
+                      subject: subjectId,
+                    }));
+                    setSelectedObjects([]); // Reset selected objects when subject changes
+                    setObjectHours({});
+                    setHoursList([]);
+                  }}
+                  required
+                >
+                  <option value="">Субъект</option>
+                  {subjectsList.map((subj) => (
+                    <option key={subj.id} value={subj.id}>
+                      {subj.subject_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-        {error && (
-          <div className="bg-red-100 text-red-700 p-4 rounded mb-4">
-            {error}
-          </div>
-        )}
+              {/* Objects List */}
+              {objectsList.length > 0 && (
+                <div className="mt-4">
+                  <label className="block text-gray-700 font-semibold mb-2">
+                    Выберите Объекты
+                  </label>
+                  <div className="max-h-40 overflow-y-auto border border-gray-300 rounded p-2 space-y-1">
+                    {objectsList.map((obj) => (
+                      <div key={obj.id} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          value={obj.id}
+                          checked={selectedObjects.includes(obj.id)}
+                          onChange={handleObjectSelection}
+                          className="mr-2"
+                        />
+                        <label>{obj.object_name}</label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          {isLoadingHours ? (
-            <div>Загрузка данных графика...</div>
-          ) : hoursList && hoursList.length > 0 ? (
-            <Line data={chartData} />
-          ) : (
-            <div>Нет данных для выбранных параметров.</div>
-          )}
+              {/* Date Range Selectors */}
+              <div>
+                <label htmlFor="date_from" className="block text-gray-700 font-semibold mb-2">
+                  Дата начала
+                </label>
+                <input
+                  type="date"
+                  name="date_from"
+                  id="date_from"
+                  className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-blue-500"
+                  value={formData.date_from}
+                  onChange={(e) =>
+                    setFormData((prevData) => ({
+                      ...prevData,
+                      date_from: e.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="date_to" className="block text-gray-700 font-semibold mb-2">
+                  Дата конца
+                </label>
+                <input
+                  type="date"
+                  name="date_to"
+                  id="date_to"
+                  className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-blue-500"
+                  value={formData.date_to}
+                  onChange={(e) =>
+                    setFormData((prevData) => ({
+                      ...prevData,
+                      date_to: e.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
+
+              {/* Plan and Fact Selectors */}
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="planMode" className="block text-gray-700 font-semibold mb-2">
+                    План
+                  </label>
+                  <select
+                    name="planMode"
+                    id="planMode"
+                    className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-blue-500"
+                    value={formData.planMode}
+                    onChange={(e) =>
+                      setFormData((prevData) => ({
+                        ...prevData,
+                        planMode: e.target.value,
+                      }))
+                    }
+                    required
+                  >
+                    <option value="P1">Первичный план (P1)</option>
+                    <option value="P2">План KCC PP (P2)</option>
+                    <option value="P3">План KEGOC (P3)</option>
+                    <option value="F1">Факт оперативный (F1)</option>
+                    <option value="F2">Факт KEGOC (F2)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="factMode" className="block text-gray-700 font-semibold mb-2">
+                    Факт
+                  </label>
+                  <select
+                    name="factMode"
+                    id="factMode"
+                    className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-blue-500"
+                    value={formData.factMode}
+                    onChange={(e) =>
+                      setFormData((prevData) => ({
+                        ...prevData,
+                        factMode: e.target.value,
+                      }))
+                    }
+                    required
+                  >
+                    <option value="P1">Первичный план (P1)</option>
+                    <option value="P2">План KCC PP (P2)</option>
+                    <option value="P3">План KEGOC (P3)</option>
+                    <option value="F1">Факт оперативный (F1)</option>
+                    <option value="F2">Факт KEGOC (F2)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Plan Generation and Fact Generation Selectors */}
+              {subjectsList.find((subj) => subj.id === formData.subject)?.subject_type === "ЭПО" && (
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="planModeGen" className="block text-gray-700 font-semibold mb-2">
+                      План Генерации
+                    </label>
+                    <select
+                      name="planModeGen"
+                      id="planModeGen"
+                      className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-blue-500"
+                      value={formData.planModeGen}
+                      onChange={(e) =>
+                        setFormData((prevData) => ({
+                          ...prevData,
+                          planModeGen: e.target.value,
+                        }))
+                      }
+                      required
+                    >
+                      <option value="P1_Gen">Первичный план генерации (P1)</option>
+                      <option value="P2_Gen">План генерации KCC PP (P2)</option>
+                      <option value="P3_Gen">План генерации KEGOC (P3)</option>
+                      <option value="F1_Gen">Факт генерации оперативный (F1)</option>
+                      <option value="F2_Gen">Факт генерации KEGOC (F2)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="factModeGen" className="block text-gray-700 font-semibold mb-2">
+                      Факт Генерации
+                    </label>
+                    <select
+                      name="factModeGen"
+                      id="factModeGen"
+                      className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-blue-500"
+                      value={formData.factModeGen}
+                      onChange={(e) =>
+                        setFormData((prevData) => ({
+                          ...prevData,
+                          factModeGen: e.target.value,
+                        }))
+                      }
+                      required
+                    >
+                      <option value="P1_Gen">Первичный план генерации</option>
+                      <option value="P2_Gen">План генерации KCC PP</option>
+                      <option value="P3_Gen">План генерации KEGOC</option>
+                      <option value="F1_Gen">Факт генерации оперативный</option>
+                      <option value="F2_Gen">Факт генерации KEGOC</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Submit Button */}
+            <div className="mt-6">
+              <button
+                type="submit"
+                className="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded hover:bg-blue-700 transition-colors duration-200"
+              >
+                Отправить
+              </button>
+            </div>
+          </form>
         </div>
 
-        <div className="flex flex-col md:flex-row justify-between mt-8 space-y-4 md:space-y-0 md:space-x-4">
-          {/* Subject selection, date range, object selection... */}
+        {/* Right Side: Tables and Disbalance Sum */}
+        <div className="w-2/3 p-6">
+          <div className="mb-10">
+            <DisbalanceSum
+              formData={formData}
+              selectedObjects={selectedObjects}
+            />
+          </div>
+
+          <div className="h-[calc(100vh-20rem)] overflow-y-auto">
+            <DisbalanceTable
+              formData={formData}
+              subjectsList={subjectsList}
+              hoursList={hoursList}
+            />
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-export default Graphs;
+export default Disbalance;
