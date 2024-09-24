@@ -33,8 +33,8 @@ const HoursTable = () => {
     }
   };
 
-  // Fetch hours based on date, subject, and hours
-  const fetchHours = async (startDate, endDate, subject, startHour, endHour) => {
+  // Fetch hours based on date and subject
+  const fetchHours = async (startDate, endDate, subject) => {
     try {
       const accessToken = localStorage.getItem('accessToken');
       const response = await axiosInstance.get(endpoints.HOURS, {
@@ -43,8 +43,6 @@ const HoursTable = () => {
           start_date: startDate,
           end_date: endDate,
           sub: subject,
-          start_hour: startHour,
-          end_hour: endHour,
         },
       });
 
@@ -54,15 +52,48 @@ const HoursTable = () => {
         return;
       }
 
-      // Group hours by date
       const groupedHours = {};
+      let currentDay = new Date(startDate);
+      let currentDayString = currentDay.toISOString().split('T')[0];
+      let hourCounter = 0;
+
       response.data.forEach((hour) => {
-        // Assuming the API returns a 'date' field in 'YYYY-MM-DD' format
-        const dayDate = hour.date || startDate; // Fallback to startDate if 'date' field is not present
-        if (!groupedHours[dayDate]) {
-          groupedHours[dayDate] = [];
+        if (hourCounter === 24) {
+          currentDay.setDate(currentDay.getDate() + 1);
+          currentDayString = currentDay.toISOString().split('T')[0];
+          hourCounter = 0;
         }
-        groupedHours[dayDate].push(hour);
+
+        // Compute hour in day
+        const hourInDay = (hourCounter % 24) + 1;
+
+        // Determine if the hour should be included
+        let includeHour = true;
+        if (startDate === endDate) {
+          // Single day selection
+          includeHour = hourInDay >= formData.startHour && hourInDay <= formData.endHour;
+        } else {
+          if (currentDayString === startDate) {
+            // First day
+            includeHour = hourInDay >= formData.startHour;
+          } else if (currentDayString === endDate) {
+            // Last day
+            includeHour = hourInDay <= formData.endHour;
+          } else {
+            // Intermediate days
+            includeHour = true;
+          }
+        }
+
+        if (includeHour) {
+          if (!groupedHours[currentDayString]) {
+            groupedHours[currentDayString] = [];
+          }
+          // Adjust the hour.hour to be hourInDay
+          groupedHours[currentDayString].push({ ...hour, hour: hourInDay });
+        }
+
+        hourCounter++;
       });
 
       setHoursByDate(groupedHours);
@@ -79,8 +110,8 @@ const HoursTable = () => {
       const response = await axiosInstance.get(endpoints.PROVIDERS, {
         headers: { Authorization: `Bearer ${accessToken}` },
         params: {
-          sub: 1,
-          start_date: startDate.slice(0, 7),
+          sub: 1, // Adjust as necessary
+          start_date: startDate.slice(0, 7), // format yyyy-mm
           end_date: endDate.slice(0, 7),
         },
       });
@@ -129,15 +160,21 @@ const HoursTable = () => {
 
   useEffect(() => {
     if (formData.startDate && formData.endDate && formData.subject) {
-      fetchHours(formData.startDate, formData.endDate, formData.subject, formData.startHour, formData.endHour);
+      fetchHours(formData.startDate, formData.endDate, formData.subject);
       fetchProviders(formData.startDate, formData.endDate);
     }
-  }, [formData.startDate, formData.endDate, formData.subject, formData.startHour, formData.endHour]);
+  }, [
+    formData.startDate,
+    formData.endDate,
+    formData.subject,
+    formData.startHour,
+    formData.endHour,
+  ]);
 
   const handleChange = (name, value) => {
-    setFormData(prevData => ({
+    setFormData((prevData) => ({
       ...prevData,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -149,24 +186,29 @@ const HoursTable = () => {
     <div className="flex flex-col lg:flex-row">
       <Sidebar />
       <div className="flex-1 p-6 bg-gray-50 min-h-screen">
-        <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">Таблица часов</h1>
+        <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
+          Таблица часов
+        </h1>
         <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             {/* Selectors */}
             <div className="w-full">
-              <label htmlFor="subject" className="block text-gray-700 font-medium mb-2">
+              <label
+                htmlFor="subject"
+                className="block text-gray-700 font-semibold mb-2"
+              >
                 Выберите субъект
               </label>
               <select
                 name="subject"
                 id="subject"
-                className="w-full h-12 border border-gray-300 rounded-lg px-4"
+                className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={formData.subject}
                 onChange={(e) => handleChange('subject', e.target.value)}
                 required
               >
                 <option value={0}>Субъект</option>
-                {subjectsList?.map(subj => (
+                {subjectsList?.map((subj) => (
                   <option key={subj.id} value={subj.id}>
                     {subj.subject_name}
                   </option>
@@ -174,43 +216,52 @@ const HoursTable = () => {
               </select>
             </div>
             <div className="w-full">
-              <label htmlFor="startDate" className="block text-gray-700 font-medium mb-2">
+              <label
+                htmlFor="startDate"
+                className="block text-gray-700 font-semibold mb-2"
+              >
                 Дата начала
               </label>
               <input
                 type="date"
                 name="startDate"
                 id="startDate"
-                className="w-full h-12 border border-gray-300 rounded-lg px-4"
+                className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={formData.startDate}
                 onChange={(e) => handleChange('startDate', e.target.value)}
                 required
               />
             </div>
             <div className="w-full">
-              <label htmlFor="endDate" className="block text-gray-700 font-medium mb-2">
+              <label
+                htmlFor="endDate"
+                className="block text-gray-700 font-semibold mb-2"
+              >
                 Дата окончания
               </label>
               <input
                 type="date"
                 name="endDate"
                 id="endDate"
-                className="w-full h-12 border border-gray-300 rounded-lg px-4"
+                className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={formData.endDate}
                 onChange={(e) => handleChange('endDate', e.target.value)}
                 required
               />
             </div>
             <div className="w-full">
-              <label htmlFor="startHour" className="block text-gray-700 font-medium mb-2">
+              <label
+                htmlFor="startHour"
+                className="block text-gray-700 font-semibold mb-2"
+              >
                 Час начала
               </label>
               <select
                 name="startHour"
                 id="startHour"
-                className="w-full h-12 border border-gray-300 rounded-lg px-4"
+                className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={formData.startHour}
-                onChange={(e) => handleChange('startHour', e.target.value)}
+                onChange={(e) => handleChange('startHour', parseInt(e.target.value))}
                 required
               >
                 {[...Array(24)].map((_, i) => (
@@ -221,15 +272,18 @@ const HoursTable = () => {
               </select>
             </div>
             <div className="w-full">
-              <label htmlFor="endHour" className="block text-gray-700 font-medium mb-2">
+              <label
+                htmlFor="endHour"
+                className="block text-gray-700 font-semibold mb-2"
+              >
                 Час окончания
               </label>
               <select
                 name="endHour"
                 id="endHour"
-                className="w-full h-12 border border-gray-300 rounded-lg px-4"
+                className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={formData.endHour}
-                onChange={(e) => handleChange('endHour', e.target.value)}
+                onChange={(e) => handleChange('endHour', parseInt(e.target.value))}
                 required
               >
                 {[...Array(24)].map((_, i) => (
@@ -249,22 +303,142 @@ const HoursTable = () => {
         {/* ... existing code for selected provider subjects ... */}
 
         {/* Table displaying hours by date */}
-        {Object.keys(hoursByDate).map(dayDate => (
+        {Object.keys(hoursByDate).map((dayDate) => (
           <div key={dayDate} className="mt-8">
             <h2 className="text-xl font-semibold text-center text-gray-700 mb-4">
               Дата: {dayDate.split('-').reverse().join('.')}
             </h2>
             {/* Scrollable table container */}
-            <div className="overflow-x-auto max-w-[1550px] bg-white shadow-md rounded-lg">
+            <div className="overflow-x-auto max-w-full bg-white shadow-md rounded-lg">
               <table className="table-fixed min-w-full text-sm bg-white border border-gray-200">
                 <thead className="bg-gray-100 text-center">
-                  {/* ... existing table headers ... */}
+                  <tr>
+                    {[
+                      'Час',
+                      'coefficient',
+                      'volume',
+                      'P1',
+                      'P2',
+                      'P3',
+                      'F1',
+                      'F2',
+                      'P1_Gen',
+                      'P2_Gen',
+                      'P3_Gen',
+                      'F1_Gen',
+                      'F2_Gen',
+                      'EZ_T',
+                      'EZ_Base_T',
+                      'EZ_T_ВИЭ',
+                      'EZ_T_РЭК',
+                      'Pred_T',
+                      'Wo_Prov_T',
+                      'W_Prov_T',
+                      'BE_T',
+                      'OD_T',
+                      'T_Coef',
+                      'direction',
+                      'message',
+                    ].map((header) => (
+                      <th
+                        key={header}
+                        className="px-2 py-1 border-b border-gray-200 font-medium text-gray-700"
+                      >
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
                 </thead>
                 <tbody>
-                  {hoursByDate[dayDate].map(hour => (
+                  {hoursByDate[dayDate].map((hour) => (
                     <tr key={hour.id} className="even:bg-gray-50 text-center">
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.hour}</td>
-                      {/* ... existing table cells ... */}
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.hour}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.coefficient}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.volume}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.P1}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.P2}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.P3}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.F1}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.F2}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.P1_Gen}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.P2_Gen}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.P3_Gen}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.F1_Gen}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.F2_Gen}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.EZ_T}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.EZ_Base_T}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.EZ_T_ВИЭ}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.EZ_T_РЭК}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.Pred_T}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.Wo_Prov_T}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.W_Prov_T}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.BE_T}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.OD_T}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.T_Coef}
+                      </td>
+                      <td
+                        className={`px-2 py-1 border-b border-gray-200 ${
+                          hour.direction === 'DOWN'
+                            ? 'bg-green-100'
+                            : hour.direction === 'UP'
+                            ? 'bg-red-100'
+                            : ''
+                        }`}
+                      >
+                        {hour.direction === 'UP'
+                          ? '↑'
+                          : hour.direction === 'DOWN'
+                          ? '↓'
+                          : '-'}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.message}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
