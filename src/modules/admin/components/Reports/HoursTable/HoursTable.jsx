@@ -5,18 +5,18 @@ import Sidebar from '../../Sidebar/Sidebar';
 const HoursTable = () => {
   const [subjectsList, setSubjectsList] = useState([]);
   const [hoursByDate, setHoursByDate] = useState({});
-  const [providersList, setProvidersList] = useState([]); // New state for providers
-  const [selectedProviderSubjects, setSelectedProviderSubjects] = useState([]); // State for subjects of the selected provider
-  const [providerError, setProviderError] = useState(''); // State for provider fetching error
+  const [providersList, setProvidersList] = useState([]);
+  const [selectedProviderSubjects, setSelectedProviderSubjects] = useState([]);
+  const [providerError, setProviderError] = useState('');
 
   const [formData, setFormData] = useState({
     object: 0,
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
     subject: 0,
+    hour: 1, // New state for hour selection
   });
 
-  // Fetch subjects list
   const fetchData = async () => {
     try {
       const accessToken = localStorage.getItem('accessToken');
@@ -31,8 +31,7 @@ const HoursTable = () => {
     }
   };
 
-  // Fetch hours based on date and subject
-  const fetchHours = async (startDate, endDate, subject) => {
+  const fetchHours = async (startDate, endDate, subject, startHour) => {
     try {
       const accessToken = localStorage.getItem('accessToken');
       const response = await axiosInstance.get(endpoints.HOURS, {
@@ -53,7 +52,7 @@ const HoursTable = () => {
       const groupedHours = {};
       let currentDay = new Date(startDate);
       let currentDayString = currentDay.toISOString().split('T')[0];
-      let hourCounter = 0;
+      let hourCounter = startHour - 1; // Start from the selected hour
 
       response.data.forEach((hour) => {
         if (hourCounter === 24) {
@@ -75,67 +74,15 @@ const HoursTable = () => {
     }
   };
 
-  // Fetch providers with error handling
-  const fetchProviders = async (startDate, endDate) => {
-    try {
-      const accessToken = localStorage.getItem('accessToken');
-      const response = await axiosInstance.get(endpoints.PROVIDERS, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        params: {
-          sub: 1, // Set the subject or modify it based on your logic
-          start_date: startDate.slice(0, 7), // format yyyy-mm
-          end_date: endDate.slice(0, 7),
-        },
-      });
-
-      if (response.data.error) {
-        setProviderError(response.data.error);
-        setProvidersList([]); // Reset providers list
-      } else if (response.data.length === 0) {
-        setProviderError('No providers found with the provided criteria.');
-        setProvidersList([]);
-      } else {
-        setProvidersList(response.data);
-        setProviderError(''); // Clear error message
-      }
-    } catch (error) {
-      console.error('Ошибка при получении провайдеров:', error);
-      setProviderError('Ошибка при получении провайдеров. Попробуйте позже.');
-    }
-  };
-
-  // Fetch subjects belonging to a provider using provider_id
-  const fetchProviderSubjects = async (providerId) => {
-    try {
-      const accessToken = localStorage.getItem('accessToken');
-      const response = await axiosInstance.get(endpoints.SUBJECTS, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        params: {
-          provider_id: providerId, // Fetch subjects based on provider ID
-        },
-      });
-      if (response.data && response.data.length > 0) {
-        setSelectedProviderSubjects(response.data);
-      } else {
-        setSelectedProviderSubjects([]);
-        console.error('No subjects found for the selected provider.');
-      }
-    } catch (error) {
-      console.error('Ошибка при получении субъектов для провайдера:', error);
-      setSelectedProviderSubjects([]);
-    }
-  };
-
   useEffect(() => {
     fetchData();
   }, []);
 
   useEffect(() => {
     if (formData.startDate && formData.endDate && formData.subject) {
-      fetchHours(formData.startDate, formData.endDate, formData.subject);
-      fetchProviders(formData.startDate, formData.endDate); // Fetch providers with dates
+      fetchHours(formData.startDate, formData.endDate, formData.subject, formData.hour); // Pass the selected hour
     }
-  }, [formData.startDate, formData.endDate, formData.subject]);
+  }, [formData.startDate, formData.endDate, formData.subject, formData.hour]);
 
   const handleChange = (name, value) => {
     setFormData(prevData => ({
@@ -144,18 +91,14 @@ const HoursTable = () => {
     }));
   };
 
-  const handleProviderClick = (providerId) => {
-    fetchProviderSubjects(providerId); // Fetch subjects for selected provider
-  };
-
   return (
     <div className="flex flex-col lg:flex-row">
       <Sidebar />
       <div className="flex-1 p-6 bg-gray-50 min-h-screen">
         <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">Таблица часов</h1>
         <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Selectors */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Subject Selector */}
             <div className="w-full">
               <label htmlFor="subject" className="block text-gray-700 font-medium mb-2">
                 Выберите субъект
@@ -176,6 +119,8 @@ const HoursTable = () => {
                 ))}
               </select>
             </div>
+
+            {/* Start Date Selector */}
             <div className="w-full">
               <label htmlFor="startDate" className="block text-gray-700 font-medium mb-2">
                 Дата начала
@@ -190,6 +135,8 @@ const HoursTable = () => {
                 required
               />
             </div>
+
+            {/* End Date Selector */}
             <div className="w-full">
               <label htmlFor="endDate" className="block text-gray-700 font-medium mb-2">
                 Дата окончания
@@ -204,43 +151,26 @@ const HoursTable = () => {
                 required
               />
             </div>
+
+            {/* Hour Selector */}
+            <div className="w-full">
+              <label htmlFor="hour" className="block text-gray-700 font-medium mb-2">
+                Час начала
+              </label>
+              <input
+                type="number"
+                name="hour"
+                id="hour"
+                className="w-full h-12 border border-gray-300 rounded-lg px-4"
+                value={formData.hour}
+                onChange={(e) => handleChange('hour', e.target.value)}
+                min="1"
+                max="24"
+                required
+              />
+            </div>
           </div>
         </div>
-
-        {/* Providers Section */}
-        <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <h2 className="text-2xl font-bold text-center text-gray-700 mb-6">Список провайдеров</h2>
-          {providerError ? (
-            <p className="text-red-500 text-center">{providerError}</p> // Display error message
-          ) : (
-            <ul className="space-y-4">
-              {providersList?.map(provider => (
-                <li key={provider.id} className="p-4 bg-gray-100 rounded-lg shadow-md cursor-pointer hover:bg-gray-200"
-                  onClick={() => handleProviderClick(provider.id)}>
-                  <p className="text-lg font-semibold text-gray-800">{provider.name} ({provider.month})</p>
-                  <p className="text-sm text-gray-600">{provider.is_epo ? 'ЭПО' : 'Не ЭПО'}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Selected Provider Subjects */}
-        {selectedProviderSubjects.length > 0 && (
-          <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-            <h2 className="text-2xl font-bold text-center text-gray-700 mb-6">Субъекты провайдера</h2>
-            <ul className="space-y-4">
-              {selectedProviderSubjects?.map(subject => (
-                <li key={subject.id} className="p-4 bg-gray-100 rounded-lg shadow-md">
-                  <p className="text-lg font-semibold text-gray-800">{subject.subject_name}</p>
-                  <p className="text-sm text-gray-600">BIN: {subject.subject_bin}</p>
-                  <p className="text-sm text-gray-600">Тип: {subject.subject_type}</p>
-                  <p className="text-sm text-gray-600">Email: {subject.email}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
 
         {/* Table displaying hours by date */}
         {Object.keys(hoursByDate).map(dayDate => (
@@ -248,27 +178,20 @@ const HoursTable = () => {
             <h2 className="text-xl font-semibold text-center text-gray-700 mb-4">
               Дата: {dayDate.split('-').reverse().join('.')}
             </h2>
-            {/* Scrollable table container */}
             <div className="overflow-x-auto max-w-[1550px] bg-white shadow-md rounded-lg">
               <table className="table-fixed min-w-full text-sm bg-white border border-gray-200">
                 <thead className="bg-gray-100 text-center">
                   <tr>
                     {[
                       "Час",
+                      "coefficient", "volume",
                       "P1", "P2", "P3", "F1", "F2",
                       "P1_Gen", "P2_Gen", "P3_Gen", "F1_Gen", "F2_Gen",
-                      "BE_Up", "BE_Down", "OD_Up", "OD_Down",
-                      "BE_Up_V1", "BE_Down_V1", "OD_Up_V1", "OD_Down_V1",
-                      "BE_Up_V2", "BE_Down_V2", "OD_Up_V2", "OD_Down_V2",
-                      "BE_Up_V3", "BE_Down_V3", "OD_Up_V3", "OD_Down_V3",
-                      "BE_Up_V4", "BE_Down_V4", "OD_Up_V4", "OD_Down_V4",
-                      "EZ_T", "EZ_Base_T", "Ind_Prov_T", "BE_T", "OD_T", "Ind_T", "Prov_T", "T_Coef",
-                      "EZ_T_ВИЭ",
-                      "Ind_T_V1", "Prov_T_V1",
-                      "Ind_T_V2", "Prov_T_V2",
-                      "Ind_T_V3", "Prov_T_V3",
-                      "Ind_T_V4", "Prov_T_V4",
-                      "Money_V1", "Money_V2", "Money_V3", "Money_V4",
+                      "EZ_T", "EZ_Base_T",
+                      "EZ_T_ВИЭ", "EZ_T_РЭК",
+                      "Pred_T", "Wo_Prov_T", "W_Prov_T",
+                      "BE_T", "OD_T",
+                      "T_Coef",
                       "direction",
                       "message"
                     ].map((header) => (
@@ -282,77 +205,31 @@ const HoursTable = () => {
                   {hoursByDate[dayDate].map(hour => (
                     <tr key={hour.id} className="even:bg-gray-50 text-center">
                       <td className="px-2 py-1 border-b border-gray-200">{hour.hour}</td>
-
+                      <td className="px-2 py-1 border-b border-gray-200">{hour.coefficient}</td>
+                      <td className="px-2 py-1 border-b border-gray-200">{hour.volume}</td>
                       <td className="px-2 py-1 border-b border-gray-200">{hour.P1}</td>
                       <td className="px-2 py-1 border-b border-gray-200">{hour.P2}</td>
                       <td className="px-2 py-1 border-b border-gray-200">{hour.P3}</td>
                       <td className="px-2 py-1 border-b border-gray-200">{hour.F1}</td>
                       <td className="px-2 py-1 border-b border-gray-200">{hour.F2}</td>
-
                       <td className="px-2 py-1 border-b border-gray-200">{hour.P1_Gen}</td>
                       <td className="px-2 py-1 border-b border-gray-200">{hour.P2_Gen}</td>
                       <td className="px-2 py-1 border-b border-gray-200">{hour.P3_Gen}</td>
                       <td className="px-2 py-1 border-b border-gray-200">{hour.F1_Gen}</td>
                       <td className="px-2 py-1 border-b border-gray-200">{hour.F2_Gen}</td>
-
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.BE_Up}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.BE_Down}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.OD_Up}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.OD_Down}</td>
-
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.BE_Up_V1}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.BE_Down_V1}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.OD_Up_V1}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.OD_Down_V1}</td>
-
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.BE_Up_V2}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.BE_Down_V2}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.OD_Up_V2}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.OD_Down_V2}</td>
-
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.BE_Up_V3}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.BE_Down_V3}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.OD_Up_V3}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.OD_Down_V3}</td>
-
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.BE_Up_V4}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.BE_Down_V4}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.OD_Up_V4}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.OD_Down_V4}</td>
-
                       <td className="px-2 py-1 border-b border-gray-200">{hour.EZ_T}</td>
                       <td className="px-2 py-1 border-b border-gray-200">{hour.EZ_Base_T}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.Ind_Prov_T}</td>
+                      <td className="px-2 py-1 border-b border-gray-200">{hour.EZ_T_ВИЭ}</td>
+                      <td className="px-2 py-1 border-b border-gray-200">{hour.EZ_T_РЭК}</td>
+                      <td className="px-2 py-1 border-b border-gray-200">{hour.Pred_T}</td>
+                      <td className="px-2 py-1 border-b border-gray-200">{hour.Wo_Prov_T}</td>
+                      <td className="px-2 py-1 border-b border-gray-200">{hour.W_Prov_T}</td>
                       <td className="px-2 py-1 border-b border-gray-200">{hour.BE_T}</td>
                       <td className="px-2 py-1 border-b border-gray-200">{hour.OD_T}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.Ind_T}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.Prov_T}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.EZ_T_ВИЭ}</td>
-
                       <td className="px-2 py-1 border-b border-gray-200">{hour.T_Coef}</td>
-
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.Ind_T_V1}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.Prov_T_V1}</td>
-
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.Ind_T_V2}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.Prov_T_V2}</td>
-
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.Ind_T_V3}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.Prov_T_V3}</td>
-
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.Ind_T_V4}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.Prov_T_V4}</td>
-
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.Money_V1}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.Money_V2}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.Money_V3}</td>
-                      <td className="px-2 py-1 border-b border-gray-200">{hour.Money_V4}</td>
-
-                      <td className={`px-2 py-1 border-b border-gray-200 ${hour.direction === 'DOWN' ? 'bg-green-100' : hour.direction === 'UP' ? 'bg-red-100' : ''
-                        }`}>
+                      <td className={`px-2 py-1 border-b border-gray-200 ${hour.direction === 'DOWN' ? 'bg-green-100' : hour.direction === 'UP' ? 'bg-red-100' : ''}`}>
                         {hour.direction === 'UP' ? '↑' : hour.direction === 'DOWN' ? '↓' : '-'}
                       </td>
-
                       <td className="px-2 py-1 border-b border-gray-200">{hour.message}</td>
                     </tr>
                   ))}

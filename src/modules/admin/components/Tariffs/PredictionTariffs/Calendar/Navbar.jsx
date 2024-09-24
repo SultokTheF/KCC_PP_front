@@ -149,6 +149,7 @@ const Navbar = ({ date, setDate, data, setData }) => {
           <option value="EZ_T_ВИЭ">EZ_T_ВИЭ</option>
           <option value="OD_T">OD_T</option>
           <option value="BE_T">BE_T</option>
+          <option value="EZ_T_РЭК">EZ_T_РЭК</option>
         </select>
       </div>
       <div className="flex items-center space-x-4">

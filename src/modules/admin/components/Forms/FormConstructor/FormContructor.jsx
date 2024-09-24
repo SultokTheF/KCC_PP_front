@@ -47,33 +47,28 @@ const FormConstructor = () => {
   const conditionOperators = [">", "<", ">=", "<=", "==", "!="];
 
   const hourFields = [
-    "P1",
-    "P2",
-    "P3",
-    "F1",
-    "F2",
-    "P1_Gen",
-    "P2_Gen",
-    "P3_Gen",
-    "F1_Gen",
-    "F2_Gen",
-    "BE_Up",
-    "BE_Down",
-    "OD_Up",
-    "OD_Down",
-    "EZ_T",
-    "EZ_Base_T",
-    "Ind_Prov_T",
-    "BE_T",
-    "OD_T",
-    "Ind_T",
-    "Prov_T",
-    "EZ_T_ВИЭ",
+    // "Час",
+    "coefficient", "volume",
+    "P1", "P2", "P3", "F1", "F2",
+    "P1_Gen", "P2_Gen", "P3_Gen", "F1_Gen", "F2_Gen",
+    // "BE_Up", "BE_Down", "OD_Up", "OD_Down",
+    // "BE_Up_V1", "BE_Down_V1", "OD_Up_V1", "OD_Down_V1",
+    // "BE_Up_V2", "BE_Down_V2", "OD_Up_V2", "OD_Down_V2",
+    // "BE_Up_V3", "BE_Down_V3", "OD_Up_V3", "OD_Down_V3",
+    // "BE_Up_V4", "BE_Down_V4", "OD_Up_V4", "OD_Down_V4",
+    "EZ_T", "EZ_Base_T",
+    "EZ_T_ВИЭ", "EZ_T_РЭК",
+    // "Ind_Prov_T", "BE_T", "OD_T", "Ind_T", "Prov_T", "T_Coef",
+    "Pred_T", "Wo_Prov_T", "W_Prov_T",
+    "BE_T", "OD_T",
     "T_Coef",
-    "Money_V1",
-    "Money_V2",
-    "Money_V3",
-    "Money_V4",
+    // "Ind_T_V1", "Prov_T_V1",
+    // "Ind_T_V2", "Prov_T_V2",
+    // "Ind_T_V3", "Prov_T_V3",
+    // "Ind_T_V4", "Prov_T_V4",
+    // "Money_V1", "Money_V2", "Money_V3", "Money_V4",
+    "direction",
+    "message"
   ];
 
   // State for table information
@@ -127,19 +122,19 @@ const FormConstructor = () => {
     setTableName(tableData.name || "Без названия");
     setStartDate(
       tableData.start_date
-        ? tableData.start_date
+        ? new Date(new Date(tableData.start_date).getTime() - new Date(tableData.start_date).getTimezoneOffset() * 60000).toISOString().split("T")[0]
         : new Date().toISOString().split("T")[0]
     );
     setEndDate(
       tableData.end_date
-        ? tableData.end_date
+        ? new Date(new Date(tableData.end_date).getTime() - new Date(tableData.end_date).getTimezoneOffset() * 60000).toISOString().split("T")[0]
         : new Date().toISOString().split("T")[0]
     );
 
     const updatedTableConfig = tableData.data.map((row) => ({
       subject: row.subject,
       columns: row.columns.map((col) => ({
-        plan: col.plan,
+        plan: (col.plan),
         operation: col.operation,
         params: col.params || [],
         value: col.value,
@@ -159,11 +154,11 @@ const FormConstructor = () => {
       columns:
         tableConfig.length > 0
           ? tableConfig[0].columns.map((col) => ({
-              plan: col.plan,
-              operation: col.operation,
-              params: col.params || [],
-              value: 0,
-            }))
+            plan: col.plan,
+            operation: col.operation,
+            params: col.params || [],
+            value: 0,
+          }))
           : [],
     };
 
@@ -238,9 +233,10 @@ const FormConstructor = () => {
       data: tableConfig.map((row) => ({
         subject: row.subject,
         columns: row.columns.map((col) => ({
-          plan: col.plan,
-          operation: reverseOperationMappings[col.operation] || col.operation,
-          params: col.params || [],
+          name: "sadsa",
+          plan: col.plan === "formula" ? col.plan : col.plan.toUpperCase(),
+          operation: col.operation.toUpperCase(),
+          params: col.params, // Assuming params is an array of strings
           value: col.value,
         })),
       })),
@@ -350,8 +346,8 @@ const FormConstructor = () => {
           </select>
 
           {selectedOperation === "sumif" ||
-          selectedOperation === "averageif" ||
-          selectedOperation === "countif" ? (
+            selectedOperation === "averageif" ||
+            selectedOperation === "countif" ? (
             <div className="flex items-center space-x-4">
               <label className="block text-gray-700">Поле условия:</label>
               <select
@@ -434,12 +430,10 @@ const FormConstructor = () => {
                       {col.plan === "formula" ? (
                         `Формула (${col.operation})`
                       ) : col.params && col.params.length > 0 ? (
-                        `${col.plan} (${
-                          operationMappings[col.operation] || col.operation
+                        `${col.plan} (${operationMappings[col.operation] || col.operation
                         } ${col.params.join(" ")})`
                       ) : (
-                        `${col.plan} (${
-                          operationMappings[col.operation] || col.operation
+                        `${col.plan} (${operationMappings[col.operation] || col.operation
                         })`
                       )}
                       <button

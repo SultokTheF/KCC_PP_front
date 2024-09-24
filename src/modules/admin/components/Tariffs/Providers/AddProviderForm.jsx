@@ -31,7 +31,7 @@ const AddProviderForm = ({ fetchData, selectedMonth, subjects }) => {
       >
         <option value="" disabled>Выберите поставщика</option>
         {subjects.map((subject) => (
-          <option key={subject.id} value={`${subject.subject_name}_provider`}>{subject.subject_name}</option>
+          <option key={subject.id} value={`${subject.subject_name}_provider_${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}`}>{subject.subject_name}</option>
         ))}
       </select>
       <button type="submit" className="bg-blue-500 text-white px-2 py-1 text-sm rounded">Добавить</button>
