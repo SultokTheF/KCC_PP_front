@@ -234,7 +234,7 @@ const FormConstructor = () => {
         subject: row.subject,
         columns: row.columns.map((col) => ({
           name: "sadsa",
-          plan: col.plan === "formula" ? col.plan : col.plan.toUpperCase(),
+          plan: col.plan === "formula" ? "formula" : (col.plan === "array" ? col.plan : col.plan.toUpperCase()),
           operation: col.operation.toUpperCase(),
           params: col.params, // Assuming params is an array of strings
           value: col.value,
@@ -330,6 +330,7 @@ const FormConstructor = () => {
               </option>
             ))}
             <option value="formula">Формула</option>
+            <option value="array">Массив</option>
           </select>
 
           <label className="block text-gray-700">Выберите операцию:</label>
