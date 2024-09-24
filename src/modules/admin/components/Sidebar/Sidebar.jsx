@@ -78,14 +78,14 @@ export default function Sidebar() {
                   Графики
                 </ListItem>
               </a>
-              {/* <a href="/reports/disbalance">
+              <a href="/reports/disbalance">
                 <ListItem>
                   <ListItemPrefix>
                     <ChevronRightIcon strokeWidth={3} className="h-3 w-5" />
                   </ListItemPrefix>
                   Дисбаланс
                 </ListItem>
-              </a> */}
+              </a>
               <a href="/reports/history">
                 <ListItem>
                   <ListItemPrefix>

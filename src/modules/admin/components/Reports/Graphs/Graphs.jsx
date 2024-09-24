@@ -27,7 +27,7 @@ const Graphs = () => {
   const [subjectsList, setSubjectsList] = useState([]);
   const [objectsList, setObjectsList] = useState([]);
   const [selectedObjects, setSelectedObjects] = useState([]);
-  const [hoursList, setHoursList] = useState([]);
+  const [hoursByDate, setHoursByDate] = useState({});
   const [error, setError] = useState(null);
   const [isLoadingHours, setIsLoadingHours] = useState(false);
 
@@ -35,6 +35,8 @@ const Graphs = () => {
     subject: '',
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
+    startHour: 1,
+    endHour: 24,
   });
 
   const [selectedParameters, setSelectedParameters] = useState({
@@ -70,33 +72,22 @@ const Graphs = () => {
     }
   };
 
-  // Generate date array based on the start and end date
-  const generateDateArray = (startDate, endDate) => {
-    const dateArray = [];
-    let currentDate = new Date(startDate);
-    const end = new Date(endDate);
-
-    while (currentDate <= end) {
-      dateArray.push(new Date(currentDate).toISOString().split('T')[0]);
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-    return dateArray;
-  };
-
   // Fetch hours data for the selected objects
   const fetchHoursData = useCallback(async () => {
-    if (!formData.subject || selectedObjects.length === 0 || !formData.startDate || !formData.endDate) {
-      setHoursList([]);
+    if (
+      !formData.subject ||
+      selectedObjects.length === 0 ||
+      !formData.startDate ||
+      !formData.endDate
+    ) {
+      setHoursByDate({});
       return;
     }
 
     setIsLoadingHours(true);
 
     try {
-      const dateArray = generateDateArray(formData.startDate, formData.endDate);
-      const totalDays = dateArray.length;
-
-      // Fetch hours for all selected objects across all days
+      // Fetch hours for all selected objects
       const hoursPromises = selectedObjects.map((objId) =>
         axiosInstance
           .get(endpoints.HOURS, {
@@ -108,46 +99,104 @@ const Graphs = () => {
           })
           .then((response) => response.data)
           .catch((error) => {
-            console.warn(`Error fetching hours for object ${objId}, using default zeros.`);
-            // Return zero values if fetching fails
-            const defaultHours = Array.from({ length: totalDays * 24 }, (_, idx) => ({
-              hour: idx % 24 + 1,
-              P1: 0, P1_Gen: 0, P2: 0, P2_Gen: 0, P3: 0, P3_Gen: 0, F1: 0, F1_Gen: 0, F2: 0, F2_Gen: 0,
-            }));
-            return defaultHours;
+            console.warn(
+              `Error fetching hours for object ${objId}, using default zeros.`
+            );
+            return [];
           })
       );
 
       const hoursResults = await Promise.all(hoursPromises);
 
       // Aggregate and sum up the data for the selected objects
-      const totalHoursList = sumHoursForSelectedObjects(hoursResults, totalDays);
-      setHoursList(totalHoursList);
+      const totalHoursByDate = sumHoursForSelectedObjects(hoursResults);
+      setHoursByDate(totalHoursByDate);
     } catch (error) {
       console.error('Error fetching hours data:', error);
       setError('Failed to load hourly data.');
     } finally {
       setIsLoadingHours(false);
     }
-  }, [formData.startDate, formData.endDate, formData.subject, selectedObjects]);
+  }, [formData, selectedObjects]);
 
   // Aggregate hours across selected objects
-  const sumHoursForSelectedObjects = (hoursResults, totalDays) => {
-    const totalHoursList = Array.from({ length: totalDays * 24 }, () => ({
-      P1: 0, P2: 0, P3: 0, F1: 0, F2: 0,
-    }));
+  const sumHoursForSelectedObjects = (hoursResults) => {
+    const groupedHours = {};
+    let currentDay = new Date(formData.startDate);
+    let currentDayString = currentDay.toISOString().split('T')[0];
+    let hourCounter = 0;
 
-    hoursResults.forEach((objectHours) => {
-      objectHours.forEach((hourData, idx) => {
-        totalHoursList[idx].P1 = Math.max(totalHoursList[idx].P1 + Math.abs(hourData.P1 - hourData.P1_Gen), 0);
-        totalHoursList[idx].P2 = Math.max(totalHoursList[idx].P2 + Math.abs(hourData.P2 - hourData.P2_Gen), 0);
-        totalHoursList[idx].P3 = Math.max(totalHoursList[idx].P3 + Math.abs(hourData.P3 - hourData.P3_Gen), 0);
-        totalHoursList[idx].F1 = Math.max(totalHoursList[idx].F1 + Math.abs(hourData.F1 - hourData.F1_Gen), 0);
-        totalHoursList[idx].F2 = Math.max(totalHoursList[idx].F2 + Math.abs(hourData.F2 - hourData.F2_Gen), 0);
-      });
-    });
+    // Calculate total number of hours
+    const totalHours = hoursResults[0]?.length || 0;
 
-    return totalHoursList;
+    for (let i = 0; i < totalHours; i++) {
+      if (hourCounter === 24) {
+        currentDay.setDate(currentDay.getDate() + 1);
+        currentDayString = currentDay.toISOString().split('T')[0];
+        hourCounter = 0;
+      }
+
+      const hourInDay = (hourCounter % 24) + 1;
+
+      // Determine if the hour should be included based on time filtration logic
+      let includeHour = true;
+      if (formData.startDate === formData.endDate) {
+        // Single day selection
+        includeHour =
+          hourInDay >= formData.startHour && hourInDay <= formData.endHour;
+      } else {
+        if (currentDayString === formData.startDate) {
+          // First day
+          includeHour = hourInDay >= formData.startHour;
+        } else if (currentDayString === formData.endDate) {
+          // Last day
+          includeHour = hourInDay <= formData.endHour;
+        } else {
+          // Intermediate days
+          includeHour = true;
+        }
+      }
+
+      if (includeHour) {
+        if (!groupedHours[currentDayString]) {
+          groupedHours[currentDayString] = [];
+        }
+
+        const summedHourData = { hour: hourInDay, P1: 0, P2: 0, P3: 0, F1: 0, F2: 0 };
+
+        hoursResults.forEach((objectHours) => {
+          const hourData = objectHours[i];
+          if (hourData) {
+            summedHourData.P1 += Math.max(
+              Math.abs(hourData.P1 - hourData.P1_Gen),
+              0
+            );
+            summedHourData.P2 += Math.max(
+              Math.abs(hourData.P2 - hourData.P2_Gen),
+              0
+            );
+            summedHourData.P3 += Math.max(
+              Math.abs(hourData.P3 - hourData.P3_Gen),
+              0
+            );
+            summedHourData.F1 += Math.max(
+              Math.abs(hourData.F1 - hourData.F1_Gen),
+              0
+            );
+            summedHourData.F2 += Math.max(
+              Math.abs(hourData.F2 - hourData.F2_Gen),
+              0
+            );
+          }
+        });
+
+        groupedHours[currentDayString].push(summedHourData);
+      }
+
+      hourCounter++;
+    }
+
+    return groupedHours;
   };
 
   useEffect(() => {
@@ -184,17 +233,26 @@ const Graphs = () => {
   // Generate data sets for graph
   const generateDataSet = (parameter, label, color) => ({
     label,
-    data: hoursList.map((hour) => hour[parameter] || 0),
+    data: chartDataPoints.map((point) => point[parameter] || 0),
     fill: false,
     borderColor: color,
   });
 
-  // Updated labels based on the total number of hours across selected days
-  const totalHours = hoursList.length; // Total hours based on the date range
-  const chartLabels = Array.from({ length: totalHours }, (_, index) => index + 1); // Generate labels like 1, 2, 3, ... up to totalHours
+  // Prepare chart data points and labels
+  const chartDataPoints = [];
+  const chartLabels = [];
+
+  Object.keys(hoursByDate)
+    .sort()
+    .forEach((dayDate) => {
+      hoursByDate[dayDate].forEach((hourData) => {
+        chartDataPoints.push(hourData);
+        chartLabels.push(`${dayDate} ${hourData.hour}:00`);
+      });
+    });
 
   const chartData = {
-    labels: chartLabels, // Use the continuous hour labels
+    labels: chartLabels,
     datasets: [
       selectedParameters.P1 && generateDataSet('P1', 'P1', 'rgba(75,192,192,1)'),
       selectedParameters.P2 && generateDataSet('P2', 'P2', 'rgba(153,102,255,1)'),
@@ -219,7 +277,7 @@ const Graphs = () => {
         <div className="bg-white p-6 rounded-lg shadow-md">
           {isLoadingHours ? (
             <div>Загрузка данных графика...</div>
-          ) : hoursList && hoursList.length > 0 ? (
+          ) : chartDataPoints && chartDataPoints.length > 0 ? (
             <Line data={chartData} />
           ) : (
             <div>Нет данных для выбранных параметров.</div>
@@ -228,10 +286,13 @@ const Graphs = () => {
 
         {/* Prettier Selectors */}
         <div className="bg-gray-100 p-6 mt-8 rounded-lg shadow-md space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
             {/* Subject Selector */}
             <div>
-              <label htmlFor="subject" className="block text-gray-700 font-semibold mb-2">
+              <label
+                htmlFor="subject"
+                className="block text-gray-700 font-semibold mb-2"
+              >
                 Выберите субъект
               </label>
               <select
@@ -253,7 +314,10 @@ const Graphs = () => {
 
             {/* Start Date Selector */}
             <div>
-              <label htmlFor="startDate" className="block text-gray-700 font-semibold mb-2">
+              <label
+                htmlFor="startDate"
+                className="block text-gray-700 font-semibold mb-2"
+              >
                 Дата начала
               </label>
               <input
@@ -262,14 +326,19 @@ const Graphs = () => {
                 id="startDate"
                 className="h-12 border border-gray-300 rounded-lg px-4 w-full text-gray-700 font-medium focus:outline-none focus:border-blue-500"
                 value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, startDate: e.target.value })
+                }
                 required
               />
             </div>
 
             {/* End Date Selector */}
             <div>
-              <label htmlFor="endDate" className="block text-gray-700 font-semibold mb-2">
+              <label
+                htmlFor="endDate"
+                className="block text-gray-700 font-semibold mb-2"
+              >
                 Дата окончания
               </label>
               <input
@@ -278,15 +347,77 @@ const Graphs = () => {
                 id="endDate"
                 className="h-12 border border-gray-300 rounded-lg px-4 w-full text-gray-700 font-medium focus:outline-none focus:border-blue-500"
                 value={formData.endDate}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, endDate: e.target.value })
+                }
                 required
               />
+            </div>
+
+            {/* Start Hour Selector */}
+            <div>
+              <label
+                htmlFor="startHour"
+                className="block text-gray-700 font-semibold mb-2"
+              >
+                Час начала
+              </label>
+              <select
+                name="startHour"
+                id="startHour"
+                className="block h-12 border border-gray-300 rounded-lg px-4 w-full text-gray-700 font-medium focus:outline-none focus:border-blue-500"
+                value={formData.startHour}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    startHour: parseInt(e.target.value),
+                  })
+                }
+                required
+              >
+                {[...Array(24)].map((_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {i + 1}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* End Hour Selector */}
+            <div>
+              <label
+                htmlFor="endHour"
+                className="block text-gray-700 font-semibold mb-2"
+              >
+                Час окончания
+              </label>
+              <select
+                name="endHour"
+                id="endHour"
+                className="block h-12 border border-gray-300 rounded-lg px-4 w-full text-gray-700 font-medium focus:outline-none focus:border-blue-500"
+                value={formData.endHour}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    endHour: parseInt(e.target.value),
+                  })
+                }
+                required
+              >
+                {[...Array(24)].map((_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {i + 1}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
           {/* Objects List with Checkboxes */}
           <div>
-            <label className="block text-gray-700 font-semibold mb-4">Выберите объекты</label>
+            <label className="block text-gray-700 font-semibold mb-4">
+              Выберите объекты
+            </label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {objectsList.map((obj) => (
                 <div key={obj.id} className="flex items-center">
@@ -297,12 +428,43 @@ const Graphs = () => {
                     onChange={() => handleObjectToggle(obj.id)}
                     className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                   />
-                  <label htmlFor={`object-${obj.id}`} className="ml-3 text-gray-700">
+                  <label
+                    htmlFor={`object-${obj.id}`}
+                    className="ml-3 text-gray-700"
+                  >
                     {obj.object_name}
                   </label>
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+
+        {/* Parameters Selection */}
+        <div className="bg-gray-100 p-6 mt-8 rounded-lg shadow-md">
+          <label className="block text-gray-700 font-semibold mb-4">
+            Выберите параметры
+          </label>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {Object.keys(selectedParameters).map((param) => (
+              <div key={param} className="flex items-center">
+                <input
+                  type="checkbox"
+                  id={`param-${param}`}
+                  checked={selectedParameters[param]}
+                  onChange={() =>
+                    setSelectedParameters((prev) => ({
+                      ...prev,
+                      [param]: !prev[param],
+                    }))
+                  }
+                  className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor={`param-${param}`} className="ml-3 text-gray-700">
+                  {param}
+                </label>
+              </div>
+            ))}
           </div>
         </div>
       </div>
