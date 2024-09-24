@@ -9,37 +9,37 @@ const FormConstructor = () => {
 
   // Operations and Formulas mappings for display and JSON
   const operationMappings = {
-    sum: "Сумма",
-    average: "Среднее",
-    min: "Минимум",
-    max: "Максимум",
-    sumif: "Сумма если",
-    averageif: "Среднее если",
-    countif: "Количество если",
+    SUM: "Сумма",
+    AVERAGE: "Среднее",
+    MIN: "Минимум",
+    MAX: "Максимум",
+    SUMIF: "Сумма если",
+    AVERAGEIF: "Среднее если",
+    COUNTIF: "Количество если",
     formula: "Формула",
     other: "Другое",
   };
 
   const reverseOperationMappings = {
-    Сумма: "sum",
-    Среднее: "avgerage",
-    Минимум: "min",
-    Максимум: "max",
-    "Сумма если": "sumif",
-    "Среднее если": "averageif",
-    "Количество если": "countif",
+    Сумма: "SUM",
+    Среднее: "AVERAGE",
+    Минимум: "MIN",
+    Максимум: "MAX",
+    "Сумма если": "SUMIF",
+    "Среднее если": "AVERAGEIF",
+    "Количество если": "COUNTIF",
     Формула: "formula",
     Другое: "other",
   };
 
   const defaultOperations = [
-    "sum",
-    "average",
-    "min",
-    "max",
-    "sumif",
-    "averageif",
-    "countif",
+    "SUM",
+    "AVERAGE",
+    "MIN",
+    "MAX",
+    "SUMIF",
+    "AVERAGEIF",
+    "COUNTIF",
     "formula",
     "other",
   ];
@@ -234,8 +234,8 @@ const FormConstructor = () => {
         subject: row.subject,
         columns: row.columns.map((col) => ({
           name: "sadsa",
-          plan: col.plan === "formula" ? "formula" : (col.plan === "array" ? col.plan : col.plan.toUpperCase()),
-          operation: col.operation.toUpperCase(),
+          plan: col.plan,
+          operation: col.operation,
           params: col.params, // Assuming params is an array of strings
           value: col.value,
         })),
@@ -331,6 +331,7 @@ const FormConstructor = () => {
             ))}
             <option value="formula">Формула</option>
             <option value="array">Массив</option>
+            <option value="where">WHERE IF</option>
           </select>
 
           <label className="block text-gray-700">Выберите операцию:</label>
