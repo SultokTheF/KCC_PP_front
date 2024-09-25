@@ -332,6 +332,7 @@ const HoursTable = () => {
                       'EZ_T_ВИЭ',
                       'EZ_T_РЭК',
                       'Pred_T',
+                      'plan_T',
                       'Wo_Prov_T',
                       'W_Prov_T',
                       'BE_T',
@@ -405,6 +406,9 @@ const HoursTable = () => {
                       </td>
                       <td className="px-2 py-1 border-b border-gray-200">
                         {hour.Pred_T}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.plan_t}
                       </td>
                       <td className="px-2 py-1 border-b border-gray-200">
                         {hour.Wo_Prov_T}

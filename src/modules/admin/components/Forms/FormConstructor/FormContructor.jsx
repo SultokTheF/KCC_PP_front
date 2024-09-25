@@ -9,37 +9,37 @@ const FormConstructor = () => {
 
   // Operations and Formulas mappings for display and JSON
   const operationMappings = {
-    SUM: "Сумма",
-    AVERAGE: "Среднее",
-    MIN: "Минимум",
-    MAX: "Максимум",
-    SUMIF: "Сумма если",
-    AVERAGEIF: "Среднее если",
-    COUNTIF: "Количество если",
+    sum: "Сумма",
+    average: "Среднее",
+    min: "Минимум",
+    max: "Максимум",
+    sumif: "Сумма если",
+    averageif: "Среднее если",
+    countif: "Количество если",
     formula: "Формула",
     other: "Другое",
   };
 
   const reverseOperationMappings = {
-    Сумма: "SUM",
-    Среднее: "AVERAGE",
-    Минимум: "MIN",
-    Максимум: "MAX",
-    "Сумма если": "SUMIF",
-    "Среднее если": "AVERAGEIF",
-    "Количество если": "COUNTIF",
+    Сумма: "sum",
+    Среднее: "avgerage",
+    Минимум: "min",
+    Максимум: "max",
+    "Сумма если": "sumif",
+    "Среднее если": "averageif",
+    "Количество если": "countif",
     Формула: "formula",
     Другое: "other",
   };
 
   const defaultOperations = [
-    "SUM",
-    "AVERAGE",
-    "MIN",
-    "MAX",
-    "SUMIF",
-    "AVERAGEIF",
-    "COUNTIF",
+    "sum",
+    "average",
+    "min",
+    "max",
+    "sumif",
+    "averageif",
+    "countif",
     "formula",
     "other",
   ];
@@ -234,7 +234,7 @@ const FormConstructor = () => {
         subject: row.subject,
         columns: row.columns.map((col) => ({
           name: "sadsa",
-          plan: col.plan,
+          plan: col.plan === "formula" ? "formula" : (col.plan === "array" ? col.plan : (col.plan === "where" ? col.plan : col.plan.toUpperCase())),
           operation: col.operation,
           params: col.params, // Assuming params is an array of strings
           value: col.value,

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { axiosInstance, endpoints } from '../../../../../services/apiConfig'; // Ensure you have the correct path for axios instance
+import { axiosInstance, endpoints } from '../../../../../services/apiConfig';
 import Sidebar from '../../Sidebar/Sidebar';
 import Calendar from './Calendar/Calendar';
 import ProvidersTable from './ProvidersTable';
@@ -37,11 +37,10 @@ const Providers = () => {
       });
 
       const initialSelectedProviders = {};
-      subjectsResponse.data.forEach(subject => {
+      subjectsResponse.data.forEach((subject) => {
         initialSelectedProviders[subject.id] = subject.providers;
       });
       setSelectedProviders(initialSelectedProviders);
-
     } catch (error) {
       console.error('Ошибка при получении данных:', error);
     }
@@ -52,16 +51,14 @@ const Providers = () => {
   }, []);
 
   const handleSave = async () => {
-    const updatePromises = Object.entries(selectedProviders).map(async ([subjectId, newProviders]) => {
-      try {
-        await axiosInstance.patch(`${endpoints.SUBJECTS}${subjectId}/`, { providers: newProviders });
-      } catch (error) {
-        console.error(`Ошибка при обновлении провайдеров для subjectId ${subjectId}:`, error);
-      }
-    });
-  
     try {
-      await Promise.all(updatePromises);
+      for (const [subjectId, newProviders] of Object.entries(selectedProviders)) {
+        try {
+          await axiosInstance.patch(`${endpoints.SUBJECTS}${subjectId}/`, { providers: newProviders });
+        } catch (error) {
+          console.error(`Ошибка при обновлении провайдеров для subjectId ${subjectId}:`, error);
+        }
+      }
       fetchData(); // Refresh the data after saving
       setSuccessMessage('Данные успешно сохранены!');
       setTimeout(() => setSuccessMessage(''), 3000);
@@ -69,7 +66,7 @@ const Providers = () => {
       console.error('Ошибка при сохранении данных:', error);
     }
   };
-  
+
   return (
     <div className="flex">
       <Sidebar />
@@ -82,7 +79,9 @@ const Providers = () => {
         />
         <div className="p-2">
           <h1 className="text-2xl font-bold mb-4">Поставщики</h1>
-          {successMessage && <div className="bg-green-200 text-green-800 p-2 mb-4 rounded">{successMessage}</div>}
+          {successMessage && (
+            <div className="bg-green-200 text-green-800 p-2 mb-4 rounded">{successMessage}</div>
+          )}
           <ProvidersTable
             data={data}
             fetchData={fetchData}
@@ -92,7 +91,9 @@ const Providers = () => {
           />
         </div>
         <div className="mt-4 flex justify-center">
-          <button onClick={handleSave} className="bg-blue-500 text-white py-2 px-4 rounded">Сохранить</button>
+          <button onClick={handleSave} className="bg-blue-500 text-white py-2 px-4 rounded">
+            Сохранить
+          </button>
         </div>
       </div>
     </div>
