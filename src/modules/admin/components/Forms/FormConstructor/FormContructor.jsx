@@ -171,7 +171,7 @@ const FormConstructor = () => {
     const operation =
       selectedOperation === "other"
         ? customOperation
-        : selectedOperation.toLowerCase();
+        : selectedOperation.toUpperCase();
 
     if (
       selectedOperation === "sumif" ||
