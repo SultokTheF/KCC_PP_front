@@ -11,6 +11,7 @@ import {
   UserDashboard,
   UserProfile,
   UserGraphs,
+  UserHoursTable,
 
   // Dispatcher
   DispatcherProfile,
@@ -57,6 +58,7 @@ const Router = ({ userRole }) => {
           <Route path="/dashboard" element={<UserDashboard />} />
 
           <Route path="/graphs" element={<UserGraphs />} />
+          <Route path="/hours-table" element={<UserHoursTable />} />
           <Route path="*" element={<PageNotFound />} />
         </>
       )}

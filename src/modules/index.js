@@ -1,7 +1,8 @@
 import { 
   Dashboard as UserDashboard,
   Profile as UserProfile,
-  Graphs as UserGraphs
+  Graphs as UserGraphs,
+  HoursTable as UserHoursTable
 } from "./user";
 
 import {
@@ -36,7 +37,8 @@ import {
 export {
   UserDashboard,
   UserProfile,
-  UserGraphs
+  UserGraphs,
+  UserHoursTable
 }
 
 export {
