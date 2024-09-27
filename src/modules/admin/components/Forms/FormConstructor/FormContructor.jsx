@@ -280,7 +280,7 @@ const FormConstructor = () => {
         subject: row.subject,
         columns: row.columns.map((col) => ({
           name: "sadsa",
-          plan: col.plan === "formula" ? "formula" : (col.plan === "array" ? col.plan : (col.plan === "where" ? col.plan : col.plan.toUpperCase())),
+          plan: col.plan,
           operation: col.operation,
           params: col.params, // Assuming params is an array of strings
           value: col.value,
@@ -463,66 +463,66 @@ const FormConstructor = () => {
 
         {/* Main Table structure */}
         <div className="overflow-x-auto max-w-full mb-6">
-  <table className="min-w-full max-w-[1200px] bg-white border border-gray-200 shadow-md">
-    <thead>
-      <tr className="bg-gray-100">
-        <th className="px-4 py-2 text-left text-gray-700 font-semibold border-b">
-          Субъекты
-        </th>
-        {tableConfig.length > 0 &&
-          tableConfig[0].columns.map((col, index) => (
-            <th
-              key={index}
-              className="px-4 py-2 text-left text-gray-700 font-semibold border-b"
-            >
-              {col.plan === "formula" ? (
-                `Формула (${col.operation})`
-              ) : col.params && col.params.length > 0 ? (
-                `${col.plan} (${operationMappings[col.operation] || col.operation
-                } ${col.params.join(" ")})`
-              ) : (
-                `${col.plan} (${operationMappings[col.operation] || col.operation
-                })`
-              )}
-              <button
-                className="ml-2 text-red-500 hover:text-red-700 flex items-center"
-                onClick={() => deleteColumn(index)}
-              >
-                <FaTrashAlt className="mr-1" />
-                <span>Удалить</span>
-              </button>
-            </th>
-          ))}
-      </tr>
-    </thead>
-    <tbody>
-      {tableConfig.map((row, rowIndex) => (
-        <tr key={rowIndex} className="hover:bg-gray-50">
-          <td className="border px-4 py-2 text-gray-600">
-            {getSubjectName(row.subject)}
-            <button
-              className="ml-2 text-red-500 hover:text-red-700 flex items-center"
-              onClick={() => deleteRow(rowIndex)}
-            >
-              <FaTrashAlt className="mr-1" />
-              <span>Удалить</span>
-            </button>
-          </td>
+          <table className="min-w-full max-w-[1200px] bg-white border border-gray-200 shadow-md">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="px-4 py-2 text-left text-gray-700 font-semibold border-b">
+                  Субъекты
+                </th>
+                {tableConfig.length > 0 &&
+                  tableConfig[0].columns.map((col, index) => (
+                    <th
+                      key={index}
+                      className="px-4 py-2 text-left text-gray-700 font-semibold border-b"
+                    >
+                      {col.plan === "formula" ? (
+                        `Формула (${col.operation})`
+                      ) : col.params && col.params.length > 0 ? (
+                        `${col.plan} (${operationMappings[col.operation] || col.operation
+                        } ${col.params.join(" ")})`
+                      ) : (
+                        `${col.plan} (${operationMappings[col.operation] || col.operation
+                        })`
+                      )}
+                      <button
+                        className="ml-2 text-red-500 hover:text-red-700 flex items-center"
+                        onClick={() => deleteColumn(index)}
+                      >
+                        <FaTrashAlt className="mr-1" />
+                        <span>Удалить</span>
+                      </button>
+                    </th>
+                  ))}
+              </tr>
+            </thead>
+            <tbody>
+              {tableConfig.map((row, rowIndex) => (
+                <tr key={rowIndex} className="hover:bg-gray-50">
+                  <td className="border px-4 py-2 text-gray-600">
+                    {getSubjectName(row.subject)}
+                    <button
+                      className="ml-2 text-red-500 hover:text-red-700 flex items-center"
+                      onClick={() => deleteRow(rowIndex)}
+                    >
+                      <FaTrashAlt className="mr-1" />
+                      <span>Удалить</span>
+                    </button>
+                  </td>
 
-          {row.columns.map((col, colIndex) => (
-            <td
-              key={colIndex}
-              className="border px-4 py-2 text-gray-600"
-            >
-              {/* If array_value exists, skip rendering in this main table */}
-              {col.array_value.length > 0 ? null : col.value !== null ? col.value : "-"}
-            </td>
-          ))}
-        </tr>
-      ))}
-    </tbody>
-  </table>
-</div>
+                  {row.columns.map((col, colIndex) => (
+                    <td
+                      key={colIndex}
+                      className="border px-4 py-2 text-gray-600"
+                    >
+                      {/* If array_value exists, skip rendering in this main table */}
+                      {col.array_value.length > 0 ? null : col.value !== null ? col.value : "-"}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
 
         {/* Render separate tables for array_value columns */}
