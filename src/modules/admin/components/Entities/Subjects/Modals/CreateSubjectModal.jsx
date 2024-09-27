@@ -146,6 +146,8 @@ const CreateSubjectModal = ({ isOpen, closeModal, onSubmit }) => {
                 <option value="">Выберите тип</option>
                 <option value="ЭПО">ЭПО</option>
                 <option value="CONSUMER">ПОТРЕБИТЕЛЬ</option>
+                <option value="ГП">ГП</option>
+                <option value="ВИЭ">ВИЭ</option>
               </select>
               {errorMessage.subject_type && (
                 <span className="text-red-600 mt-2 block text-center">{errorMessage.subject_type[0]}</span>

@@ -72,7 +72,7 @@ const SingleSubject = () => {
       return 'ЭПО';
     } else if (type === 'CONSUMER') {
       return 'Потребитель';
-    }
+    } 
     return type;
   };
 
@@ -179,8 +179,11 @@ const SingleSubject = () => {
                     onChange={handleChange}
                     className="w-full p-2 border border-gray-300 rounded-md"
                   >
+                    <option value="">Выберите тип</option>
                     <option value="ЭПО">ЭПО</option>
-                    <option value="CONSUMER">Потребитель</option>
+                    <option value="CONSUMER">ПОТРЕБИТЕЛЬ</option>
+                    <option value="ГП">ГП</option>
+                    <option value="ВИЭ">ВИЭ</option>
                   </select>
                 ) : (
                   <div>{formatType(subjectData?.subject_type)}</div>

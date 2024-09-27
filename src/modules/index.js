@@ -31,7 +31,8 @@ import {
   SingleUser as AdminSingleUser,
   HoursTable as AdminHoursTable,
   FormContructor as AdminFormContructor,
-  TableOverview as AdminTableOverview
+  TableOverview as AdminTableOverview,
+  TableConstructor as AdminTableContructor
 } from "./admin";
 
 export {
@@ -67,5 +68,6 @@ export {
   AdminSingleUser,
   AdminVolumes,
   AdminFormContructor,
-  AdminTableOverview
+  AdminTableOverview,
+  AdminTableContructor
 }

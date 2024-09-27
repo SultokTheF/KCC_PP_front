@@ -38,7 +38,8 @@ import {
   AdminHoursTable,
   AdminVolumes,
   AdminFormContructor,
-  AdminTableOverview
+  AdminTableOverview,
+  AdminTableContructor
 } from "./modules";
 
 const Router = ({ userRole }) => {
@@ -86,6 +87,7 @@ const Router = ({ userRole }) => {
           <Route path="/reports/history" element={<AdminHistory />} />
           <Route path="/reports/hour-table" element={<AdminHoursTable />} />
           <Route path="/forms/table" element={<AdminTableOverview />} />
+          <Route path="/forms/tables/:id" element={<AdminTableContructor />} />
           <Route path="/forms/table/:id" element={<AdminFormContructor />} />
 
           <Route path="/subjects" element={<AdminSubjectsList />} />

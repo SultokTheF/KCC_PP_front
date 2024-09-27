@@ -22,7 +22,7 @@ const FormConstructor = () => {
 
   const reverseOperationMappings = {
     Сумма: "sum",
-    Среднее: "avgerage",
+    Среднее: "average",
     Минимум: "min",
     Максимум: "max",
     "Сумма если": "sumif",
@@ -47,26 +47,14 @@ const FormConstructor = () => {
   const conditionOperators = [">", "<", ">=", "<=", "==", "!="];
 
   const hourFields = [
-    // "Час",
     "coefficient", "volume",
     "P1", "P2", "P3", "F1", "F2",
     "P1_Gen", "P2_Gen", "P3_Gen", "F1_Gen", "F2_Gen",
-    // "BE_Up", "BE_Down", "OD_Up", "OD_Down",
-    // "BE_Up_V1", "BE_Down_V1", "OD_Up_V1", "OD_Down_V1",
-    // "BE_Up_V2", "BE_Down_V2", "OD_Up_V2", "OD_Down_V2",
-    // "BE_Up_V3", "BE_Down_V3", "OD_Up_V3", "OD_Down_V3",
-    // "BE_Up_V4", "BE_Down_V4", "OD_Up_V4", "OD_Down_V4",
     "EZ_T", "EZ_Base_T",
     "EZ_T_ВИЭ", "EZ_T_РЭК",
-    // "Ind_Prov_T", "BE_T", "OD_T", "Ind_T", "Prov_T", "T_Coef",
     "Pred_T", "Wo_Prov_T", "W_Prov_T",
     "BE_T", "OD_T",
     "T_Coef",
-    // "Ind_T_V1", "Prov_T_V1",
-    // "Ind_T_V2", "Prov_T_V2",
-    // "Ind_T_V3", "Prov_T_V3",
-    // "Ind_T_V4", "Prov_T_V4",
-    // "Money_V1", "Money_V2", "Money_V3", "Money_V4",
     "direction",
     "message"
   ];
@@ -134,14 +122,68 @@ const FormConstructor = () => {
     const updatedTableConfig = tableData.data.map((row) => ({
       subject: row.subject,
       columns: row.columns.map((col) => ({
-        plan: (col.plan),
+        plan: col.plan,
         operation: col.operation,
         params: col.params || [],
         value: col.value,
+        array_value: col.array_value || [], // Catch the array values if present
       })),
     }));
 
     setTableConfig(updatedTableConfig);
+  };
+
+  // Function to render hourly data when the plan is "array" and operation is "other"
+  const renderHourlyArrayTable = (arrayData, label) => {
+    let rows = [];
+    let currentDay = new Date(startDate);
+
+    // Iterate through the array in chunks of 24 (representing each hour of the day)
+    for (let i = 0; i < arrayData.length; i += 24) {
+      const dayHours = arrayData.slice(i, i + 24);
+
+      // Generate row for the day and each hour
+      rows.push(
+        <tr key={i}>
+          <td className="border px-4 py-2 text-gray-600">
+            {currentDay.toISOString().split("T")[0]}
+          </td>
+          {dayHours.map((hourValue, hourIndex) => (
+            <td key={hourIndex} className="border px-4 py-2 text-gray-600">
+              {hourValue || 0} {/* Display 0 if value is null */}
+            </td>
+          ))}
+        </tr>
+      );
+
+      // Move to the next day
+      currentDay.setDate(currentDay.getDate() + 1);
+    }
+
+    return (
+      <div key={label} className="my-6">
+        <h3 className="text-lg font-bold mb-2">{label}</h3>
+
+        {/* Apply the scrolling and width restrictions */}
+        <div className="overflow-x-auto">
+          <table className="min-w-full max-w-[1200px] bg-gray-100 border border-gray-300">
+            <thead>
+              <tr>
+                <th className="px-2 py-1 text-left text-gray-700 border-b">
+                  Дата
+                </th>
+                {Array.from({ length: 24 }, (_, i) => (
+                  <th key={i} className="px-2 py-1 text-left text-gray-700 border-b">
+                    {i + 1} час
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>{rows}</tbody>
+          </table>
+        </div>
+      </div>
+    );
   };
 
   // Add a new row
@@ -158,8 +200,9 @@ const FormConstructor = () => {
             operation: col.operation,
             params: col.params || [],
             value: 0,
+            array_value: [], // Initialize array_value as an empty array for new columns
           }))
-          : [],
+          : [], // Initialize empty columns if no previous rows
     };
 
     setTableConfig((prev) => [...prev, newRow]);
@@ -187,18 +230,21 @@ const FormConstructor = () => {
           conditionOperator + conditionValue,
         ],
         value: 0,
+        array_value: [], // Initialize array_value as an empty array
       };
     } else if (selectedOperation === "formula") {
       newColumn = {
         plan: "formula",
         operation: formulaInput,
         value: 0,
+        array_value: [], // Initialize array_value as an empty array
       };
     } else {
       newColumn = {
         plan: selectedField,
         operation,
         value: 0,
+        array_value: [], // Initialize array_value as an empty array
       };
     }
 
@@ -415,67 +461,78 @@ const FormConstructor = () => {
           </button>
         </div>
 
-        {/* Table structure */}
-        <div className="overflow-x-auto mb-6">
-          <table className="min-w-full bg-white border border-gray-200 shadow-md">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="px-4 py-2 text-left text-gray-700 font-semibold border-b">
-                  Субъекты
-                </th>
-                {tableConfig.length > 0 &&
-                  tableConfig[0].columns.map((col, index) => (
-                    <th
-                      key={index}
-                      className="px-4 py-2 text-left text-gray-700 font-semibold border-b"
-                    >
-                      {col.plan === "formula" ? (
-                        `Формула (${col.operation})`
-                      ) : col.params && col.params.length > 0 ? (
-                        `${col.plan} (${operationMappings[col.operation] || col.operation
-                        } ${col.params.join(" ")})`
-                      ) : (
-                        `${col.plan} (${operationMappings[col.operation] || col.operation
-                        })`
-                      )}
-                      <button
-                        className="ml-2 text-red-500 hover:text-red-700 flex items-center"
-                        onClick={() => deleteColumn(index)}
-                      >
-                        <FaTrashAlt className="mr-1" />
-                        <span>Удалить</span>
-                      </button>
-                    </th>
-                  ))}
-              </tr>
-            </thead>
-            <tbody>
-              {tableConfig.map((row, rowIndex) => (
-                <tr key={rowIndex} className="hover:bg-gray-50">
-                  <td className="border px-4 py-2 text-gray-600">
-                    {getSubjectName(row.subject)}
-                    <button
-                      className="ml-2 text-red-500 hover:text-red-700 flex items-center"
-                      onClick={() => deleteRow(rowIndex)}
-                    >
-                      <FaTrashAlt className="mr-1" />
-                      <span>Удалить</span>
-                    </button>
-                  </td>
+        {/* Main Table structure */}
+        <div className="overflow-x-auto max-w-full mb-6">
+  <table className="min-w-full max-w-[1200px] bg-white border border-gray-200 shadow-md">
+    <thead>
+      <tr className="bg-gray-100">
+        <th className="px-4 py-2 text-left text-gray-700 font-semibold border-b">
+          Субъекты
+        </th>
+        {tableConfig.length > 0 &&
+          tableConfig[0].columns.map((col, index) => (
+            <th
+              key={index}
+              className="px-4 py-2 text-left text-gray-700 font-semibold border-b"
+            >
+              {col.plan === "formula" ? (
+                `Формула (${col.operation})`
+              ) : col.params && col.params.length > 0 ? (
+                `${col.plan} (${operationMappings[col.operation] || col.operation
+                } ${col.params.join(" ")})`
+              ) : (
+                `${col.plan} (${operationMappings[col.operation] || col.operation
+                })`
+              )}
+              <button
+                className="ml-2 text-red-500 hover:text-red-700 flex items-center"
+                onClick={() => deleteColumn(index)}
+              >
+                <FaTrashAlt className="mr-1" />
+                <span>Удалить</span>
+              </button>
+            </th>
+          ))}
+      </tr>
+    </thead>
+    <tbody>
+      {tableConfig.map((row, rowIndex) => (
+        <tr key={rowIndex} className="hover:bg-gray-50">
+          <td className="border px-4 py-2 text-gray-600">
+            {getSubjectName(row.subject)}
+            <button
+              className="ml-2 text-red-500 hover:text-red-700 flex items-center"
+              onClick={() => deleteRow(rowIndex)}
+            >
+              <FaTrashAlt className="mr-1" />
+              <span>Удалить</span>
+            </button>
+          </td>
 
-                  {row.columns.map((col, colIndex) => (
-                    <td
-                      key={colIndex}
-                      className="border px-4 py-2 text-gray-600"
-                    >
-                      {col.value}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+          {row.columns.map((col, colIndex) => (
+            <td
+              key={colIndex}
+              className="border px-4 py-2 text-gray-600"
+            >
+              {/* If array_value exists, skip rendering in this main table */}
+              {col.array_value.length > 0 ? null : col.value !== null ? col.value : "-"}
+            </td>
+          ))}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+
+
+        {/* Render separate tables for array_value columns */}
+        {tableConfig.map((row, rowIndex) =>
+          row.columns.map((col, colIndex) =>
+            col.array_value.length > 0 ? (
+              renderHourlyArrayTable(col.array_value, `${col.plan} (${col.operation})`, col.subject)
+            ) : null
+          )
+        )}
 
         {/* Submit button */}
         <div className="mt-6">
