@@ -141,7 +141,7 @@ const IndProvTariffs = () => {
         // Map the found hours to the correct index in the array
         dayHours.forEach((hour) => {
           const hourIndex = parseInt(hour.hour) - 1;
-          hoursData[hourIndex] = hour.Ind_Prov_T;
+          hoursData[hourIndex] = hour.Pred_T;
         });
       }
 
