@@ -5,9 +5,6 @@ import Sidebar from '../../Sidebar/Sidebar';
 const HoursTable = () => {
   const [subjectsList, setSubjectsList] = useState([]);
   const [hoursByDate, setHoursByDate] = useState({});
-  const [providersList, setProvidersList] = useState([]);
-  const [selectedProviderSubjects, setSelectedProviderSubjects] = useState([]);
-  const [providerError, setProviderError] = useState('');
   const [datesByDayId, setDatesByDayId] = useState({});
   const [subjectsById, setSubjectsById] = useState({});
 
@@ -20,7 +17,12 @@ const HoursTable = () => {
     endHour: 24,
   });
 
-  // Fetch subjects list
+  const [buttonLoading, setButtonLoading] = useState(false);
+  const [superButtonMessage, setSuperButtonMessage] = useState('');
+
+  const SUPER_BUTTON_ENDPOINT = '/api/days/superButton/';
+
+  // Получение списка субъектов
   const fetchData = async () => {
     try {
       const accessToken = localStorage.getItem('accessToken');
@@ -35,7 +37,7 @@ const HoursTable = () => {
     }
   };
 
-  // Function to fetch the date using the dayId and format it
+  // Получение даты по dayId и форматирование
   const fetchDateByDayId = async (dayId) => {
     try {
       const accessToken = localStorage.getItem('accessToken');
@@ -45,20 +47,21 @@ const HoursTable = () => {
 
       const fullDate = response.data.date;
 
-      const subjsctResponse = await axiosInstance.get(`${endpoints.SUBJECTS}${response.data.subject}`);
+      const subjectResponse = await axiosInstance.get(
+        `${endpoints.SUBJECTS}${response.data.subject}`
+      );
 
-      const subject = subjsctResponse.data.subject_name;
-      // Remove everything after 'T' and format the date as ДД.ММ.ГГГГ
+      const subject = subjectResponse.data.subject_name;
       const formattedDate = fullDate.split('T')[0].split('-').reverse().join('.');
       setDatesByDayId((prev) => ({ ...prev, [dayId]: formattedDate }));
       setSubjectsById((prev) => ({ ...prev, [dayId]: subject }));
     } catch (error) {
       console.error('Ошибка при получении даты по dayId:', error);
-      setDatesByDayId((prev) => ({ ...prev, [dayId]: 'Неизвестная дата' })); // Fallback in case of error
+      setDatesByDayId((prev) => ({ ...prev, [dayId]: 'Неизвестная дата' }));
     }
   };
 
-  // Fetch hours based on date and subject
+  // Получение часов по дате и субъекту
   const fetchHours = async (startDate, endDate, subject) => {
     try {
       const accessToken = localStorage.getItem('accessToken');
@@ -72,12 +75,14 @@ const HoursTable = () => {
       });
 
       if (!response.data || response.data.error || response.data.length === 0) {
-        console.error('Ошибка при получении часов:', response.data.error || 'Часы не найдены с указанными критериями.');
+        console.error(
+          'Ошибка при получении часов:',
+          response.data.error || 'Часы не найдены с указанными критериями.'
+        );
         setHoursByDate({});
         return;
       }
 
-      // Group hours by day
       const groupedHours = response.data.reduce((acc, hour) => {
         const day = hour.day;
 
@@ -90,17 +95,15 @@ const HoursTable = () => {
         return acc;
       }, {});
 
-      // Sort the days and sort hours within each day by hour
       const sortedGroupedHours = Object.keys(groupedHours)
-        .sort((a, b) => parseInt(a) - parseInt(b)) // Sort days numerically
+        .sort((a, b) => parseInt(a) - parseInt(b))
         .reduce((acc, day) => {
-          acc[day] = groupedHours[day].sort((a, b) => a.hour - b.hour); // Sort hours within the day
+          acc[day] = groupedHours[day].sort((a, b) => a.hour - b.hour);
           return acc;
         }, {});
 
       setHoursByDate(sortedGroupedHours);
 
-      // Fetch the date for each dayId and format it
       Object.keys(sortedGroupedHours).forEach((dayId) => fetchDateByDayId(dayId));
     } catch (error) {
       console.error('Ошибка при получении часов:', error);
@@ -131,6 +134,26 @@ const HoursTable = () => {
     }));
   };
 
+  const handleSuperButtonClick = async () => {
+    setButtonLoading(true);
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      await axiosInstance.post(
+        SUPER_BUTTON_ENDPOINT,
+        {},
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      setSuperButtonMessage('Запрос успешно выполнен.');
+    } catch (error) {
+      console.error('Ошибка при выполнении запроса супер кнопки:', error);
+      setSuperButtonMessage('Ошибка при выполнении запроса.');
+    } finally {
+      setButtonLoading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col lg:flex-row">
       <Sidebar />
@@ -140,7 +163,7 @@ const HoursTable = () => {
         </h1>
         <div className="bg-white p-6 rounded-lg shadow-md mb-8">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            {/* Selectors */}
+            {/* Селекторы */}
             <div className="w-full">
               <label
                 htmlFor="subject"
@@ -243,15 +266,36 @@ const HoursTable = () => {
               </select>
             </div>
           </div>
+          {/* Кнопка "Супер кнопка" */}
+          <div className="flex justify-center mt-4">
+            <button
+              onClick={handleSuperButtonClick}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={buttonLoading}
+            >
+              {buttonLoading ? 'Загрузка...' : 'Супер кнопка'}
+            </button>
+          </div>
+          {/* Сообщение после выполнения запроса */}
+          {superButtonMessage && (
+            <div
+              className={`mt-4 text-center font-semibold ${superButtonMessage.includes('Ошибка')
+                  ? 'text-red-600'
+                  : 'text-green-600'
+                }`}
+            >
+              {superButtonMessage}
+            </div>
+          )}
         </div>
 
-        {/* Table displaying hours by date */}
+        {/* Таблица отображения часов по дате */}
         {Object.keys(hoursByDate).map((dayId) => (
           <div key={dayId} className="mt-8">
             <h2 className="text-xl font-semibold text-center text-gray-700 mb-4">
               Дата: {datesByDayId[dayId] || 'Загрузка...'}
             </h2>
-            {/* Scrollable table container */}
+            {/* Контейнер для прокручиваемой таблицы */}
             <div className="overflow-x-auto max-w-full bg-white shadow-md rounded-lg">
               <table className="table-fixed min-w-full text-sm bg-white border border-gray-200">
                 <thead className="bg-gray-100 text-center">
@@ -370,10 +414,10 @@ const HoursTable = () => {
                       </td>
                       <td
                         className={`px-2 py-1 border-b border-gray-200 ${hour.direction === 'DOWN'
-                            ? 'bg-green-100'
-                            : hour.direction === 'UP'
-                              ? 'bg-red-100'
-                              : ''
+                          ? 'bg-green-100'
+                          : hour.direction === 'UP'
+                            ? 'bg-red-100'
+                            : ''
                           }`}
                       >
                         {hour.direction === 'UP'

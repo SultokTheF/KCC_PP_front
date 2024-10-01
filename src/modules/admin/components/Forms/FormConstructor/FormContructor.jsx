@@ -119,7 +119,9 @@ const FormConstructor = () => {
   const setTablesFromResponse = (responseData) => {
     // Assuming responseData is an array of tables
     // If responseData is a single table, wrap it in an array
-    const tablesData = Array.isArray(responseData) ? responseData : [responseData];
+    const tablesData = Array.isArray(responseData)
+      ? responseData
+      : [responseData];
 
     const newTables = tablesData.map((tableData) => {
       const {
@@ -129,6 +131,7 @@ const FormConstructor = () => {
         group_by_date,
         group_by_hour,
         results,
+        exclude_holidays,
       } = tableData;
 
       // Organize results by subject
@@ -167,6 +170,11 @@ const FormConstructor = () => {
           : new Date().toISOString().split("T")[0],
         groupByDate: group_by_date || false,
         groupByHour: group_by_hour || false,
+        excludeHolidays: exclude_holidays || {
+          Russia: false,
+          Kazakhstan: false,
+          Weekend: false,
+        },
         tableConfig: Object.values(subjectsMap),
       };
     });
@@ -185,14 +193,10 @@ const FormConstructor = () => {
     setTables((prevTables) =>
       prevTables.map((table, idx) => {
         if (idx === tableIndex) {
-          if (
-            !table.tableConfig.find((item) => item.subject === subject.id)
-          ) {
+          if (!table.tableConfig.find((item) => item.subject === subject.id)) {
             // Get existing columns (results) from first subject
             const existingResults =
-              table.tableConfig.length > 0
-                ? table.tableConfig[0].results
-                : [];
+              table.tableConfig.length > 0 ? table.tableConfig[0].results : [];
 
             // Create new results for the new subject
             const newResults = existingResults.map((res) => ({
@@ -345,6 +349,7 @@ const FormConstructor = () => {
       end_date: table.endDate,
       group_by_date: table.groupByDate,
       group_by_hour: table.groupByHour,
+      exclude_holidays: table.excludeHolidays,
       results: table.tableConfig
         .map((item) =>
           item.results.map((res) => ({
@@ -514,7 +519,9 @@ const FormConstructor = () => {
                   onChange={(e) =>
                     setTables((prevTables) =>
                       prevTables.map((t, idx) =>
-                        idx === tableIndex ? { ...t, startDate: e.target.value } : t
+                        idx === tableIndex
+                          ? { ...t, startDate: e.target.value }
+                          : t
                       )
                     )
                   }
@@ -532,7 +539,9 @@ const FormConstructor = () => {
                   onChange={(e) =>
                     setTables((prevTables) =>
                       prevTables.map((t, idx) =>
-                        idx === tableIndex ? { ...t, endDate: e.target.value } : t
+                        idx === tableIndex
+                          ? { ...t, endDate: e.target.value }
+                          : t
                       )
                     )
                   }
@@ -577,6 +586,84 @@ const FormConstructor = () => {
                 />
                 Группировать по часу
               </label>
+            </div>
+
+            {/* Exclude Holidays Options */}
+            <div className="mb-6">
+              <label className="block text-gray-700 mb-1">
+                Исключить праздничные дни:
+              </label>
+              <div className="flex items-center space-x-6">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={table.excludeHolidays.Russia}
+                    onChange={(e) =>
+                      setTables((prevTables) =>
+                        prevTables.map((t, idx) =>
+                          idx === tableIndex
+                            ? {
+                                ...t,
+                                excludeHolidays: {
+                                  ...t.excludeHolidays,
+                                  Russia: e.target.checked,
+                                },
+                              }
+                            : t
+                        )
+                      )
+                    }
+                    className="mr-2"
+                  />
+                  Россия
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={table.excludeHolidays.Kazakhstan}
+                    onChange={(e) =>
+                      setTables((prevTables) =>
+                        prevTables.map((t, idx) =>
+                          idx === tableIndex
+                            ? {
+                                ...t,
+                                excludeHolidays: {
+                                  ...t.excludeHolidays,
+                                  Kazakhstan: e.target.checked,
+                                },
+                              }
+                            : t
+                        )
+                      )
+                    }
+                    className="mr-2"
+                  />
+                  Казахстан
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={table.excludeHolidays.Weekend}
+                    onChange={(e) =>
+                      setTables((prevTables) =>
+                        prevTables.map((t, idx) =>
+                          idx === tableIndex
+                            ? {
+                                ...t,
+                                excludeHolidays: {
+                                  ...t.excludeHolidays,
+                                  Weekend: e.target.checked,
+                                },
+                              }
+                            : t
+                        )
+                      )
+                    }
+                    className="mr-2"
+                  />
+                  Выходные
+                </label>
+              </div>
             </div>
 
             {/* Add row section */}
