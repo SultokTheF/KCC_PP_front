@@ -89,8 +89,8 @@ const FormConstructor = () => {
   const [conditionValue, setConditionValue] = useState("");
   const [formulaInput, setFormulaInput] = useState("");
 
-  // State for showing detailed data
-  const [showDetailedData, setShowDetailedData] = useState([]);
+  // State for showing detailed data (sub-tables)
+  const [visibleSubTables, setVisibleSubTables] = useState({});
 
   // Fetch subjects and initial table data by id
   useEffect(() => {
@@ -237,7 +237,7 @@ const FormConstructor = () => {
     ) {
       newResult = {
         plan: selectedField,
-        name: operation,
+        name: operationMappings[selectedOperation] || operation,
         operation: operation,
         params: [
           selectedField,
@@ -384,40 +384,42 @@ const FormConstructor = () => {
   };
 
   // Function to render hourly data when groupByHour is true
-  const renderHourlyArrayTable = (arrayData, label, tableName) => {
-    let rows = [];
-    let currentDay = tableName; // Use the table name as the date
-
+  const renderHourlyArrayTable = (arrayData, label, date, key) => {
     // If arrayData is empty, display a message
     if (!arrayData || arrayData.length === 0) {
       return (
-        <div key={label} className="my-6">
+        <div key={`${label}-${date}`} className="my-6">
           <h3 className="text-lg font-bold mb-2">{label}</h3>
           <div>Нет данных для отображения</div>
         </div>
       );
     }
 
-    // Iterate through the array in chunks of 24 (representing each hour of the day)
-    for (let i = 0; i < arrayData.length; i += 24) {
-      const dayHours = arrayData.slice(i, i + 24);
+    // Generate row for the day and each hour
+    const dayHours = arrayData;
 
-      // Generate row for the day and each hour
-      rows.push(
-        <tr key={i}>
-          <td className="border px-4 py-2 text-gray-600">{currentDay}</td>
-          {dayHours.map((hourValue, hourIndex) => (
-            <td key={hourIndex} className="border px-4 py-2 text-gray-600">
-              {hourValue || 0} {/* Display 0 if value is null */}
-            </td>
-          ))}
-        </tr>
-      );
-    }
+    const rows = (
+      <tr key={date}>
+        <td className="border px-4 py-2 text-gray-600">{date}</td>
+        {dayHours.map((hourValue, hourIndex) => (
+          <td key={hourIndex} className="border px-4 py-2 text-gray-600">
+            {hourValue.value || 0} {/* Display 0 if value is null */}
+          </td>
+        ))}
+      </tr>
+    );
 
     return (
-      <div key={label} className="my-6">
-        <h3 className="text-lg font-bold mb-2">{label}</h3>
+      <div key={`${label}-${date}-${key}`} className="my-6">
+        <h3 className="text-lg font-bold mb-2">
+          {label} - {date}
+          <button
+            onClick={() => toggleSubTableVisibility(key)}
+            className="ml-4 text-blue-500 hover:underline"
+          >
+            Скрыть данные
+          </button>
+        </h3>
 
         {/* Apply the scrolling and width restrictions */}
         <div className="overflow-x-auto">
@@ -440,100 +442,40 @@ const FormConstructor = () => {
             <tbody>{rows}</tbody>
           </table>
         </div>
-        {/* Hide detailed data button */}
-        <button
-          onClick={() =>
-            setShowDetailedData((prev) =>
-              prev.filter((item) => item.label !== label)
-            )
-          }
-          className="mt-2 text-blue-500 hover:underline"
-        >
-          Скрыть данные
-        </button>
       </div>
     );
   };
 
+  // State and functions to control visibility of sub-tables
+  const toggleSubTableVisibility = (key) => {
+    setVisibleSubTables((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const isSubTableVisible = (key) => {
+    return visibleSubTables[key];
+  };
+
   // Updated renderValue function
-  const renderValue = (
-    result,
-    tableIndex,
-    subjectIndex,
-    resultIndex,
-    tableName
-  ) => {
+  const renderValue = (result, key) => {
     if (result.value !== undefined) {
       return result.value !== null ? result.value : "-";
     } else if (result.date_value) {
-      // Instead of rendering the data, provide a button to view it
-      const isVisible = isDetailedDataVisible(
-        tableIndex,
-        subjectIndex,
-        resultIndex
-      );
+      // Indicate that data can be shown/hidden
+      const isVisible = isSubTableVisible(key);
       return (
         <button
-          onClick={() =>
-            toggleDetailedDataVisibility(
-              tableIndex,
-              subjectIndex,
-              resultIndex,
-              result,
-              tableName
-            )
-          }
+          onClick={() => toggleSubTableVisibility(key)}
           className="text-blue-500 hover:underline"
         >
-          {isVisible ? "Скрыть данные" : "Просмотреть данные"}
+          {isVisible ? "Скрыть данные" : "Показать данные"}
         </button>
       );
     } else {
       return "-";
     }
-  };
-
-  // Function to toggle detailed data visibility
-  const toggleDetailedDataVisibility = (
-    tableIndex,
-    subjectIndex,
-    resultIndex,
-    result,
-    tableName
-  ) => {
-    const key = `${tableIndex}-${subjectIndex}-${resultIndex}`;
-    if (
-      showDetailedData.some(
-        (item) => item.tableIndex === tableIndex && item.key === key
-      )
-    ) {
-      // If already visible, remove it
-      setShowDetailedData((prev) =>
-        prev.filter(
-          (item) => !(item.tableIndex === tableIndex && item.key === key)
-        )
-      );
-    } else {
-      // Else, add it
-      setShowDetailedData((prev) => [
-        ...prev,
-        { tableIndex, key, result, tableName },
-      ]);
-    }
-  };
-
-  // Function to check if detailed data is to be shown
-  const isDetailedDataVisible = (tableIndex, subjectIndex, resultIndex) => {
-    const key = `${tableIndex}-${subjectIndex}-${resultIndex}`;
-    return showDetailedData.some(
-      (item) => item.tableIndex === tableIndex && item.key === key
-    );
-  };
-
-  // Get the date from the table's name
-  const getDateFromTableName = (tableName) => {
-    // Implement logic to extract date from table name if needed
-    return tableName;
   };
 
   return (
@@ -805,55 +747,60 @@ const FormConstructor = () => {
                           <span>Удалить</span>
                         </button>
                       </td>
-                      {item.results.map((res, colIndex) => (
-                        <td
-                          key={res.id}
-                          className="border px-4 py-2 text-gray-600"
-                        >
-                          {renderValue(
-                            res,
-                            tableIndex,
-                            rowIndex,
-                            colIndex,
-                            table.name
-                          )}
-                        </td>
-                      ))}
+                      {item.results.map((res, colIndex) => {
+                        const key = `${tableIndex}-${rowIndex}-${colIndex}`;
+                        return (
+                          <td
+                            key={res.id}
+                            className="border px-4 py-2 text-gray-600"
+                          >
+                            {renderValue(res, key)}
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            {/* Render detailed data if any */}
-            {showDetailedData
-              .filter((data) => data.tableIndex === tableIndex)
-              .map((data, idx) => {
-                const { result, tableName } = data;
-                const { groupByDate, groupByHour } = tables[tableIndex];
-
+            {/* Render detailed data for each result with date_value */}
+            {table.tableConfig.map((item, rowIndex) =>
+              item.results.map((result, colIndex) => {
                 if (result.date_value && result.date_value.length > 0) {
+                  const subjectName = getSubjectName(item.subject);
+                  const label = `${subjectName} - ${table.name} - ${result.name}`;
+                  const key = `${tableIndex}-${rowIndex}-${colIndex}`;
+                  if (!isSubTableVisible(key)) {
+                    return null;
+                  }
                   return result.date_value.map((dateItem, index) =>
                     Array.isArray(dateItem.value) ? (
                       renderHourlyArrayTable(
-                        dateItem.value.map((v) => v.value),
-                        `${result.plan} (${
-                          operationMappings[
-                            result.operation.toLowerCase()
-                          ] || result.operation
-                        }) - ${tableName}`,
-                        tableName
+                        dateItem.value,
+                        label,
+                        dateItem.date,
+                        key
                       )
                     ) : (
-                      <div key={index}>
-                        Дата: {getDateFromTableName(tableName)}, Значение:{" "}
-                        {dateItem.value}
+                      <div key={`${label}-${dateItem.date}-${index}`}>
+                        <h3 className="text-lg font-bold mb-2">
+                          {label} - {dateItem.date}
+                          <button
+                            onClick={() => toggleSubTableVisibility(key)}
+                            className="ml-4 text-blue-500 hover:underline"
+                          >
+                            Скрыть данные
+                          </button>
+                        </h3>
+                        Значение: {dateItem.value}
                       </div>
                     )
                   );
                 }
                 return null;
-              })}
+              })
+            )}
           </div>
         ))}
 
