@@ -8,6 +8,8 @@ const HoursTable = () => {
   const [providersList, setProvidersList] = useState([]);
   const [selectedProviderSubjects, setSelectedProviderSubjects] = useState([]);
   const [providerError, setProviderError] = useState('');
+  const [datesByDayId, setDatesByDayId] = useState({});
+  const [subjectsById, setSubjectsById] = useState({});
 
   const [formData, setFormData] = useState({
     object: 0,
@@ -33,6 +35,29 @@ const HoursTable = () => {
     }
   };
 
+  // Function to fetch the date using the dayId and format it
+  const fetchDateByDayId = async (dayId) => {
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      const response = await axiosInstance.get(`${endpoints.DAYS}${dayId}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      const fullDate = response.data.date;
+
+      const subjsctResponse = await axiosInstance.get(`${endpoints.SUBJECTS}${response.data.subject}`);
+
+      const subject = subjsctResponse.data.subject_name;
+      // Remove everything after 'T' and format the date as ДД.ММ.ГГГГ
+      const formattedDate = fullDate.split('T')[0].split('-').reverse().join('.');
+      setDatesByDayId((prev) => ({ ...prev, [dayId]: formattedDate }));
+      setSubjectsById((prev) => ({ ...prev, [dayId]: subject }));
+    } catch (error) {
+      console.error('Ошибка при получении даты по dayId:', error);
+      setDatesByDayId((prev) => ({ ...prev, [dayId]: 'Неизвестная дата' })); // Fallback in case of error
+    }
+  };
+
   // Fetch hours based on date and subject
   const fetchHours = async (startDate, endDate, subject) => {
     try {
@@ -52,105 +77,34 @@ const HoursTable = () => {
         return;
       }
 
-      const groupedHours = {};
-      let currentDay = new Date(startDate);
-      let currentDayString = currentDay.toISOString().split('T')[0];
-      let hourCounter = 0;
+      // Group hours by day
+      const groupedHours = response.data.reduce((acc, hour) => {
+        const day = hour.day;
 
-      response.data.forEach((hour) => {
-        if (hourCounter === 24) {
-          currentDay.setDate(currentDay.getDate() + 1);
-          currentDayString = currentDay.toISOString().split('T')[0];
-          hourCounter = 0;
+        if (!acc[day]) {
+          acc[day] = [];
         }
 
-        // Compute hour in day
-        const hourInDay = (hourCounter % 24) + 1;
+        acc[day].push(hour);
 
-        // Determine if the hour should be included
-        let includeHour = true;
-        if (startDate === endDate) {
-          // Single day selection
-          includeHour = hourInDay >= formData.startHour && hourInDay <= formData.endHour;
-        } else {
-          if (currentDayString === startDate) {
-            // First day
-            includeHour = hourInDay >= formData.startHour;
-          } else if (currentDayString === endDate) {
-            // Last day
-            includeHour = hourInDay <= formData.endHour;
-          } else {
-            // Intermediate days
-            includeHour = true;
-          }
-        }
+        return acc;
+      }, {});
 
-        if (includeHour) {
-          if (!groupedHours[currentDayString]) {
-            groupedHours[currentDayString] = [];
-          }
-          // Adjust the hour.hour to be hourInDay
-          groupedHours[currentDayString].push({ ...hour, hour: hourInDay });
-        }
+      // Sort the days and sort hours within each day by hour
+      const sortedGroupedHours = Object.keys(groupedHours)
+        .sort((a, b) => parseInt(a) - parseInt(b)) // Sort days numerically
+        .reduce((acc, day) => {
+          acc[day] = groupedHours[day].sort((a, b) => a.hour - b.hour); // Sort hours within the day
+          return acc;
+        }, {});
 
-        hourCounter++;
-      });
+      setHoursByDate(sortedGroupedHours);
 
-      setHoursByDate(groupedHours);
+      // Fetch the date for each dayId and format it
+      Object.keys(sortedGroupedHours).forEach((dayId) => fetchDateByDayId(dayId));
     } catch (error) {
       console.error('Ошибка при получении часов:', error);
       setHoursByDate({});
-    }
-  };
-
-  // Fetch providers with error handling
-  const fetchProviders = async (startDate, endDate) => {
-    try {
-      const accessToken = localStorage.getItem('accessToken');
-      const response = await axiosInstance.get(endpoints.PROVIDERS, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        params: {
-          sub: 1, // Adjust as necessary
-          start_date: startDate.slice(0, 7), // format yyyy-mm
-          end_date: endDate.slice(0, 7),
-        },
-      });
-
-      if (response.data.error) {
-        setProviderError(response.data.error);
-        setProvidersList([]);
-      } else if (response.data.length === 0) {
-        setProviderError('No providers found with the provided criteria.');
-        setProvidersList([]);
-      } else {
-        setProvidersList(response.data);
-        setProviderError('');
-      }
-    } catch (error) {
-      console.error('Ошибка при получении провайдеров:', error);
-      setProviderError('Ошибка при получении провайдеров. Попробуйте позже.');
-    }
-  };
-
-  // Fetch subjects belonging to a provider using provider_id
-  const fetchProviderSubjects = async (providerId) => {
-    try {
-      const accessToken = localStorage.getItem('accessToken');
-      const response = await axiosInstance.get(endpoints.SUBJECTS, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        params: {
-          provider_id: providerId,
-        },
-      });
-      if (response.data && response.data.length > 0) {
-        setSelectedProviderSubjects(response.data);
-      } else {
-        setSelectedProviderSubjects([]);
-        console.error('No subjects found for the selected provider.');
-      }
-    } catch (error) {
-      console.error('Ошибка при получении субъектов для провайдера:', error);
-      setSelectedProviderSubjects([]);
     }
   };
 
@@ -161,7 +115,6 @@ const HoursTable = () => {
   useEffect(() => {
     if (formData.startDate && formData.endDate && formData.subject) {
       fetchHours(formData.startDate, formData.endDate, formData.subject);
-      fetchProviders(formData.startDate, formData.endDate);
     }
   }, [
     formData.startDate,
@@ -176,10 +129,6 @@ const HoursTable = () => {
       ...prevData,
       [name]: value,
     }));
-  };
-
-  const handleProviderClick = (providerId) => {
-    fetchProviderSubjects(providerId);
   };
 
   return (
@@ -296,17 +245,11 @@ const HoursTable = () => {
           </div>
         </div>
 
-        {/* Providers Section */}
-        {/* ... existing code for providers ... */}
-
-        {/* Selected Provider Subjects */}
-        {/* ... existing code for selected provider subjects ... */}
-
         {/* Table displaying hours by date */}
-        {Object.keys(hoursByDate).map((dayDate) => (
-          <div key={dayDate} className="mt-8">
+        {Object.keys(hoursByDate).map((dayId) => (
+          <div key={dayId} className="mt-8">
             <h2 className="text-xl font-semibold text-center text-gray-700 mb-4">
-              Дата: {dayDate.split('-').reverse().join('.')}
+              Дата: {datesByDayId[dayId] || 'Загрузка...'}
             </h2>
             {/* Scrollable table container */}
             <div className="overflow-x-auto max-w-full bg-white shadow-md rounded-lg">
@@ -315,7 +258,7 @@ const HoursTable = () => {
                   <tr>
                     {[
                       'Час',
-                      'coefficient',
+                      'Субъект',
                       'volume',
                       'P1',
                       'P2',
@@ -351,13 +294,13 @@ const HoursTable = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {hoursByDate[dayDate].map((hour) => (
+                  {hoursByDate[dayId].map((hour) => (
                     <tr key={hour.id} className="even:bg-gray-50 text-center">
                       <td className="px-2 py-1 border-b border-gray-200">
                         {hour.hour}
                       </td>
                       <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.coefficient}
+                        {subjectsById[dayId] || 'Загрузка...'}
                       </td>
                       <td className="px-2 py-1 border-b border-gray-200">
                         {hour.volume}
@@ -426,19 +369,18 @@ const HoursTable = () => {
                         {hour.T_Coef}
                       </td>
                       <td
-                        className={`px-2 py-1 border-b border-gray-200 ${
-                          hour.direction === 'DOWN'
+                        className={`px-2 py-1 border-b border-gray-200 ${hour.direction === 'DOWN'
                             ? 'bg-green-100'
                             : hour.direction === 'UP'
-                            ? 'bg-red-100'
-                            : ''
-                        }`}
+                              ? 'bg-red-100'
+                              : ''
+                          }`}
                       >
                         {hour.direction === 'UP'
                           ? '↑'
                           : hour.direction === 'DOWN'
-                          ? '↓'
-                          : '-'}
+                            ? '↓'
+                            : '-'}
                       </td>
                       <td className="px-2 py-1 border-b border-gray-200">
                         {hour.message}
