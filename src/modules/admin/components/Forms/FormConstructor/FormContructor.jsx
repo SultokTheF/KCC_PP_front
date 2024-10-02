@@ -130,20 +130,20 @@ const FormConstructor = () => {
         end_date,
         group_by_date,
         group_by_hour,
-        results,
+        data,
         exclude_holidays,
       } = tableData;
 
-      // Organize results by subject
+      // Organize data by subject
       const subjectsMap = {};
-      (results || []).forEach((result) => {
+      (data || []).forEach((result) => {
         if (!subjectsMap[result.subject]) {
           subjectsMap[result.subject] = {
             subject: result.subject,
-            results: [],
+            data: [],
           };
         }
-        subjectsMap[result.subject].results.push({
+        subjectsMap[result.subject].data.push({
           ...result,
           // Ensure each result has a unique identifier
           id: Math.random().toString(36).substr(2, 9),
@@ -194,12 +194,12 @@ const FormConstructor = () => {
       prevTables.map((table, idx) => {
         if (idx === tableIndex) {
           if (!table.tableConfig.find((item) => item.subject === subject.id)) {
-            // Get existing columns (results) from first subject
-            const existingResults =
-              table.tableConfig.length > 0 ? table.tableConfig[0].results : [];
+            // Get existing columns (data) from first subject
+            const existingdata =
+              table.tableConfig.length > 0 ? table.tableConfig[0].data : [];
 
-            // Create new results for the new subject
-            const newResults = existingResults.map((res) => ({
+            // Create new data for the new subject
+            const newdata = existingdata.map((res) => ({
               ...res,
               subject: subject.id,
               value: null,
@@ -214,7 +214,7 @@ const FormConstructor = () => {
                 ...table.tableConfig,
                 {
                   subject: subject.id,
-                  results: newResults,
+                  data: newdata,
                 },
               ],
             };
@@ -275,7 +275,7 @@ const FormConstructor = () => {
             ...table,
             tableConfig: table.tableConfig.map((item) => ({
               ...item,
-              results: [...item.results, newResult],
+              data: [...item.data, newResult],
             })),
           };
         }
@@ -308,7 +308,7 @@ const FormConstructor = () => {
             ...table,
             tableConfig: table.tableConfig.map((item) => ({
               ...item,
-              results: item.results.filter((_, i) => i !== colIndex),
+              data: item.data.filter((_, i) => i !== colIndex),
             })),
           };
         }
@@ -325,13 +325,13 @@ const FormConstructor = () => {
           return {
             ...table,
             tableConfig: table.tableConfig.map((item) => {
-              const updatedResults = item.results.map((res, resIdx) => {
+              const updateddata = item.data.map((res, resIdx) => {
                 if (resIdx === columnIndex) {
                   return { ...res, name: newName };
                 }
                 return res;
               });
-              return { ...item, results: updatedResults };
+              return { ...item, data: updateddata };
             }),
           };
         }
@@ -350,9 +350,9 @@ const FormConstructor = () => {
       group_by_date: table.groupByDate,
       group_by_hour: table.groupByHour,
       exclude_holidays: table.excludeHolidays,
-      results: table.tableConfig
+      data: table.tableConfig
         .map((item) =>
-          item.results.map((res) => ({
+          item.data.map((res) => ({
             subject: item.subject,
             plan: res.plan,
             name: res.name,
@@ -797,7 +797,7 @@ const FormConstructor = () => {
                       Субъекты
                     </th>
                     {table.tableConfig.length > 0 &&
-                      table.tableConfig[0].results.map((res, index) => (
+                      table.tableConfig[0].data.map((res, index) => (
                         <th
                           key={res.id}
                           className="px-4 py-2 text-left text-gray-700 font-semibold border-b"
@@ -834,7 +834,7 @@ const FormConstructor = () => {
                           <span>Удалить</span>
                         </button>
                       </td>
-                      {item.results.map((res, colIndex) => {
+                      {item.data.map((res, colIndex) => {
                         const key = `${tableIndex}-${rowIndex}-${colIndex}`;
                         return (
                           <td
@@ -853,7 +853,7 @@ const FormConstructor = () => {
 
             {/* Render detailed data for each result with date_value */}
             {table.tableConfig.map((item, rowIndex) =>
-              item.results.map((result, colIndex) => {
+              item.data.map((result, colIndex) => {
                 if (result.date_value && result.date_value.length > 0) {
                   const subjectName = getSubjectName(item.subject);
                   const label = `${subjectName} - ${table.name} - ${result.name}`;
