@@ -3,9 +3,11 @@ import { useParams } from "react-router-dom";
 import { FaTrashAlt, FaPlusCircle, FaCheckCircle } from "react-icons/fa";
 import Sidebar from "../../Sidebar/Sidebar";
 import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
+import FormulaEditor from './FormulaEditor';
 
 const FormConstructor = () => {
   const { id } = useParams();
+  
 
   // Operations and Formulas mappings for display and JSON
   const operationMappings = {
@@ -283,6 +285,32 @@ const FormConstructor = () => {
       })
     );
   };
+
+  const groupDataByDate = (tables) => {
+    const groupedData = {};
+  
+    tables.forEach((table) => {
+      table.tableConfig.forEach((item) => {
+        item.data.forEach((result) => {
+          if (result.date_value && result.date_value.length > 0) {
+            result.date_value.forEach((dateItem) => {
+              const date = dateItem.date;
+              if (!groupedData[date]) {
+                groupedData[date] = [];
+              }
+              groupedData[date].push({
+                hour: dateItem.hour, // Assuming there's an hour field
+                tableName: table.name,
+                value: dateItem.value || "-",
+              });
+            });
+          }
+        });
+      });
+    });
+  
+    return groupedData;
+  };  
 
   // Delete a row (subject) from a specific table
   const deleteRow = (tableIndex, rowIndex) => {
@@ -761,13 +789,7 @@ const FormConstructor = () => {
               ) : selectedOperation === "formula" ? (
                 <div className="flex items-center space-x-4">
                   <label className="block text-gray-700">Введите формулу:</label>
-                  <input
-                    type="text"
-                    placeholder="Например: IF(SUM(F1) > 100, SUM(F1) * 2, 0)"
-                    value={formulaInput}
-                    onChange={(e) => setFormulaInput(e.target.value)}
-                    className="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 w-96"
-                  />
+                  <FormulaEditor value={formulaInput} onChange={setFormulaInput} />
                 </div>
               ) : selectedOperation === "other" && (
                 <input

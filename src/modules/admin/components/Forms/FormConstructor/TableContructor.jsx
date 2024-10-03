@@ -1,14 +1,5 @@
-import Sidebar from "../../Sidebar/Sidebar";
-
-const TableConstructor = () => {
-  return (
-    <div className="flex">
-      <Sidebar />
-      <div className="flex-1">
-        <h1>Table Constructor</h1>
-      </div>
-    </div>
-  );
+const TableContructor = () => {
+  return <></>
 }
 
-export default TableConstructor;
+export default TableContructor
