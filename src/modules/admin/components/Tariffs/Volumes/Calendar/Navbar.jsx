@@ -59,7 +59,31 @@ const Navbar = ({ date, setDate, data, setData }) => {
     console.log('Экспорт завершен');
     setLoading(prev => ({ ...prev, export: false }));
   };
+
+  const [buttonLoading, setButtonLoading] = useState(false);
+  const [superButtonMessage, setSuperButtonMessage] = useState('');
+
+  const SUPER_BUTTON_ENDPOINT = '/api/days/superButton/';
   
+  const handleSuperButtonClick = async () => {
+    setButtonLoading(true);
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      await axiosInstance.post(
+        SUPER_BUTTON_ENDPOINT,
+        {},
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      alert('Супер кнопка нажата!');
+    } catch (error) {
+      console.error('Ошибка при выполнении запроса супер кнопки:', error);
+      setSuperButtonMessage('Ошибка при выполнении запроса.');
+    } finally {
+      setButtonLoading(false);
+    }
+  };
 
   const importFromXLSX = (event) => {
     setLoading(prev => ({ ...prev, import: true }));
@@ -203,6 +227,16 @@ const Navbar = ({ date, setDate, data, setData }) => {
             <>
               <ArrowUpOnSquareIcon className="h-5 w-5 mr-1" />
               Загрузить
+            </>
+          )}
+        </button>
+        <button onClick={handleSuperButtonClick} className="flex items-center text-blue-600 hover:text-blue-800 focus:outline-none">
+          {loading.upload ? (
+            <span>Загрузка...</span>
+          ) : (
+            <>
+              <ArrowUpOnSquareIcon className="h-5 w-5 mr-1" />
+              Супер Кнопка
             </>
           )}
         </button>

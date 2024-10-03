@@ -19,6 +19,7 @@ const HoursTable = () => {
 
   const [buttonLoading, setButtonLoading] = useState(false);
   const [superButtonMessage, setSuperButtonMessage] = useState('');
+  const [providersByDayId, setProvidersByDayId] = useState({});
 
   const SUPER_BUTTON_ENDPOINT = '/api/days/superButton/';
 
@@ -51,15 +52,48 @@ const HoursTable = () => {
         `${endpoints.SUBJECTS}${response.data.subject}`
       );
 
-      const subject = subjectResponse.data.subject_name;
+      const subject = subjectResponse.data;
       const formattedDate = fullDate.split('T')[0].split('-').reverse().join('.');
       setDatesByDayId((prev) => ({ ...prev, [dayId]: formattedDate }));
       setSubjectsById((prev) => ({ ...prev, [dayId]: subject }));
+      fetchProvidersByDayId(dayId, subject.id, formData.startDate, formData.endDate);
     } catch (error) {
       console.error('Ошибка при получении даты по dayId:', error);
       setDatesByDayId((prev) => ({ ...prev, [dayId]: 'Неизвестная дата' }));
     }
   };
+
+  // Fetch providers by dayId
+  // Fetch providers by dayId with formatted startDate and endDate
+  const fetchProvidersByDayId = async (dayId, subject, startDate, endDate) => {
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+
+      // Format the dates to 'YYYY-MM'
+      const formattedStartDate = startDate.slice(0, 7); // Get YYYY-MM from startDate
+      const formattedEndDate = endDate.slice(0, 7); // Get YYYY-MM from endDate
+
+      const response = await axiosInstance.get(endpoints.PROVIDERS, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        params: {
+          sub: subject,
+          start_date: formattedStartDate,  // Use the formatted date
+          end_date: formattedEndDate,      // Use the formatted date
+        },
+      });
+
+      const providers = response.data;
+      setProvidersByDayId((prev) => ({
+        ...prev,
+        [dayId]: providers.map((provider) => provider.name), // Store providers' names
+      }));
+    } catch (error) {
+      console.error('Ошибка при получении провайдеров:', error);
+      setProvidersByDayId((prev) => ({ ...prev, [dayId]: ['Неизвестные провайдеры'] }));
+    }
+  };
+
+
 
   // Получение часов по дате и субъекту
   const fetchHours = async (startDate, endDate, subject) => {
@@ -267,21 +301,21 @@ const HoursTable = () => {
             </div>
           </div>
           {/* Кнопка "Супер кнопка" */}
-          <div className="flex justify-center mt-4">
+          {/* <div className="flex justify-center mt-4">
             <button
               onClick={handleSuperButtonClick}
               className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={buttonLoading}
             >
               {buttonLoading ? 'Загрузка...' : 'Супер кнопка'}
-            </button>
-          </div>
+            </button>/
+          </div> */}
           {/* Сообщение после выполнения запроса */}
           {superButtonMessage && (
             <div
               className={`mt-4 text-center font-semibold ${superButtonMessage.includes('Ошибка')
-                  ? 'text-red-600'
-                  : 'text-green-600'
+                ? 'text-red-600'
+                : 'text-green-600'
                 }`}
             >
               {superButtonMessage}
@@ -303,7 +337,8 @@ const HoursTable = () => {
                     {[
                       'Час',
                       'Субъект',
-                      'volume',
+                      'Провайдеры',
+                      'Тип',
                       'P1',
                       'P2',
                       'P3',
@@ -344,10 +379,13 @@ const HoursTable = () => {
                         {hour.hour}
                       </td>
                       <td className="px-2 py-1 border-b border-gray-200">
-                        {subjectsById[dayId] || 'Загрузка...'}
+                        {subjectsById[dayId]?.subject_name || 'Загрузка...'}
                       </td>
                       <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.volume}
+                        {providersByDayId[dayId]?.join(', ') || 'Загрузка...'}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {subjectsById[dayId]?.subject_type === "CONSUMER" ? "Потребитель" : subjectsById[dayId]?.subject_type}
                       </td>
                       <td className="px-2 py-1 border-b border-gray-200">
                         {hour.P1}
