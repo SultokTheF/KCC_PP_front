@@ -11,21 +11,10 @@ const TableComponent = ({
   hourFields,
   operationMappings,
   defaultOperations,
-  conditionOperators,
   selectedSubject,
   setSelectedSubject,
-  selectedField,
-  setSelectedField,
   selectedOperation,
   setSelectedOperation,
-  customOperation,
-  setCustomOperation,
-  conditionField,
-  setConditionField,
-  conditionOperator,
-  setConditionOperator,
-  conditionValue,
-  setConditionValue,
   formulaInput,
   setFormulaInput,
   addRow,
@@ -34,11 +23,71 @@ const TableComponent = ({
   deleteColumn,
   updateColumnName,
   getSubjectName,
-  renderValue,
-  toggleSubTableVisibility,
-  isSubTableVisible,
   visibleSubTables,
+  setVisibleSubTables,
 }) => {
+  // Function to toggle sub-table visibility by date
+  const toggleSubTableVisibility = (date) => {
+    setVisibleSubTables((prev) => ({
+      ...prev,
+      [date]: !prev[date],
+    }));
+  };
+
+  // Function to check if a sub-table for a date is visible
+  const isSubTableVisible = (date) => {
+    return visibleSubTables[date];
+  };
+
+  // Extract all unique dates from all results
+  const getAllUniqueDates = () => {
+    const datesSet = new Set();
+    table.tableConfig.forEach((item) => {
+      item.data.forEach((result) => {
+        if (result.date_value) {
+          result.date_value.forEach((dv) => datesSet.add(dv.date));
+        }
+      });
+    });
+    return Array.from(datesSet).sort();
+  };
+
+  // Prepare a flat list of all results across all subjects
+  const getAllResults = () => {
+    const results = [];
+    table.tableConfig.forEach((item) => {
+      item.data.forEach((res) => {
+        results.push({
+          ...res,
+          subjectName: getSubjectName(item.subject),
+        });
+      });
+    });
+    return results;
+  };
+
+  // Prepare data grouped by date
+  const getDataGroupedByDate = () => {
+    const groupedData = {};
+    table.tableConfig.forEach((item) => {
+      item.data.forEach((result) => {
+        if (result.date_value) {
+          result.date_value.forEach((dv) => {
+            if (!groupedData[dv.date]) {
+              groupedData[dv.date] = {};
+            }
+            groupedData[dv.date][result.id] = dv.value; // Use result.id as key
+          });
+        }
+      });
+    });
+    return groupedData;
+  };
+
+  const uniqueDates = getAllUniqueDates();
+  const allResults = getAllResults();
+  const dataGroupedByDate = getDataGroupedByDate();
+
   return (
     <div className="mb-10">
       {/* Table Name Input */}
@@ -244,94 +293,84 @@ const TableComponent = ({
                     <span>Удалить</span>
                   </button>
                 </td>
-                {item.data.map((res, colIndex) => {
-                  const key = `${tableIndex}-${rowIndex}-${colIndex}`;
-                  return (
-                    <td
-                      key={res.id}
-                      className="border px-4 py-2 text-gray-600"
-                    >
-                      {renderValue(res, key)}
-                    </td>
-                  );
-                })}
+                {item.data.map((res, colIndex) => (
+                  <td
+                    key={res.id}
+                    className="border px-4 py-2 text-gray-600"
+                  >
+                    {/* Since sub-tables are now grouped by date, you can display a summary or keep it empty */}
+                    -
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* Render Detailed Data for Each Result with date_value */}
-      {table.tableConfig.map((item, rowIndex) =>
-        item.data.map((result, colIndex) => {
-          if (result.date_value && result.date_value.length > 0) {
-            const subjectName = getSubjectName(item.subject);
-            const label = `${subjectName} - ${table.name} - ${result.name}`;
-            const key = `${tableIndex}-${rowIndex}-${colIndex}`;
-            if (!isSubTableVisible(key)) {
-              return null;
-            }
-            return result.date_value.map((dateItem, index) =>
-              Array.isArray(dateItem.value) ? (
-                <div key={`${label}-${dateItem.date}-${index}`}>
-                  <h3 className="text-lg font-bold mb-2">
-                    {label} - {dateItem.date}
-                    <button
-                      onClick={() => toggleSubTableVisibility(key)}
-                      className="ml-4 text-blue-500 hover:underline"
-                    >
-                      Скрыть данные
-                    </button>
-                  </h3>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full max-w-[1200px] bg-gray-100 border border-gray-300">
-                      <thead>
-                        <tr>
-                          <th className="px-2 py-1 text-left text-gray-700 border-b">
-                            Дата
-                          </th>
-                          {Array.from({ length: 24 }, (_, i) => (
-                            <th
-                              key={i}
-                              className="px-2 py-1 text-left text-gray-700 border-b"
+      {/* Sub-Tables Grouped by Date */}
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold mb-4">Детализированные данные по датам</h2>
+        {uniqueDates.map((date) => (
+          <div key={date} className="mb-4">
+            <button
+              onClick={() => toggleSubTableVisibility(date)}
+              className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center space-x-1"
+            >
+              {isSubTableVisible(date) ? "Скрыть данные" : "Показать данные"} для {date}
+            </button>
+
+            {isSubTableVisible(date) && (
+              <div className="overflow-x-auto mt-2">
+                <table className="min-w-full max-w-[1200px] bg-gray-100 border border-gray-300">
+                  <thead>
+                    <tr className="bg-gray-200">
+                      <th className="px-2 py-1 text-left text-gray-700 border-b">Час</th>
+                      {allResults.map((res) => (
+                        <th
+                          key={res.id}
+                          className="px-2 py-1 text-left text-gray-700 border-b"
+                        >
+                          {res.name}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {hourFields.map((hour, hourIdx) => (
+                      <tr key={hourIdx} className="hover:bg-gray-50">
+                        <td className="border px-2 py-1 text-gray-600">{hourIdx + 1} час</td>
+                        {allResults.map((res) => {
+                          // Find the date_value for this date
+                          const dv = res.date_value?.find(dv => dv.date === date);
+                          let value = "-";
+                          if (dv && Array.isArray(dv.value)) {
+                            const cellValue = dv.value[hourIdx];
+                            // If cellValue is an object, extract the 'value' property
+                            if (typeof cellValue === 'object' && cellValue !== null) {
+                              value = cellValue.value !== undefined ? cellValue.value : '-';
+                            } else {
+                              value = cellValue !== null && cellValue !== undefined ? cellValue : '-';
+                            }
+                          }
+                          return (
+                            <td
+                              key={`${res.id}-${hourIdx}`}
+                              className="border px-2 py-1 text-gray-600"
                             >
-                              {i + 1} час
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr key={dateItem.date}>
-                          <td className="border px-4 py-2 text-gray-600">{dateItem.date}</td>
-                          {dateItem.value.map((hourValue, hourIndex) => (
-                            <td key={hourIndex} className="border px-4 py-2 text-gray-600">
-                              {hourValue.value || 0}
+                              {value}
                             </td>
-                          ))}
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ) : (
-                <div key={`${label}-${dateItem.date}-${index}`}>
-                  <h3 className="text-lg font-bold mb-2">
-                    {label} - {dateItem.date}
-                    <button
-                      onClick={() => toggleSubTableVisibility(key)}
-                      className="ml-4 text-blue-500 hover:underline"
-                    >
-                      Скрыть данные
-                    </button>
-                  </h3>
-                  Значение: {dateItem.value}
-                </div>
-              )
-            );
-          }
-          return null;
-        })
-      )}
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

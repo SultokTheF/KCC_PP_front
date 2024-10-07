@@ -371,38 +371,6 @@ const FormConstructor = () => {
     return subject ? subject.subject_name : "Неизвестный субъект";
   };
 
-  // Render value function
-  const renderValue = (result, key) => {
-    if (result.value !== undefined) {
-      return result.value !== null ? result.value : "-";
-    } else if (result.date_value) {
-      // Indicate that data can be shown/hidden
-      const isVisible = isSubTableVisible(key);
-      return (
-        <button
-          onClick={() => toggleSubTableVisibility(key)}
-          className="text-blue-500 hover:underline"
-        >
-          {isVisible ? "Скрыть данные" : "Показать данные"}
-        </button>
-      );
-    } else {
-      return "-";
-    }
-  };
-
-  // Toggle sub-table visibility
-  const toggleSubTableVisibility = (key) => {
-    setVisibleSubTables((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  };
-
-  const isSubTableVisible = (key) => {
-    return visibleSubTables[key];
-  };
-
   return (
     <div className="flex">
       <Sidebar />
@@ -429,10 +397,8 @@ const FormConstructor = () => {
             deleteColumn={deleteColumn}
             updateColumnName={updateColumnName}
             getSubjectName={getSubjectName}
-            renderValue={renderValue}
-            toggleSubTableVisibility={toggleSubTableVisibility}
-            isSubTableVisible={isSubTableVisible}
             visibleSubTables={visibleSubTables}
+            setVisibleSubTables={setVisibleSubTables}
           />
         ))}
 
