@@ -191,19 +191,6 @@ const TableComponent = ({
 
       {/* Add Column Section */}
       <div className="mb-6 space-x-4 flex items-center">
-        <label className="block text-gray-700">Выберите операцию:</label>
-        <select
-          value={selectedOperation}
-          onChange={(e) => setSelectedOperation(e.target.value)}
-          className="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-        >
-          {defaultOperations.map((operation) => (
-            <option key={operation} value={operation}>
-              {operationMappings[operation]}
-            </option>
-          ))}
-        </select>
-
         {selectedOperation === "formula" && (
           <div className="flex items-center space-x-4">
             <label className="block text-gray-700">Введите формулу:</label>
@@ -223,17 +210,17 @@ const TableComponent = ({
       {/* Main Table Structure */}
       <h2 className="text-lg font-semibold mb-4">Основная таблица</h2>
       <div className="overflow-x-auto max-w-full mb-6">
-        <table className="min-w-full max-w-[1200px] bg-white border border-gray-200 shadow-md">
+        <table className="min-w-full bg-white border border-gray-200 shadow-md table-auto">
           <thead>
             <tr className="bg-gray-100">
-              <th className="px-4 py-2 text-left text-gray-700 font-semibold border-b">
+              <th className="px-2 py-1 text-left text-gray-700 font-semibold border-b">
                 Субъекты
               </th>
               {table.tableConfig.length > 0 &&
                 table.tableConfig[0].data.map((res, index) => (
                   <th
                     key={res.id}
-                    className="px-4 py-2 text-left text-gray-700 font-semibold border-b"
+                    className="px-2 py-1 text-left text-gray-700 font-semibold border-b"
                   >
                     <input
                       type="text"
@@ -242,6 +229,7 @@ const TableComponent = ({
                         updateColumnName(tableIndex, index, e.target.value)
                       }
                       className="border border-gray-300 rounded-md p-1 focus:ring-2 focus:ring-blue-500"
+                      style={{ width: "100px" }}
                     />
                     <button
                       className="ml-2 text-red-500 hover:text-red-700 flex items-center"
@@ -257,7 +245,7 @@ const TableComponent = ({
           <tbody>
             {table.tableConfig.map((item, rowIndex) => (
               <tr key={rowIndex} className="hover:bg-gray-50">
-                <td className="border px-4 py-2 text-gray-600">
+                <td className="border px-2 py-1 text-gray-600">
                   {getSubjectName(item.subject)}
                   <button
                     className="ml-2 text-red-500 hover:text-red-700 flex items-center"
@@ -268,7 +256,7 @@ const TableComponent = ({
                   </button>
                 </td>
                 {item.data.map((res, colIndex) => (
-                  <td key={colIndex} className="border px-4 py-2 text-gray-600">
+                  <td key={colIndex} className="border px-2 py-1 text-gray-600">
                     {table.groupByDate || table.groupByHour
                       ? '-'
                       : Array.isArray(res.value)
@@ -301,19 +289,19 @@ const TableComponent = ({
                 <div className="overflow-x-auto mt-4">
                   {groupedSubjects[subjectId][0].data[0]?.date_value?.length > 0 ? (
                     <div className="mb-4">
-                      <table className="min-w-full max-w-[1200px] bg-white border border-gray-200 shadow-md">
+                      <table className="min-w-full bg-white border border-gray-200 shadow-md table-auto">
                         <thead>
                           <tr className="bg-gray-100">
-                            <th className="px-4 py-2 text-left text-gray-700 font-semibold border-b">
+                            <th className="px-2 py-1 text-left text-gray-700 font-semibold border-b">
                               Дата
                             </th>
-                            <th className="px-4 py-2 text-left text-gray-700 font-semibold border-b">
+                            <th className="px-2 py-1 text-left text-gray-700 font-semibold border-b">
                               Час
                             </th>
                             {groupedSubjects[subjectId][0].data.map((res, colIdx) => (
                               <th
                                 key={colIdx}
-                                className="px-4 py-2 text-left text-gray-700 font-semibold border-b"
+                                className="px-2 py-1 text-left text-gray-700 font-semibold border-b"
                               >
                                 {res.name} {/* Column name */}
                               </th>
@@ -321,18 +309,20 @@ const TableComponent = ({
                           </tr>
                         </thead>
                         <tbody>
-                          {/* Loop through the date_value for each date */}
                           {groupedSubjects[subjectId][0].data[0].date_value.map((dateItem, dateIdx) => (
-                            dateItem.value.map((hourItem, hourIdx) => (
+                            dateItem.value.map((hourItem, hourIdx, hourArr) => (
                               <tr key={`${dateIdx}-${hourIdx}`} className="hover:bg-gray-50">
-                                <td className="border px-4 py-2 text-gray-600">
-                                  {dateItem.date} {/* Date */}
-                                </td>
-                                <td className="border px-4 py-2 text-gray-600">
+                                {/* Merging Date Cells */}
+                                {hourIdx === 0 && (
+                                  <td rowSpan={hourArr.length} className="border px-2 py-1 text-gray-600 w-32">
+                                    {dateItem.date} {/* Date */}
+                                  </td>
+                                )}
+                                <td className="border px-2 py-1 text-gray-600">
                                   {hourItem.hour} {/* Hour */}
                                 </td>
                                 {groupedSubjects[subjectId][0].data.map((res, resIdx) => (
-                                  <td key={resIdx} className="border px-4 py-2 text-gray-600">
+                                  <td key={resIdx} className="border px-2 py-1 text-gray-600">
                                     {res.date_value && res.date_value[dateIdx]?.value[hourIdx]?.value || '-'}
                                   </td>
                                 ))}
