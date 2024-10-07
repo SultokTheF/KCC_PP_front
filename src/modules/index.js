@@ -32,7 +32,6 @@ import {
   HoursTable as AdminHoursTable,
   FormContructor as AdminFormContructor,
   TableOverview as AdminTableOverview,
-  TableConstructor as AdminTableContructor
 } from "./admin";
 
 export {
@@ -69,5 +68,4 @@ export {
   AdminVolumes,
   AdminFormContructor,
   AdminTableOverview,
-  AdminTableContructor
 }
