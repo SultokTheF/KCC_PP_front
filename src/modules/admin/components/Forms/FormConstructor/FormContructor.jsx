@@ -5,9 +5,11 @@ import Sidebar from "../../Sidebar/Sidebar";
 import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 import TableComponent from "./TableComponent";
 import useFetchData from './useFetchData';
-import { operationMappings, defaultOperations, hourFields } from './constants';
+import { hourFields } from './constants';
 import { processTableData, getSubjectName } from './utils';
 import { v4 as uuidv4 } from 'uuid';
+import * as XLSX from 'xlsx'; // Import XLSX library
+import { Circles } from 'react-loader-spinner'; // Loader component
 
 const FormConstructor = () => {
   const { id } = useParams();
@@ -18,6 +20,7 @@ const FormConstructor = () => {
   const [selectedOperation, setSelectedOperation] = useState("formula");
   const [formulaInput, setFormulaInput] = useState("");
   const [visibleSubTables, setVisibleSubTables] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loader state
 
   // Add a new row (subject) to a specific table
   const addRow = (tableIndex) => {
@@ -196,6 +199,8 @@ const FormConstructor = () => {
 
   // Submit the tables data
   const handleSubmit = async () => {
+    setIsSubmitting(true); // Show loader
+
     // Prepare the data to match the server's expected format
     const finalData = tables.map((table) => ({
       name: table.name,
@@ -218,13 +223,10 @@ const FormConstructor = () => {
     }));
 
     try {
-      // If the server expects a single table, send finalData[0]
-      // Otherwise, send the entire finalData array
       const dataToSend = finalData.length === 1 ? finalData[0] : finalData;
 
       const response = await axiosInstance.put(endpoints.TABLE(id), dataToSend);
 
-      // If successful, fetch the updated table from the server
       if (response.status === 200) {
         const updatedTableResponse = await axiosInstance.get(
           endpoints.TABLE(id)
@@ -237,7 +239,70 @@ const FormConstructor = () => {
       }
     } catch (error) {
       console.error("Ошибка при отправке данных на сервер:", error);
+    } finally {
+      setIsSubmitting(false); // Hide loader
     }
+  };
+
+  // Function to export tables to Excel
+  const exportToExcel = () => {
+    const wb = XLSX.utils.book_new();
+
+    tables.forEach((table) => {
+      table.tableConfig.forEach((item) => {
+        const wsData = [];
+
+        // Header row
+        const header = ['Дата', 'Субъект', 'Час'];
+        item.data.forEach((res) => {
+          header.push(res.name);
+        });
+        wsData.push(header);
+
+        // Data rows
+        if (item.data[0]?.date_value?.length > 0) {
+          item.data[0].date_value.forEach((dateItem, dateIdx) => {
+            dateItem.value.forEach((hourItem, hourIdx) => {
+              const row = [
+                dateItem.date,
+                getSubjectName(subjectList, item.subject),
+                hourItem.hour,
+              ];
+              item.data.forEach((res) => {
+                const value =
+                  res.date_value
+                    ?.find((d) => d.date === dateItem.date)
+                    ?.value.find((h) => h.hour === hourItem.hour)?.value || '-';
+                row.push(value);
+              });
+              wsData.push(row);
+            });
+          });
+        } else {
+          // If no date_value, add a single row
+          const row = [
+            table.startDate || '-',
+            getSubjectName(subjectList, item.subject),
+            '-',
+          ];
+          item.data.forEach((res) => {
+            row.push(res.value || '-');
+          });
+          wsData.push(row);
+        }
+
+        // Create worksheet and add to workbook
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        const sheetName = `${table.name}_${getSubjectName(
+          subjectList,
+          item.subject
+        )}`;
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      });
+    });
+
+    // Save to file
+    XLSX.writeFile(wb, 'exported_tables.xlsx');
   };
 
   return (
@@ -268,8 +333,8 @@ const FormConstructor = () => {
           />
         ))}
 
-        {/* Submit button */}
-        <div className="mt-6">
+        {/* Submit and Export buttons */}
+        <div className="mt-6 flex space-x-4">
           <button
             onClick={handleSubmit}
             className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors w-1/3 flex items-center justify-center"
@@ -277,7 +342,22 @@ const FormConstructor = () => {
             <FaCheckCircle className="mr-2" />
             <span>Отправить</span>
           </button>
+
+          <button
+            onClick={exportToExcel}
+            className="p-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors w-1/3 flex items-center justify-center"
+          >
+            <FaCheckCircle className="mr-2" />
+            <span>Экспортировать в Excel</span>
+          </button>
         </div>
+
+        {/* Loader */}
+        {isSubmitting && (
+          <div className="flex justify-center mt-4">
+            <Circles color="#00BFFF" height={80} width={80} />
+          </div>
+        )}
       </div>
     </div>
   );

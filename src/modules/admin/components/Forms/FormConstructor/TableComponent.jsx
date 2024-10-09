@@ -1,7 +1,8 @@
 import React from 'react';
-import { FaTrashAlt, FaPlusCircle } from 'react-icons/fa';
+import { FaTrashAlt, FaPlusCircle, FaFileExport } from 'react-icons/fa';
 import FormulaEditor from './FormulaEditor';
 import { getSubjectName } from './utils';
+import * as XLSX from 'xlsx'; // Import XLSX for export functionality
 
 const TableComponent = ({
   table,
@@ -33,6 +34,62 @@ const TableComponent = ({
       ...prev,
       [subjectId]: !prev[subjectId],
     }));
+  };
+
+  // Function to export individual subject table to Excel
+  const exportSubjectToExcel = (subjectItem) => {
+    const wb = XLSX.utils.book_new();
+    const wsData = [];
+
+    // Header row
+    const header = ['Дата', 'Субъект', 'Час'];
+    subjectItem.data.forEach((res) => {
+      header.push(res.name);
+    });
+    wsData.push(header);
+
+    // Data rows
+    if (subjectItem.data[0]?.date_value?.length > 0) {
+      subjectItem.data[0].date_value.forEach((dateItem) => {
+        dateItem.value.forEach((hourItem) => {
+          const row = [
+            dateItem.date,
+            getSubjectName(subjectList, subjectItem.subject),
+            hourItem.hour,
+          ];
+          subjectItem.data.forEach((res) => {
+            const value =
+              res.date_value
+                ?.find((d) => d.date === dateItem.date)
+                ?.value.find((h) => h.hour === hourItem.hour)?.value || '-';
+            row.push(value);
+          });
+          wsData.push(row);
+        });
+      });
+    } else {
+      // If no date_value, add a single row
+      const row = [
+        table.startDate || '-',
+        getSubjectName(subjectList, subjectItem.subject),
+        '-',
+      ];
+      subjectItem.data.forEach((res) => {
+        row.push(res.value || '-');
+      });
+      wsData.push(row);
+    }
+
+    // Create worksheet and add to workbook
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const sheetName = `${table.name}_${getSubjectName(
+      subjectList,
+      subjectItem.subject
+    )}`;
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+    // Save to file
+    XLSX.writeFile(wb, `${sheetName}.xlsx`);
   };
 
   return (
@@ -121,6 +178,7 @@ const TableComponent = ({
           onChange={(e) => setSelectedSubject(e.target.value)}
           className="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
         >
+          <option value="">Выберите субъект</option>
           {subjectList.map((subject) => (
             <option key={subject.id} value={subject.id}>
               {subject.subject_name}
@@ -223,14 +281,23 @@ const TableComponent = ({
           <h2 className="text-lg font-semibold mb-4">Таблицы по субъектам</h2>
           {table.tableConfig.map((item) => (
             <div key={item.subject} className="mb-6">
-              <button
-                onClick={() => toggleSubTableVisibility(item.subject)}
-                className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center space-x-1"
-              >
-                {isSubTableVisible(item.subject)
-                  ? `Скрыть данные для ${getSubjectName(subjectList, item.subject)}`
-                  : `Показать данные для ${getSubjectName(subjectList, item.subject)}`}
-              </button>
+              <div className="flex items-center space-x-4 mb-2">
+                <button
+                  onClick={() => toggleSubTableVisibility(item.subject)}
+                  className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center space-x-1"
+                >
+                  {isSubTableVisible(item.subject)
+                    ? `Скрыть данные для ${getSubjectName(subjectList, item.subject)}`
+                    : `Показать данные для ${getSubjectName(subjectList, item.subject)}`}
+                </button>
+                <button
+                  onClick={() => exportSubjectToExcel(item)}
+                  className="p-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors flex items-center space-x-1"
+                >
+                  <FaFileExport className="mr-1" />
+                  <span>Экспортировать</span>
+                </button>
+              </div>
 
               {isSubTableVisible(item.subject) && (
                 <div className="overflow-x-auto mt-4">
