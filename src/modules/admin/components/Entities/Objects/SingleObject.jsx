@@ -220,9 +220,12 @@ const SingleObject = () => {
                     onChange={handleChange}
                     className="w-full p-2 border border-gray-300 rounded-md"
                   >
+                    <option value="">Выберите тип</option>
                     <option value="ЭПО">ЭПО</option>
-                    <option value="CONSUMER">Потребитель</option>
-                    <option value="РЭК">Рэк</option>
+                    <option value="ЭПО">РЭК</option>
+                    <option value="CONSUMER">ПОТРЕБИТЕЛЬ</option>
+                    <option value="ВИЭ">ВИЭ</option>
+                    <option value="ГП">ГП</option>
                   </select>
                 ) : (
                   <div>{formatType(formData.object_type)}</div>

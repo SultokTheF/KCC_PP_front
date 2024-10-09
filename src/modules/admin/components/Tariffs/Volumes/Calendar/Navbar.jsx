@@ -10,7 +10,7 @@ import * as XLSX from 'xlsx';
 import { axiosInstance, endpoints } from "../../../../../../services/apiConfig";
 
 const Navbar = ({ date, setDate, data, setData }) => {
-  const [loading, setLoading] = useState({ export: false, import: false, upload: false });
+  const [loading, setLoading] = useState({ export: false, import: false, upload: false, superButton: false });
 
   const uploadTableData = () => {
     setLoading(prev => ({ ...prev, upload: true }));
@@ -45,7 +45,6 @@ const Navbar = ({ date, setDate, data, setData }) => {
       const day = Object.keys(dayData)[0];
       const row = [day.split('-').reverse().join('.')]; // Date in format dd.mm.yyyy
       row.push(...dayData[day].map(hourValue => hourValue === 0 ? getRandomValue() : hourValue));
-      // row.push(...dayData[day].map(hourValue => hourValue === 0 ? hourValue : hourValue));
       return row;
     });
   
@@ -60,17 +59,12 @@ const Navbar = ({ date, setDate, data, setData }) => {
     setLoading(prev => ({ ...prev, export: false }));
   };
 
-  const [buttonLoading, setButtonLoading] = useState(false);
-  const [superButtonMessage, setSuperButtonMessage] = useState('');
-
-  const SUPER_BUTTON_ENDPOINT = '/api/days/superButton/';
-  
   const handleSuperButtonClick = async () => {
-    setButtonLoading(true);
+    setLoading(prev => ({ ...prev, superButton: true }));
     try {
       const accessToken = localStorage.getItem('accessToken');
       await axiosInstance.post(
-        SUPER_BUTTON_ENDPOINT,
+        '/api/days/superButton/',
         {},
         {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -79,9 +73,8 @@ const Navbar = ({ date, setDate, data, setData }) => {
       alert('Супер кнопка нажата!');
     } catch (error) {
       console.error('Ошибка при выполнении запроса супер кнопки:', error);
-      setSuperButtonMessage('Ошибка при выполнении запроса.');
     } finally {
-      setButtonLoading(false);
+      setLoading(prev => ({ ...prev, superButton: false }));
     }
   };
 
@@ -102,35 +95,29 @@ const Navbar = ({ date, setDate, data, setData }) => {
       const newTableData = rows.slice(1).map(row => {
         let [day, ...hours] = row;
   
-        // If `day` is a number (Excel serialized date), convert it to a JS Date object
         if (typeof day === 'number') {
-          const excelStartDate = new Date(1900, 0, 1); // Excel's start date
+          const excelStartDate = new Date(1900, 0, 1);
           day = new Date(excelStartDate.getTime() + (day - 1) * 24 * 60 * 60 * 1000);
         }
   
-        // Convert Date object to `YYYY-MM-DD` format
         if (day instanceof Date) {
           const dayNumber = String(day.getDate()).padStart(2, '0');
-          const monthNumber = String(day.getMonth() + 1).padStart(2, '0'); // Months are zero-indexed
+          const monthNumber = String(day.getMonth() + 1).padStart(2, '0');
           const yearNumber = day.getFullYear();
           day = `${yearNumber}-${monthNumber}-${dayNumber}`;
         } else if (typeof day === 'string') {
-          // If `day` is a string in `dd.mm.yyyy` format, convert it to `YYYY-MM-DD`
           if (day.includes('.')) {
             const [dayNumber, monthNumber, yearNumber] = day.split('.').map(Number);
             day = `${yearNumber}-${String(monthNumber).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
           }
-          // If already in `YYYY-MM-DD`, no conversion needed
         } else {
           console.error('Не удалось обработать дату:', day);
           return null;
         }
   
-        // Create an object for each day's data
         return { [day]: hours };
-      }).filter(row => row !== null); // Filter out any rows that failed to process
+      }).filter(row => row !== null);
   
-      // Update table data
       setData(prevData => ({
         ...prevData,
         tableData: newTableData
@@ -155,22 +142,6 @@ const Navbar = ({ date, setDate, data, setData }) => {
     <div className="flex w-full justify-between items-center px-6 py-4 bg-gray-100 border-b shadow">
       <span className="text-lg font-semibold text-gray-700">Объемные Тарифы</span>
       <div className="flex items-center ml-24 space-x-4">
-        <select 
-          name="subject_type" 
-          id="subject_type"
-          className="text-center border rounded-lg px-4 py-2 bg-white shadow focus:outline-none focus:ring-2 focus:ring-blue-500"
-          value={data.subject_type}
-          onChange={(e) => {
-            setData((prevData) => ({
-              ...prevData,
-              subject_type: e.target.value
-            }));
-          }}
-        >
-          <option value="ЭПО">ЭПО</option>
-          <option value="ГП">ГП</option>
-        </select>
-
         <Year date={date} setDate={setDate} />
 
         <select
@@ -185,7 +156,7 @@ const Navbar = ({ date, setDate, data, setData }) => {
           className="text-center border rounded-lg px-4 py-2 bg-white shadow focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Субъект</option>
-          {data.subjects.filter(s => s.subject_type === data.subject_type).map((subject, index) => (
+          {data.subjects.map((subject, index) => (
             <option key={index} value={parseInt(subject.id)}>
               {subject.subject_name}
             </option>
@@ -231,7 +202,7 @@ const Navbar = ({ date, setDate, data, setData }) => {
           )}
         </button>
         <button onClick={handleSuperButtonClick} className="flex items-center text-blue-600 hover:text-blue-800 focus:outline-none">
-          {loading.upload ? (
+          {loading.superButton ? (
             <span>Загрузка...</span>
           ) : (
             <>

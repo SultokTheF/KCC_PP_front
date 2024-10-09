@@ -59,7 +59,7 @@ const CreateSubjectModal = ({ isOpen, closeModal, onSubmit }) => {
         },
       });
       console.log('API response:', response.data);
-      onSubmit(); 
+      onSubmit();
       closeModal();
     } catch (error) {
       if (error.response && error.response.data) {
@@ -145,9 +145,10 @@ const CreateSubjectModal = ({ isOpen, closeModal, onSubmit }) => {
               >
                 <option value="">Выберите тип</option>
                 <option value="ЭПО">ЭПО</option>
+                <option value="ЭПО">РЭК</option>
                 <option value="CONSUMER">ПОТРЕБИТЕЛЬ</option>
-                <option value="ГП">ГП</option>
                 <option value="ВИЭ">ВИЭ</option>
+                <option value="ГП">ГП</option>
               </select>
               {errorMessage.subject_type && (
                 <span className="text-red-600 mt-2 block text-center">{errorMessage.subject_type[0]}</span>

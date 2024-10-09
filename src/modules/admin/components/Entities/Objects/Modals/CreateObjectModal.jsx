@@ -29,7 +29,7 @@ const CreateObjectModal = ({ isOpen, closeModal, onSubmit }) => {
         console.error('Error fetching users:', error);
       }
     };
-    
+
     const fetchSubjects = async () => {
       try {
         const response = await axiosInstance.get('/api/subjects/');
@@ -160,9 +160,12 @@ const CreateObjectModal = ({ isOpen, closeModal, onSubmit }) => {
                 onChange={handleChange}
                 required
               >
+                <option value="">Выберите тип</option>
                 <option value="ЭПО">ЭПО</option>
-                <option value="CONSUMER">Потребитель</option>
-                <option value="РЭК">РЭК</option>
+                <option value="ЭПО">РЭК</option>
+                <option value="CONSUMER">ПОТРЕБИТЕЛЬ</option>
+                <option value="ВИЭ">ВИЭ</option>
+                <option value="ГП">ГП</option>
               </select>
             </div>
           </div>

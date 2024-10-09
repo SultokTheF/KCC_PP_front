@@ -7,7 +7,6 @@ const HoursTable = () => {
   const [hoursByDate, setHoursByDate] = useState({});
   const [datesByDayId, setDatesByDayId] = useState({});
   const [subjectsById, setSubjectsById] = useState({});
-
   const [formData, setFormData] = useState({
     object: 0,
     startDate: new Date().toISOString().split('T')[0],
@@ -23,7 +22,6 @@ const HoursTable = () => {
 
   const SUPER_BUTTON_ENDPOINT = '/api/days/superButton/';
 
-  // Получение списка субъектов
   const fetchData = async () => {
     try {
       const accessToken = localStorage.getItem('accessToken');
@@ -38,7 +36,6 @@ const HoursTable = () => {
     }
   };
 
-  // Получение даты по dayId и форматирование
   const fetchDateByDayId = async (dayId) => {
     try {
       const accessToken = localStorage.getItem('accessToken');
@@ -63,13 +60,9 @@ const HoursTable = () => {
     }
   };
 
-  // Fetch providers by dayId
-  // Fetch providers by dayId with formatted startDate and endDate
   const fetchProvidersByDayId = async (dayId, subject, startDate, endDate) => {
     try {
       const accessToken = localStorage.getItem('accessToken');
-
-      // Format the dates to 'YYYY-MM'
       const formattedStartDate = startDate.slice(0, 7); // Get YYYY-MM from startDate
       const formattedEndDate = endDate.slice(0, 7); // Get YYYY-MM from endDate
 
@@ -77,15 +70,15 @@ const HoursTable = () => {
         headers: { Authorization: `Bearer ${accessToken}` },
         params: {
           sub: subject,
-          start_date: formattedStartDate,  // Use the formatted date
-          end_date: formattedEndDate,      // Use the formatted date
+          start_date: formattedStartDate,
+          end_date: formattedEndDate,
         },
       });
 
       const providers = response.data;
       setProvidersByDayId((prev) => ({
         ...prev,
-        [dayId]: providers.map((provider) => provider.name), // Store providers' names
+        [dayId]: providers.length > 0 ? providers.map((provider) => provider.name) : ['Нет Провайдеров'], // Handle empty array case
       }));
     } catch (error) {
       console.error('Ошибка при получении провайдеров:', error);
@@ -93,9 +86,6 @@ const HoursTable = () => {
     }
   };
 
-
-
-  // Получение часов по дате и субъекту
   const fetchHours = async (startDate, endDate, subject) => {
     try {
       const accessToken = localStorage.getItem('accessToken');
@@ -153,13 +143,7 @@ const HoursTable = () => {
     if (formData.startDate && formData.endDate && formData.subject) {
       fetchHours(formData.startDate, formData.endDate, formData.subject);
     }
-  }, [
-    formData.startDate,
-    formData.endDate,
-    formData.subject,
-    formData.startHour,
-    formData.endHour,
-  ]);
+  }, [formData.startDate, formData.endDate, formData.subject, formData.startHour, formData.endHour]);
 
   const handleChange = (name, value) => {
     setFormData((prevData) => ({
@@ -197,12 +181,8 @@ const HoursTable = () => {
         </h1>
         <div className="bg-white p-6 rounded-lg shadow-md mb-8">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            {/* Селекторы */}
             <div className="w-full">
-              <label
-                htmlFor="subject"
-                className="block text-gray-700 font-semibold mb-2"
-              >
+              <label htmlFor="subject" className="block text-gray-700 font-semibold mb-2">
                 Выберите субъект
               </label>
               <select
@@ -222,10 +202,7 @@ const HoursTable = () => {
               </select>
             </div>
             <div className="w-full">
-              <label
-                htmlFor="startDate"
-                className="block text-gray-700 font-semibold mb-2"
-              >
+              <label htmlFor="startDate" className="block text-gray-700 font-semibold mb-2">
                 Дата начала
               </label>
               <input
@@ -239,10 +216,7 @@ const HoursTable = () => {
               />
             </div>
             <div className="w-full">
-              <label
-                htmlFor="endDate"
-                className="block text-gray-700 font-semibold mb-2"
-              >
+              <label htmlFor="endDate" className="block text-gray-700 font-semibold mb-2">
                 Дата окончания
               </label>
               <input
@@ -256,10 +230,7 @@ const HoursTable = () => {
               />
             </div>
             <div className="w-full">
-              <label
-                htmlFor="startHour"
-                className="block text-gray-700 font-semibold mb-2"
-              >
+              <label htmlFor="startHour" className="block text-gray-700 font-semibold mb-2">
                 Час начала
               </label>
               <select
@@ -278,10 +249,7 @@ const HoursTable = () => {
               </select>
             </div>
             <div className="w-full">
-              <label
-                htmlFor="endHour"
-                className="block text-gray-700 font-semibold mb-2"
-              >
+              <label htmlFor="endHour" className="block text-gray-700 font-semibold mb-2">
                 Час окончания
               </label>
               <select
@@ -300,17 +268,7 @@ const HoursTable = () => {
               </select>
             </div>
           </div>
-          {/* Кнопка "Супер кнопка" */}
-          {/* <div className="flex justify-center mt-4">
-            <button
-              onClick={handleSuperButtonClick}
-              className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={buttonLoading}
-            >
-              {buttonLoading ? 'Загрузка...' : 'Супер кнопка'}
-            </button>/
-          </div> */}
-          {/* Сообщение после выполнения запроса */}
+
           {superButtonMessage && (
             <div
               className={`mt-4 text-center font-semibold ${superButtonMessage.includes('Ошибка')
@@ -323,14 +281,12 @@ const HoursTable = () => {
           )}
         </div>
 
-        {/* Таблица отображения часов по дате */}
         {Object.keys(hoursByDate).map((dayId) => (
           <div key={dayId} className="mt-8">
             <h2 className="text-xl font-semibold text-center text-gray-700 mb-4">
               Дата: {datesByDayId[dayId] || 'Загрузка...'}
             </h2>
-            {/* Контейнер для прокручиваемой таблицы */}
-            <div className="overflow-x-auto max-w-full bg-white shadow-md rounded-lg">
+            <div className="overflow-x-auto max-w-[1550px] bg-white shadow-md rounded-lg">
               <table className="table-fixed min-w-full text-sm bg-white border border-gray-200">
                 <thead className="bg-gray-100 text-center">
                   <tr>
@@ -339,6 +295,8 @@ const HoursTable = () => {
                       'Субъект',
                       'Провайдеры',
                       'Тип',
+                      'coefficient',
+                      'volume',
                       'P1',
                       'P2',
                       'P3',
@@ -386,6 +344,12 @@ const HoursTable = () => {
                       </td>
                       <td className="px-2 py-1 border-b border-gray-200">
                         {subjectsById[dayId]?.subject_type === "CONSUMER" ? "Потребитель" : subjectsById[dayId]?.subject_type}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.coefficient}
+                      </td>
+                      <td className="px-2 py-1 border-b border-gray-200">
+                        {hour.volume}
                       </td>
                       <td className="px-2 py-1 border-b border-gray-200">
                         {hour.P1}

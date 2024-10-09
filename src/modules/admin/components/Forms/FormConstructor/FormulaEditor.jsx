@@ -6,7 +6,7 @@ const FormulaEditor = ({ value, onChange }) => {
 
   // Define the functions and variables
   const allowedFunctions = [
-    'SUM', 'AVERAGE', 'AVG', 'MAX', 'MIN', 'COUNT', 'IF', 'ABS', 'ROUND', 'ROUNDUP', 'ROUNDDOWN', 'POW', 'SQRT', 'AND', 'OR',
+    'SUM', 'AVERAGE', 'AVG', 'MAX', 'MIN', 'COUNT', 'IF', 'ABS', 'ROUND', 'ROUNDUP', 'ROUNDDOWN', 'POW', 'SQRT', 'AND', 'OR', 'WHERE', 'GLOB'
   ];
 
   const allowedVariables = [
@@ -22,20 +22,20 @@ const FormulaEditor = ({ value, onChange }) => {
   // Define custom light theme colors
   const defineCustomTheme = (monaco) => {
     monaco.editor.defineTheme('customLightTheme', {
-      base: 'vs', // Light theme base
-      inherit: true, // Inherit default light theme settings
+      base: 'vs',
+      inherit: true,
       rules: [
-        { token: 'keyword', foreground: 'D35400', fontStyle: 'bold' }, // Functions (Orange)
-        { token: 'variable', foreground: '2980B9' },  // Variables (Blue)
-        { token: 'number', foreground: '8E44AD' },    // Numbers (Purple)
-        { token: 'comment', foreground: '7F8C8D', fontStyle: 'italic' }, // Comments (Grey with italic)
+        { token: 'keyword', foreground: 'D35400', fontStyle: 'bold' },
+        { token: 'variable', foreground: '2980B9' },
+        { token: 'number', foreground: '8E44AD' },
+        { token: 'comment', foreground: '7F8C8D', fontStyle: 'italic' },
       ],
       colors: {
-        'editor.background': '#FDFDFD',  // Light background
-        'editor.foreground': '#2C3E50',  // Darker text color for contrast
-        'editor.lineHighlightBackground': '#ECF0F1',  // Light line highlight color
-        'editorCursor.foreground': '#D35400',  // Cursor color (Orange)
-        'editorIndentGuide.activeBackground': '#BDC3C7',  // Indent guide color
+        'editor.background': '#FDFDFD',
+        'editor.foreground': '#2C3E50',
+        'editor.lineHighlightBackground': '#ECF0F1',
+        'editorCursor.foreground': '#D35400',
+        'editorIndentGuide.activeBackground': '#BDC3C7',
         'editorIndentGuide.background': '#E0E0E0',
       },
     });
@@ -43,10 +43,7 @@ const FormulaEditor = ({ value, onChange }) => {
 
   // onMount gives access to the Monaco instance
   const handleEditorDidMount = (editor, monaco) => {
-    // Define the custom theme
     defineCustomTheme(monaco);
-
-    // Set the theme to the editor
     monaco.editor.setTheme('customLightTheme');
 
     // Register autocompletion for functions and variables
@@ -82,7 +79,7 @@ const FormulaEditor = ({ value, onChange }) => {
         minimap: { enabled: false },
         automaticLayout: true,
         wordWrap: 'on',
-        fontSize: 14,  // Adjust font size
+        fontSize: 14,
         lineNumbers: 'on',
         scrollBeyondLastLine: false,
         smoothScrolling: true,
