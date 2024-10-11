@@ -1,3 +1,4 @@
+// PredictionTariffsTable.js
 import React, { useState } from "react";
 
 // Tailwind CSS spinner component
@@ -17,7 +18,7 @@ const PredictionTariffsTable = ({ data, setData, loading }) => {
     setEditingCell({ day, hour });
 
     // Find the current value in the cell
-    const existingValue = data.tableData.find((d) => Object.keys(d)[0] === day)?.[day]?.[hour] || 0;
+    const existingValue = data.tableData.find((d) => Object.keys(d)[0] === day)?.[day]?.[hour - 1] || 0;
     setInputValue(existingValue); // Set input value with the existing cell value
   };
 
@@ -32,7 +33,8 @@ const PredictionTariffsTable = ({ data, setData, loading }) => {
 
       if (dayData) {
         // Update the specific cell with the new input value
-        dayData[editingCell.day][editingCell.hour] = parseFloat(inputValue);
+        const value = parseFloat(inputValue);
+        dayData[editingCell.day][editingCell.hour - 1] = isNaN(value) ? 0 : value;
       }
 
       return {
@@ -74,13 +76,13 @@ const PredictionTariffsTable = ({ data, setData, loading }) => {
                     <td
                       key={hourIndex}
                       className={`px-4 w-12 border text-center hover:bg-blue-100 ${
-                        editingCell.day === day && editingCell.hour === hourIndex ? "bg-blue-100" : ""
+                        editingCell.day === day && editingCell.hour === hourIndex + 1 ? "bg-blue-100" : ""
                       }`}
-                      onDoubleClick={() => handleDoubleClick(day, hourIndex)}
+                      onDoubleClick={() => handleDoubleClick(day, hourIndex + 1)}
                     >
-                      {editingCell.day === day && editingCell.hour === hourIndex ? (
+                      {editingCell.day === day && editingCell.hour === hourIndex + 1 ? (
                         <input
-                          type="text"
+                          type="number"
                           value={inputValue}
                           onChange={handleChange}
                           onBlur={handleBlur}

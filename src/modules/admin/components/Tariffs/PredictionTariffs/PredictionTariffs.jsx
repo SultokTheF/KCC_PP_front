@@ -1,3 +1,4 @@
+// PredictionTariffs.js
 import { useState, useEffect } from "react";
 import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 
@@ -26,20 +27,17 @@ const PredictionTariffs = () => {
 
   const fetchData = async () => {
     try {
-      const subjectsResponse = await axiosInstance.get(endpoints.SUBJECTS);
-
-      const providersResponse = await axiosInstance.get(endpoints.PROVIDERS);
+      const [subjectsResponse, providersResponse] = await Promise.all([
+        axiosInstance.get(endpoints.SUBJECTS),
+        axiosInstance.get(endpoints.PROVIDERS),
+      ]);
 
       setData((prevData) => ({
         ...prevData,
         subjects: subjectsResponse.data,
         providers: providersResponse.data,
-        provider:
-          providersResponse.data.length > 0
-            ? providersResponse?.data[0].id
-            : 0,
-        subject:
-          subjectsResponse.data.length > 0 ? subjectsResponse?.data[0].id : 0,
+        provider: providersResponse.data.length > 0 ? providersResponse?.data[0].id : 0,
+        subject: subjectsResponse.data.length > 0 ? subjectsResponse?.data[0].id : 0,
       }));
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -49,16 +47,8 @@ const PredictionTariffs = () => {
   const fetchTariffs = async () => {
     setLoading(true); // Start loading
     try {
-      const startDate = `${selectedMonth.year}-${String(
-        selectedMonth.month + 1
-      ).padStart(2, "0")}-01`;
-      const endDate = `${selectedMonth.year}-${String(
-        selectedMonth.month + 1
-      ).padStart(2, "0")}-${new Date(
-        selectedMonth.year,
-        selectedMonth.month + 1,
-        0
-      ).getDate()}`;
+      const startDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, "0")}-01`;
+      const endDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, "0")}-${new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate()}`;
 
       const tariffsResponse = await axiosInstance.get(endpoints.BASE_TARIFF, {
         params: {
@@ -75,31 +65,19 @@ const PredictionTariffs = () => {
 
       generateTableData(tariffsResponse.data);
     } catch (error) {
-      if (
-        error.response &&
-        error.response.data.error ===
-          "No tariffs found with the provided criteria."
-      ) {
-        console.warn("No tariffs found, filling table data with zeroes.");
-        const daysInMonth = new Date(
-          selectedMonth.year,
-          selectedMonth.month + 1,
-          0
-        ).getDate();
+      if (error.response && error.response.data.error === "No BaseTariffs found with the provided criteria.") {
+        console.warn("No BaseTariffs found, filling table data with zeroes.");
+        const daysInMonth = new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate();
         const emptyTariffs = [];
 
         // Generate an empty list of tariffs to fill with zeroes
         for (let day = 1; day <= daysInMonth; day++) {
-          for (let hour = 1; hour <= 24; hour++) {
-            const formattedDay = `${selectedMonth.year}-${String(
-              selectedMonth.month + 1
-            ).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-            emptyTariffs.push({
-              date: formattedDay,
-              hour: hour,
-              [data.tariffType]: 0,
-            });
-          }
+          const formattedDay = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          emptyTariffs.push({
+            date: formattedDay,
+            hour: 1, // Start hour at 1
+            [data.tariffType]: 0,
+          });
         }
 
         generateTableData(emptyTariffs);
@@ -122,7 +100,7 @@ const PredictionTariffs = () => {
     // Create a mapping from date to an array of 24 hours
     const dateToHoursMap = {};
 
-    // Initialize the map with empty arrays for each day
+    // Initialize the map with 0 for each hour
     for (let day = 1; day <= daysInMonth; day++) {
       const formattedDay = `${selectedMonth.year}-${String(
         selectedMonth.month + 1

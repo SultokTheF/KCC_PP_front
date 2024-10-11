@@ -1,3 +1,4 @@
+// DirectionsTable.js
 import React, { useState } from 'react';
 
 // Tailwind CSS spinner component
@@ -73,7 +74,7 @@ const DirectionsTable = ({ data, setData, loading }) => {
                       }`}
                       onDoubleClick={() => handleDoubleClick(day, hourIndex + 1)}
                     >
-                      {hourData === 'UP' ? '↑' : hourData === 'DOWN' ? '↓' : ''}
+                      {hourData === 'UP' ? '↑' : hourData === 'DOWN' ? '↓' : hourData === 'NONE' ? '—' : ''}
                     </td>
                   ))}
                 </tr>
