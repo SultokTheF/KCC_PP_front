@@ -33,6 +33,9 @@ const endpoints = {
   // Hours
   HOURS: `api/hours/`,
 
+  // Base Tariff
+  BASE_TARIFF: `api/base-tariff/`,
+
   // Holidays
   HOLIDAYS: `api/holiday/`,
 

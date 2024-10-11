@@ -20,6 +20,7 @@ const Directions = () => {
     providers: [],
     days: [],
     hours: [],
+    tariffs: [],
   });
 
   const [loading, setLoading] = useState(false); // Add loading state
@@ -43,98 +44,81 @@ const Directions = () => {
     }
   };
 
-  const fetchDays = async () => {
+  const fetchTariffs = async () => {
     setLoading(true); // Start loading
     try {
       const startDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-01`;
       const endDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-${new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate()}`;
-  
-      const daysResponse = await axiosInstance.get(endpoints.DAYS, {
+
+      const tariffsResponse = await axiosInstance.get(endpoints.BASE_TARIFF, {
         params: {
           start_date: startDate,
           end_date: endDate,
           sub: data.subject,
         },
       });
-  
+
       setData((prevData) => ({
         ...prevData,
-        days: daysResponse.data,
+        tariffs: tariffsResponse.data,
       }));
-  
-      // Fetch hours after fetching days
-      await fetchHours(daysResponse.data);
+
+      generateTableData(tariffsResponse.data);
     } catch (error) {
-      if (error.response && error.response.data.error === "No days found with the provided criteria.") {
-        console.warn('No days found, filling table data with "NONE".');
+      if (error.response && error.response.data.error === "No tariffs found with the provided criteria.") {
+        console.warn('No tariffs found, filling table data with "NONE".');
         const daysInMonth = new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate();
-        const emptyDays = [];
-        
-        // Generate an empty list of days to fill with "NONE"
+        const emptyTariffs = [];
+
+        // Generate an empty list of tariffs to fill with "NONE"
         for (let day = 1; day <= daysInMonth; day++) {
-          const formattedDay = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-          emptyDays.push({ date: formattedDay });
+          for (let hour = 1; hour <= 24; hour++) {
+            const formattedDay = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            emptyTariffs.push({
+              date: formattedDay,
+              hour: hour,
+              direction: "NONE",
+            });
+          }
         }
-        
-        // Generate table data with "NONE"
-        generateTableData(emptyDays, []);
+
+        generateTableData(emptyTariffs);
       } else {
-        console.error('Error fetching days:', error);
+        console.error('Error fetching tariffs:', error);
       }
     } finally {
       setLoading(false); // End loading
     }
   };
-  
 
-  const fetchHours = async (filteredDays) => {
-    try {
-      const startDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-01`;
-      const endDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-${new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate()}`;
-
-      const hoursResponse = await axiosInstance.get(endpoints.HOURS, {
-        params: {
-          start_date: startDate,
-          end_date: endDate,
-          sub: data.subject,
-        },
-      });
-
-      setData((prevData) => ({
-        ...prevData,
-        hours: hoursResponse.data,
-      }));
-
-      generateTableData(filteredDays, hoursResponse.data);
-    } catch (error) {
-      if (error.response && error.response.data.error === "No hours found with the provided criteria.") {
-        console.warn('No hours found, filling table data with "NONE".');
-        generateTableData(filteredDays, []);
-      } else {
-        console.error('Error fetching hours:', error);
-      }
-    }
-  };
-
-  const generateTableData = (filteredDays, hours) => {
+  const generateTableData = (tariffsData) => {
     const tableData = [];
     const daysInMonth = new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate();
 
+    // Create a mapping from date to an array of 24 hours
+    const dateToHoursMap = {};
+
+    // Initialize the map with empty arrays for each day
     for (let day = 1; day <= daysInMonth; day++) {
       const formattedDay = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const dayData = filteredDays.find(d => d.date.split('T')[0] === formattedDay);
-      const hoursData = new Array(24).fill("NONE");
+      dateToHoursMap[formattedDay] = new Array(24).fill("NONE");
+    }
 
-      if (dayData) {
-        const dayHours = hours.filter(hour => hour.day === dayData.id);
-        dayHours.forEach((hour) => {
-          const hourIndex = parseInt(hour.hour) - 1;
-          hoursData[hourIndex] = hour.direction;
-        });
+    // Now, fill the dateToHoursMap with the data from tariffsData
+    tariffsData.forEach((tariff) => {
+      const date = tariff.date.split('T')[0]; // Assuming date is in ISO format
+      const hourIndex = tariff.hour - 1;
+      const direction = tariff.direction;
+
+      if (dateToHoursMap[date]) {
+        dateToHoursMap[date][hourIndex] = direction;
       }
+    });
 
+    // Now, convert dateToHoursMap to tableData array
+    for (const [date, hours] of Object.entries(dateToHoursMap)) {
       tableData.push({
-        [formattedDay]: hoursData
+        [date]: hours,
       });
     }
 
@@ -150,7 +134,7 @@ const Directions = () => {
 
   useEffect(() => {
     if (data.subject) {
-      fetchDays();
+      fetchTariffs();
     }
   }, [selectedMonth, data.subject]);
 
