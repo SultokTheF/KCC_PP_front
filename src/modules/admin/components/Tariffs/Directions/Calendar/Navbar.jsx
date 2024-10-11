@@ -18,9 +18,10 @@ const Navbar = ({ date, setDate, data, setData }) => {
     const payload = {
       month: `${date.year}-${String(date.month + 1).padStart(2, '0')}`,
       data: data.tableData,
+      tariff_type: 'direction',
     };
 
-    axiosInstance.post(endpoints.DIRECTIONS_CREATE, payload)
+    axiosInstance.post(endpoints.CALCULATE_TARIFFS, payload)
       .then(response => {
         console.log('Данные успешно загружены', response.data);
       })

@@ -90,8 +90,8 @@ const CreateObjectModal = ({ isOpen, closeModal, onSubmit }) => {
       onSubmit(); // Call onSubmit to handle any post-submission logic
       closeModal();
     } catch (error) {
-      console.error('There was a problem with the API request:', error);
-      setErrorMessage('Произошла ошибка при отправке данных. Пожалуйста, попробуйте снова.');
+      onSubmit(); // Call onSubmit to handle any post-submission logic
+      closeModal();
     }
   };
 

@@ -19,7 +19,7 @@ const SingleObject = () => {
     object_type: '',
     subject: '',
     users: [],
-    related_objects: [],
+    related_objects: [],  // Initialize as an empty array
   });
 
   useEffect(() => {
@@ -54,7 +54,7 @@ const SingleObject = () => {
           object_type: objectData.object_type,
           subject: objectData.subject,
           users: objectData.users,
-          related_objects: objectData.related_objects,
+          related_objects: objectData.related_objects || [],  // Ensure this is always an array
         });
       } catch (error) {
         console.error('Failed to fetch data:', error);
@@ -107,9 +107,9 @@ const SingleObject = () => {
       return 'Юг-Север';
     } else if (zone === 'WEST') {
       return 'Запад';
-
-      return "Неизвестная Зона";
     }
+
+    return "Неизвестная Зона";
   }
 
   if (!objectData) {
@@ -126,7 +126,7 @@ const SingleObject = () => {
 
           <div className="bg-white p-6 rounded-lg shadow-md">
             <div className="mb-4">
-              {/* Subject Select */}
+              {/* Object Name */}
               <div className="flex items-center mb-2">
                 <div className="w-1/4 font-medium">Название объекта:</div>
                 {isEditing ? (
@@ -141,6 +141,8 @@ const SingleObject = () => {
                   <div>{formData.object_name}</div>
                 )}
               </div>
+
+              {/* Object EIC Code */}
               <div className="flex items-center mb-2">
                 <div className="w-1/4 font-medium">Код EIC объекта:</div>
                 {isEditing ? (
@@ -156,6 +158,7 @@ const SingleObject = () => {
                 )}
               </div>
 
+              {/* Subject */}
               <div className="flex items-center mb-2">
                 <div className="w-1/4 font-medium">Субъект:</div>
                 {isEditing ? (
@@ -172,11 +175,11 @@ const SingleObject = () => {
                     ))}
                   </select>
                 ) : (
-                  <div>{subjects.find(subject => subject.id == formData.subject)?.subject_name}</div>
+                  <div>{subjects.find(subject => subject.id === formData.subject)?.subject_name}</div>
                 )}
               </div>
 
-              {/* Users Multiple Select */}
+              {/* Users */}
               <div className="flex items-center mb-2">
                 <div className="w-1/4 font-medium">Пользователи:</div>
                 {isEditing ? (
@@ -203,14 +206,14 @@ const SingleObject = () => {
                     {formData.users.map((userId) => {
                       const user = users.find((user) => user.id === userId);
                       return user ? (
-                        <span key={user.id}>{user.subject_name}, </span>
+                        <span key={user.id}>{user.email}, </span>
                       ) : null;
                     })}
                   </div>
                 )}
               </div>
 
-              {/* Object Type Select */}
+              {/* Object Type */}
               <div className="flex items-center mb-2">
                 <div className="w-1/4 font-medium">Тип объекта:</div>
                 {isEditing ? (
@@ -222,7 +225,7 @@ const SingleObject = () => {
                   >
                     <option value="">Выберите тип</option>
                     <option value="ЭПО">ЭПО</option>
-                    <option value="ЭПО">РЭК</option>
+                    <option value="РЭК">РЭК</option>
                     <option value="CONSUMER">ПОТРЕБИТЕЛЬ</option>
                     <option value="ВИЭ">ВИЭ</option>
                     <option value="ГП">ГП</option>
@@ -232,7 +235,7 @@ const SingleObject = () => {
                 )}
               </div>
 
-              {/* Zone Name Select */}
+              {/* Zone Name */}
               <div className="flex items-center mb-2">
                 <div className="w-1/4 font-medium">Зона:</div>
                 {isEditing ? (
@@ -250,6 +253,7 @@ const SingleObject = () => {
                 )}
               </div>
 
+              {/* Related Objects */}
               <div className="flex items-center mb-2">
                 <div className="w-1/4 font-medium">Связанные объекты:</div>
                 {isEditing ? (
@@ -273,7 +277,7 @@ const SingleObject = () => {
                   </select>
                 ) : (
                   <div>
-                    {formData.related_objects.map((objId) => {
+                    {formData.related_objects?.map((objId) => {  // Safe check for map
                       const obj = objects.find((obj) => obj.id === objId);
                       return obj ? (
                         <span key={obj.id}>{obj.object_name}, </span>
@@ -282,9 +286,6 @@ const SingleObject = () => {
                   </div>
                 )}
               </div>
-
-              {/* Other Input Fields */}
-              {/* Add other input fields as needed */}
 
               <div className="flex justify-end mt-6">
                 {isEditing ? (
