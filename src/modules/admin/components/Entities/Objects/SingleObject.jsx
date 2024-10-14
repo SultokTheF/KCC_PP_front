@@ -227,8 +227,8 @@ const SingleObject = () => {
                     <option value="ЭПО">ЭПО</option>
                     <option value="РЭК">РЭК</option>
                     <option value="CONSUMER">ПОТРЕБИТЕЛЬ</option>
-                    <option value="ВИЭ">ВИЭ</option>
-                    <option value="ГП">ГП</option>
+                    <option value="ВИЭ" disabled>ВИЭ</option>
+                    <option value="ГП" disabled>ГП</option>
                   </select>
                 ) : (
                   <div>{formatType(formData.object_type)}</div>
