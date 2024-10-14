@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { axiosInstance, endpoints } from '../../../../../services/apiConfig';
 import Sidebar from '../../Sidebar/Sidebar';
 import Calendar from './Calendar/Calendar';
@@ -41,6 +41,9 @@ const Providers = () => {
   const [selectedProviders, setSelectedProviders] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
 
+  // Ref to store previous selectedProviders (arrays of provider IDs) for comparison
+  const prevSelectedProvidersRef = useRef({});
+
   const fetchData = async () => {
     try {
       const [subjectsResponse, providersResponse, hoursResponse, daysResponse] = await Promise.all([
@@ -59,9 +62,16 @@ const Providers = () => {
 
       const initialSelectedProviders = {};
       subjectsResponse.data.forEach((subject) => {
-        initialSelectedProviders[subject.id] = subject.providers;
+        initialSelectedProviders[subject.id] = subject.providers; // Array of provider objects
       });
       setSelectedProviders(initialSelectedProviders);
+
+      // Initialize the ref with arrays of provider IDs
+      const initialSelectedProvidersIds = {};
+      subjectsResponse.data.forEach((subject) => {
+        initialSelectedProvidersIds[subject.id] = subject.providers.map(provider => provider.id);
+      });
+      prevSelectedProvidersRef.current = initialSelectedProvidersIds;
     } catch (error) {
       console.error('Ошибка при получении данных:', error);
       // Optionally, set an error state here
@@ -80,18 +90,33 @@ const Providers = () => {
       const monthyear = `${year}-${formattedMonth}`;
 
       // Step 2: Iterate over each subject and prepare the providers data
-      for (const [subjectId, newProviders] of Object.entries(selectedProviders)) {
-        // Transform the array of provider IDs into the required format
-        const providersWithMonthYear = newProviders.map(providerId => ({
-          id: providerId,
-          monthyear: monthyear,
-        }));
+      for (const subject of data.subjects) {
+        const subjectId = subject.id;
+        const previousProviders = prevSelectedProvidersRef.current[subjectId] || [];
+        const currentProviders = (selectedProviders[subjectId] || []).map(provider => provider.id);
+
+        // Determine added and removed providers
+        const addedProviders = currentProviders.filter(id => !previousProviders.includes(id));
+        const removedProviders = previousProviders.filter(id => !currentProviders.includes(id));
+
+        // Prepare the payload
+        const payload = {
+          providers: [
+            // Add selected providers with id and monthyear
+            ...addedProviders.map(providerId => ({
+              id: providerId,
+              monthyear: monthyear,
+            })),
+            // Add removed providers with only monthyear
+            ...removedProviders.map(() => ({
+              monthyear: monthyear,
+            })),
+          ],
+        };
 
         try {
-          // Step 3: Send the PATCH request with the transformed providers array
-          await axiosInstance.patch(`${endpoints.SUBJECTS}${subjectId}/`, {
-            providers: providersWithMonthYear,
-          });
+          // Send the PATCH request with the payload
+          await axiosInstance.patch(`${endpoints.SUBJECTS}${subjectId}/`, payload);
         } catch (error) {
           console.error(`Ошибка при обновлении провайдеров для subjectId ${subjectId}:`, error);
           // Optionally, handle individual subject update errors
@@ -138,13 +163,15 @@ const Providers = () => {
           <button onClick={handleSave} className="bg-blue-500 text-white py-2 px-4 rounded">
             Сохранить
           </button>
-          <button onClick={handleSuperButtonClick} className="bg-green-500 ml-5 text-white py-2 px-4 rounded">
+          <button
+            onClick={handleSuperButtonClick}
+            className="bg-green-500 ml-5 text-white py-2 px-4 rounded"
+            disabled={loading.superButton} // Optionally disable the button while loading
+          >
             {loading.superButton ? (
               <span>Загрузка...</span>
             ) : (
-              <>
-                Супер Кнопка
-              </>
+              'Супер Кнопка'
             )}
           </button>
         </div>
