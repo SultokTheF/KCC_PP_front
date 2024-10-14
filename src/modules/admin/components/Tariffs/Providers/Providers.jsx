@@ -12,6 +12,27 @@ const Providers = () => {
     hours: [],
   });
 
+  const [loading, setLoading] = useState({ superButton: false });
+
+  const handleSuperButtonClick = async () => {
+    setLoading(prev => ({ ...prev, superButton: true }));
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      await axiosInstance.post(
+        '/api/days/superButton/',
+        {},
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      alert('Супер кнопка нажата!');
+    } catch (error) {
+      console.error('Ошибка при выполнении запроса супер кнопки:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, superButton: false }));
+    }
+  };
+
   const [selectedMonth, setSelectedMonth] = useState({
     year: new Date().getFullYear(),
     month: new Date().getMonth(),
@@ -116,6 +137,15 @@ const Providers = () => {
         <div className="mt-4 flex justify-center">
           <button onClick={handleSave} className="bg-blue-500 text-white py-2 px-4 rounded">
             Сохранить
+          </button>
+          <button onClick={handleSuperButtonClick} className="bg-green-500 ml-5 text-white py-2 px-4 rounded">
+            {loading.superButton ? (
+              <span>Загрузка...</span>
+            ) : (
+              <>
+                Супер Кнопка
+              </>
+            )}
           </button>
         </div>
       </div>
