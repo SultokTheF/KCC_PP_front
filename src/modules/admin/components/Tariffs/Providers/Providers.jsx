@@ -43,6 +43,7 @@ const Providers = () => {
       setSelectedProviders(initialSelectedProviders);
     } catch (error) {
       console.error('Ошибка при получении данных:', error);
+      // Optionally, set an error state here
     }
   };
 
@@ -52,18 +53,40 @@ const Providers = () => {
 
   const handleSave = async () => {
     try {
+      // Step 1: Construct the monthyear string in "YYYY-MM" format
+      const { year, month } = selectedMonth;
+      const formattedMonth = String(month + 1).padStart(2, '0');
+      const monthyear = `${year}-${formattedMonth}`;
+
+      // Step 2: Iterate over each subject and prepare the providers data
       for (const [subjectId, newProviders] of Object.entries(selectedProviders)) {
+        // Transform the array of provider IDs into the required format
+        const providersWithMonthYear = newProviders.map(providerId => ({
+          id: providerId,
+          monthyear: monthyear,
+        }));
+
         try {
-          await axiosInstance.patch(`${endpoints.SUBJECTS}${subjectId}/`, { providers: newProviders });
+          // Step 3: Send the PATCH request with the transformed providers array
+          await axiosInstance.patch(`${endpoints.SUBJECTS}${subjectId}/`, {
+            providers: providersWithMonthYear,
+          });
         } catch (error) {
           console.error(`Ошибка при обновлении провайдеров для subjectId ${subjectId}:`, error);
+          // Optionally, handle individual subject update errors
         }
       }
-      fetchData(); // Refresh the data after saving
+
+      // Refresh the data after saving to ensure the UI is up-to-date
+      await fetchData();
+
+      // Display a success message to the user
       setSuccessMessage('Данные успешно сохранены!');
+      // Clear the success message after 3 seconds
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
       console.error('Ошибка при сохранении данных:', error);
+      // Optionally, handle global errors here
     }
   };
 
