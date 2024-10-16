@@ -166,6 +166,31 @@ const TableComponent = ({
         </div>
       </div>
 
+      {/* Add Row Section */}
+      <div className="mb-6 space-x-4 flex items-center">
+        <label className="block text-gray-700">Выберите субъект:</label>
+        <select
+          value={selectedSubject}
+          onChange={(e) => setSelectedSubject(e.target.value)}
+          className="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Выберите субъект</option>
+          {subjectList.map((subject) => (
+            <option key={subject.id} value={subject.id}>
+              {subject.subject_name}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={() => addRow(tableIndex)}
+          className="p-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors flex items-center space-x-1"
+        >
+          <FaPlusCircle className="mr-1" />
+          <span>Добавить строку</span>
+        </button>
+      </div>
+
+
       <div className="mb-6 space-x-4 flex items-center">
         {selectedOperation === "formula" && (
           <div className="flex items-center space-x-4">
