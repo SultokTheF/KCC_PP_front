@@ -50,18 +50,31 @@ const TableComponent = ({
 
     // Data rows
     if (subjectItem.data[0]?.date_value?.length > 0) {
-      subjectItem.data[0].date_value.forEach((dateItem) => {
-        dateItem.value.forEach((hourItem) => {
+      // Merge date_value arrays
+      const dateValueMap = {};
+      subjectItem.data.forEach((res) => {
+        res.date_value.forEach((dateItem) => {
+          if (!dateValueMap[dateItem.date]) {
+            dateValueMap[dateItem.date] = {};
+          }
+          dateItem.value.forEach((hourItem) => {
+            if (!dateValueMap[dateItem.date][hourItem.hour]) {
+              dateValueMap[dateItem.date][hourItem.hour] = {};
+            }
+            dateValueMap[dateItem.date][hourItem.hour][res.name] = hourItem.value;
+          });
+        });
+      });
+
+      Object.keys(dateValueMap).forEach((date) => {
+        Object.keys(dateValueMap[date]).forEach((hour) => {
           const row = [
-            dateItem.date,
+            date,
             getSubjectName(subjectList, subjectItem.subject),
-            hourItem.hour,
+            hour,
           ];
           subjectItem.data.forEach((res) => {
-            const value =
-              res.date_value
-                ?.find((d) => d.date === dateItem.date)
-                ?.value.find((h) => h.hour === hourItem.hour)?.value || '-';
+            const value = dateValueMap[date][hour][res.name] || '-';
             row.push(value);
           });
           wsData.push(row);
@@ -279,83 +292,109 @@ const TableComponent = ({
       {table.groupByDate || table.groupByHour ? (
         <>
           <h2 className="text-lg font-semibold mb-4">Таблицы по субъектам</h2>
-          {table.tableConfig.map((item) => (
-            <div key={item.subject} className="mb-6">
-              <div className="flex items-center space-x-4 mb-2">
-                <button
-                  onClick={() => toggleSubTableVisibility(item.subject)}
-                  className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center space-x-1"
-                >
-                  {isSubTableVisible(item.subject)
-                    ? `Скрыть данные для ${getSubjectName(subjectList, item.subject)}`
-                    : `Показать данные для ${getSubjectName(subjectList, item.subject)}`}
-                </button>
-                <button
-                  onClick={() => exportSubjectToExcel(item)}
-                  className="p-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors flex items-center space-x-1"
-                >
-                  <FaFileExport className="mr-1" />
-                  <span>Экспортировать</span>
-                </button>
-              </div>
-
-              {isSubTableVisible(item.subject) && (
-                <div className="overflow-x-auto mt-4">
-                  {item.data[0]?.date_value?.length > 0 ? (
-                    <div className="mb-4">
-                      <table className="min-w-full bg-white border border-gray-200 shadow-md table-auto">
-                        <thead>
-                          <tr className="bg-gray-100">
-                            <th className="px-2 py-1 text-left text-gray-700 font-semibold border-b">
-                              Дата
-                            </th>
-                            <th className="px-2 py-1 text-left text-gray-700 font-semibold border-b">
-                              Час
-                            </th>
-                            {item.data.map((res, colIdx) => (
-                              <th
-                                key={colIdx}
-                                className="px-2 py-1 text-left text-gray-700 font-semibold border-b"
-                              >
-                                {res.name}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {item.data[0].date_value.map((dateItem, dateIdx) =>
-                            dateItem.value.map((hourItem, hourIdx, hourArr) => (
-                              <tr key={`${dateIdx}-${hourIdx}`} className="hover:bg-gray-50">
-                                {hourIdx === 0 && (
-                                  <td
-                                    rowSpan={hourArr.length}
-                                    className="border px-2 py-1 text-gray-600 w-32"
-                                  >
-                                    {dateItem.date}
-                                  </td>
-                                )}
-                                <td className="border px-2 py-1 text-gray-600">
-                                  {hourItem.hour}
-                                </td>
-                                {item.data.map((res, resIdx) => (
-                                  <td key={resIdx} className="border px-2 py-1 text-gray-600">
-                                    {res.date_value &&
-                                      res.date_value[dateIdx]?.value[hourIdx]?.value || '-'}
-                                  </td>
-                                ))}
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div>Нет данных для отображения</div>
-                  )}
+          {table.tableConfig.map((item) => {
+            // Data is already merged in processTableData
+            return (
+              <div key={item.subject} className="mb-6">
+                <div className="flex items-center space-x-4 mb-2">
+                  <button
+                    onClick={() => toggleSubTableVisibility(item.subject)}
+                    className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center space-x-1"
+                  >
+                    {isSubTableVisible(item.subject)
+                      ? `Скрыть данные для ${getSubjectName(subjectList, item.subject)}`
+                      : `Показать данные для ${getSubjectName(subjectList, item.subject)}`}
+                  </button>
+                  <button
+                    onClick={() => exportSubjectToExcel(item)}
+                    className="p-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors flex items-center space-x-1"
+                  >
+                    <FaFileExport className="mr-1" />
+                    <span>Экспортировать</span>
+                  </button>
                 </div>
-              )}
-            </div>
-          ))}
+
+                {isSubTableVisible(item.subject) && (
+                  <div className="overflow-x-auto mt-4">
+                    {item.data[0]?.date_value?.length > 0 ? (
+                      <div className="mb-4">
+                        <table className="min-w-full bg-white border border-gray-200 shadow-md table-auto">
+                          <thead>
+                            <tr className="bg-gray-100">
+                              <th className="px-2 py-1 text-left text-gray-700 font-semibold border-b">
+                                Дата
+                              </th>
+                              <th className="px-2 py-1 text-left text-gray-700 font-semibold border-b">
+                                Час
+                              </th>
+                              {item.data.map((res, colIdx) => (
+                                <th
+                                  key={colIdx}
+                                  className="px-2 py-1 text-left text-gray-700 font-semibold border-b"
+                                >
+                                  {res.name}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {/* Prepare data for display */}
+                            {(() => {
+                              const dateValueMap = {};
+                              item.data.forEach((res) => {
+                                res.date_value.forEach((dateItem) => {
+                                  if (!dateValueMap[dateItem.date]) {
+                                    dateValueMap[dateItem.date] = {};
+                                  }
+                                  dateItem.value.forEach((hourItem) => {
+                                    if (!dateValueMap[dateItem.date][hourItem.hour]) {
+                                      dateValueMap[dateItem.date][hourItem.hour] = {};
+                                    }
+                                    dateValueMap[dateItem.date][hourItem.hour][res.name] =
+                                      hourItem.value;
+                                  });
+                                });
+                              });
+
+                              const rows = [];
+                              Object.keys(dateValueMap).forEach((date) => {
+                                const hours = Object.keys(dateValueMap[date]);
+                                hours.forEach((hour, hourIdx) => {
+                                  rows.push(
+                                    <tr key={`${date}-${hour}`} className="hover:bg-gray-50">
+                                      {hourIdx === 0 && (
+                                        <td
+                                          rowSpan={hours.length}
+                                          className="border px-2 py-1 text-gray-600 w-32"
+                                        >
+                                          {date}
+                                        </td>
+                                      )}
+                                      <td className="border px-2 py-1 text-gray-600">
+                                        {hour}
+                                      </td>
+                                      {item.data.map((res, resIdx) => (
+                                        <td key={resIdx} className="border px-2 py-1 text-gray-600">
+                                          {dateValueMap[date][hour][res.name] || '-'}
+                                        </td>
+                                      ))}
+                                    </tr>
+                                  );
+                                });
+                              });
+                              return rows;
+                            })()}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div>Нет данных для отображения</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </>
       ) : null}
     </div>

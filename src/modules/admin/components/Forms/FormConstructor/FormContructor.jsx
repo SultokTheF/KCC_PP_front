@@ -6,7 +6,7 @@ import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 import TableComponent from "./TableComponent";
 import useFetchData from './useFetchData';
 import { hourFields } from './constants';
-import { processTableData, getSubjectName } from './utils';
+import { processTableData, getSubjectName, mergeDataEntries } from './utils';
 import { v4 as uuidv4 } from 'uuid';
 import * as XLSX from 'xlsx'; // Import XLSX library
 import { Circles } from 'react-loader-spinner'; // Loader component
@@ -228,13 +228,16 @@ const FormConstructor = () => {
       const response = await axiosInstance.put(endpoints.TABLE(id), dataToSend);
 
       if (response.status === 200) {
-        const updatedTableResponse = await axiosInstance.get(
-          endpoints.TABLE(id)
-        );
+        const updatedTableResponse = await axiosInstance.get(endpoints.TABLE(id));
         const tablesData = Array.isArray(updatedTableResponse.data)
           ? updatedTableResponse.data
           : [updatedTableResponse.data];
-        const newTables = tablesData.map(processTableData);
+
+        // Process tablesData to merge date_value arrays
+        const newTables = tablesData.map((tableData) => {
+          const processedTable = processTableData(tableData);
+          return processedTable;
+        });
         setTables(newTables);
       }
     } catch (error) {
@@ -261,18 +264,31 @@ const FormConstructor = () => {
 
         // Data rows
         if (item.data[0]?.date_value?.length > 0) {
-          item.data[0].date_value.forEach((dateItem, dateIdx) => {
-            dateItem.value.forEach((hourItem, hourIdx) => {
+          // Merge date_value arrays
+          const dateValueMap = {};
+          item.data.forEach((res) => {
+            res.date_value.forEach((dateItem) => {
+              if (!dateValueMap[dateItem.date]) {
+                dateValueMap[dateItem.date] = {};
+              }
+              dateItem.value.forEach((hourItem) => {
+                if (!dateValueMap[dateItem.date][hourItem.hour]) {
+                  dateValueMap[dateItem.date][hourItem.hour] = {};
+                }
+                dateValueMap[dateItem.date][hourItem.hour][res.name] = hourItem.value;
+              });
+            });
+          });
+
+          Object.keys(dateValueMap).forEach((date) => {
+            Object.keys(dateValueMap[date]).forEach((hour) => {
               const row = [
-                dateItem.date,
+                date,
                 getSubjectName(subjectList, item.subject),
-                hourItem.hour,
+                hour,
               ];
               item.data.forEach((res) => {
-                const value =
-                  res.date_value
-                    ?.find((d) => d.date === dateItem.date)
-                    ?.value.find((h) => h.hour === hourItem.hour)?.value || '-';
+                const value = dateValueMap[date][hour][res.name] || '-';
                 row.push(value);
               });
               wsData.push(row);

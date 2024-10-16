@@ -1,3 +1,5 @@
+// constants.js
+
 export const operationMappings = {
   array: "Array",
   formula: "Formula",
