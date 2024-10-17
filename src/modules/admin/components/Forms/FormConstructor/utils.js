@@ -11,19 +11,19 @@ export const processTableData = (tableData) => {
     exclude_holidays,
   } = tableData;
 
-  // Organize data by subject
+  // Check for nested structure of subjects inside data
   const subjectsMap = {};
-  (data || []).forEach((result) => {
-    if (!subjectsMap[result.subject]) {
-      subjectsMap[result.subject] = {
-        subject: result.subject,
+  (data.subjects || []).forEach((subject) => {
+    if (!subjectsMap[subject.subject]) {
+      subjectsMap[subject.subject] = {
+        subject: subject.subject,
         data: [],
+        selectedObjects: subject.objects || [], // Ensure we capture selected objects
       };
     }
-    subjectsMap[result.subject].data.push({
-      ...result,
-      // Ensure each result has a unique identifier
-      id: uuidv4(),
+    subjectsMap[subject.subject].data.push({
+      ...subject,
+      id: uuidv4(), // Ensure each result has a unique identifier
     });
   });
 
