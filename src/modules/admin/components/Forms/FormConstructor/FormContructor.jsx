@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { FaCheckCircle } from "react-icons/fa";
 import Sidebar from "../../Sidebar/Sidebar";
@@ -21,6 +21,21 @@ const FormConstructor = () => {
   const [formulaInput, setFormulaInput] = useState("");
   const [visibleSubTables, setVisibleSubTables] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false); // Loader state
+
+  const [objects, setObjects] = useState([]);
+
+
+  useEffect(() => {
+    const fetchObjects = async () => {
+      try {
+        const response = await axiosInstance.get(endpoints.OBJECTS);
+        setObjects(response.data);
+      } catch (error) {
+        console.error("Error fetching objects:", error);
+      }
+    };
+    fetchObjects();
+  }, []);
 
   // Add a new row (subject) to a specific table
   const addRow = (tableIndex) => {
@@ -199,9 +214,9 @@ const FormConstructor = () => {
 
   // Submit the tables data
   const handleSubmit = async () => {
-    setIsSubmitting(true); // Show loader
-
-    // Prepare the data to match the server's expected format
+    setIsSubmitting(true);
+  
+    // Prepare the data to match the server's expected format, including selected objects
     const finalData = tables.map((table) => ({
       name: table.name,
       start_date: table.startDate,
@@ -213,7 +228,8 @@ const FormConstructor = () => {
         .map((item) =>
           item.data.map((res) => ({
             subject: item.subject,
-            plan: res.plan,
+            objects: item.selectedObjects || [], // Include selected objects here
+            plan: res.plan, // Take plan from the data entry as before
             name: res.name,
             operation: res.operation,
             params: res.params,
@@ -221,16 +237,13 @@ const FormConstructor = () => {
         )
         .flat(),
     }));
-
+  
     try {
       const dataToSend = finalData.length === 1 ? finalData[0] : finalData;
-
       const response = await axiosInstance.put(endpoints.TABLE(id), dataToSend);
-
+  
       if (response.status === 200) {
-        const updatedTableResponse = await axiosInstance.get(
-          endpoints.TABLE(id)
-        );
+        const updatedTableResponse = await axiosInstance.get(endpoints.TABLE(id));
         const tablesData = Array.isArray(updatedTableResponse.data)
           ? updatedTableResponse.data
           : [updatedTableResponse.data];
@@ -238,11 +251,12 @@ const FormConstructor = () => {
         setTables(newTables);
       }
     } catch (error) {
-      console.error("Ошибка при отправке данных на сервер:", error);
+      console.error("Error submitting data to the server:", error);
     } finally {
-      setIsSubmitting(false); // Hide loader
+      setIsSubmitting(false);
     }
   };
+  
 
   // Function to export tables to Excel
   const exportToExcel = () => {
@@ -308,7 +322,6 @@ const FormConstructor = () => {
   return (
     <div className="flex">
       <Sidebar />
-
       <div className="flex-1 p-6 bg-gray-50 min-h-screen">
         {tables.map((table, tableIndex) => (
           <TableComponent
@@ -330,10 +343,11 @@ const FormConstructor = () => {
             updateColumnName={updateColumnName}
             visibleSubTables={visibleSubTables}
             setVisibleSubTables={setVisibleSubTables}
+            objects={objects}
+            setTables={setTables}
           />
         ))}
 
-        {/* Submit and Export buttons */}
         <div className="mt-6 flex space-x-4">
           <button
             onClick={handleSubmit}
@@ -342,17 +356,8 @@ const FormConstructor = () => {
             <FaCheckCircle className="mr-2" />
             <span>Отправить</span>
           </button>
-
-          <button
-            onClick={exportToExcel}
-            className="p-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors w-1/3 flex items-center justify-center"
-          >
-            <FaCheckCircle className="mr-2" />
-            <span>Экспортировать в Excel</span>
-          </button>
         </div>
 
-        {/* Loader */}
         {isSubmitting && (
           <div className="flex justify-center mt-4">
             <Circles color="#00BFFF" height={80} width={80} />

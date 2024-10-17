@@ -78,15 +78,16 @@ const Providers = () => {
       const { year, month } = selectedMonth;
       const formattedMonth = String(month + 1).padStart(2, '0');
       const monthyear = `${year}-${formattedMonth}`;
-
+  
       // Step 2: Iterate over each subject and prepare the providers data
       for (const [subjectId, newProviders] of Object.entries(selectedProviders)) {
         // Transform the array of provider IDs into the required format
-        const providersWithMonthYear = newProviders.map(providerId => ({
-          id: providerId,
-          monthyear: monthyear,
-        }));
-
+        const providersWithMonthYear = newProviders.map((providerId) => {
+          const provider = data.providers.find((p) => p.id === providerId);
+          // Include the ID only if the provider exists and is assigned, otherwise only include monthyear
+          return provider ? { id: providerId, monthyear } : { monthyear };
+        });
+  
         try {
           // Step 3: Send the PATCH request with the transformed providers array
           await axiosInstance.patch(`${endpoints.SUBJECTS}${subjectId}/`, {
@@ -94,22 +95,20 @@ const Providers = () => {
           });
         } catch (error) {
           console.error(`Ошибка при обновлении провайдеров для subjectId ${subjectId}:`, error);
-          // Optionally, handle individual subject update errors
         }
       }
-
+  
       // Refresh the data after saving to ensure the UI is up-to-date
       await fetchData();
-
+  
       // Display a success message to the user
       setSuccessMessage('Данные успешно сохранены!');
       // Clear the success message after 3 seconds
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
       console.error('Ошибка при сохранении данных:', error);
-      // Optionally, handle global errors here
     }
-  };
+  };  
 
   return (
     <div className="flex">

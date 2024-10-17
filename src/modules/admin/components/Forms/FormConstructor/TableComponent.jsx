@@ -22,10 +22,39 @@ const TableComponent = ({
   updateColumnName,
   visibleSubTables,
   setVisibleSubTables,
+  objects,
 }) => {
   // Function to check if a sub-table for a subject is visible
   const isSubTableVisible = (subjectId) => {
-    return visibleSubTables[subjectId];
+    return visibleSubTables[subjectId] || false; // Ensure it returns `false` if not defined
+  };
+
+
+  // Function to handle object checkbox changes
+  const handleObjectSelection = (subjectId, objectId, isChecked) => {
+    setTables((prevTables) =>
+      prevTables.map((table, idx) => {
+        if (idx === tableIndex) {
+          return {
+            ...table,
+            tableConfig: table.tableConfig.map((item) => {
+              if (item.subject === subjectId) {
+                const updatedObjects = isChecked
+                  ? [...(item.selectedObjects || []), objectId]
+                  : (item.selectedObjects || []).filter((id) => id !== objectId);
+
+                return {
+                  ...item,
+                  selectedObjects: updatedObjects,
+                };
+              }
+              return item;
+            }),
+          };
+        }
+        return table;
+      })
+    );
   };
 
   // Toggle visibility for each subject
@@ -252,6 +281,23 @@ const TableComponent = ({
               <tr key={rowIndex} className="hover:bg-gray-50">
                 <td className="border px-2 py-1 text-gray-600">
                   {getSubjectName(subjectList, item.subject)}
+                  <div className="mt-2">
+                    {objects
+                      .filter((obj) => obj.subject === item.subject)
+                      .map((obj) => (
+                        <label key={obj.id} className="block">
+                          <input
+                            type="checkbox"
+                            checked={(item.selectedObjects || []).includes(obj.id)}
+                            onChange={(e) =>
+                              handleObjectSelection(item.subject, obj.id, e.target.checked)
+                            }
+                            className="mr-2"
+                          />
+                          {obj.object_name}
+                        </label>
+                      ))}
+                  </div>
                   <button
                     className="ml-2 text-red-500 hover:text-red-700 flex items-center"
                     onClick={() => deleteRow(tableIndex, rowIndex)}
@@ -265,8 +311,8 @@ const TableComponent = ({
                     {table.groupByDate || table.groupByHour
                       ? '-'
                       : Array.isArray(res.value)
-                      ? res.value.join(', ')
-                      : res.value || '-'}
+                        ? res.value.join(', ')
+                        : res.value || '-'}
                   </td>
                 ))}
               </tr>
