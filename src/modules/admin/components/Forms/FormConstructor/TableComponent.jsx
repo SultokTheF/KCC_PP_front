@@ -1,7 +1,7 @@
 import React from 'react';
 import { FaTrashAlt, FaPlusCircle, FaFileExport } from 'react-icons/fa';
 import FormulaEditor from './FormulaEditor';
-import { getSubjectName } from './utils';
+import { getSubjectName, getObjectName } from './utils';
 import * as XLSX from 'xlsx'; // Import XLSX for export functionality
 
 const TableComponent = ({
@@ -28,6 +28,13 @@ const TableComponent = ({
   // Function to check if a sub-table for a subject is visible
   const isSubTableVisible = (subjectId) => {
     return visibleSubTables[subjectId] || false; // Ensure it returns `false` if not defined
+  };
+
+  const toggleObjectTableVisibility = (objectId) => {
+    setVisibleSubTables((prev) => ({
+      ...prev,
+      [objectId]: !prev[objectId],
+    }));
   };
 
 
@@ -64,6 +71,46 @@ const TableComponent = ({
       ...prev,
       [subjectId]: !prev[subjectId],
     }));
+  };
+
+  const exportObjectToExcel = (objectItem) => {
+    const wb = XLSX.utils.book_new();
+    const wsData = [];
+
+    // Header row for object export
+    const header = ['Дата', 'Объект', 'Субъект', 'Час'];
+    objectItem.data.forEach((res) => {
+      header.push(res.name);
+    });
+    wsData.push(header);
+
+    // Data rows
+    if (objectItem.data[0]?.date_value?.length > 0) {
+      objectItem.data[0].date_value.forEach((dateItem) => {
+        dateItem.value.forEach((hourItem) => {
+          const row = [
+            dateItem.date,
+            objectItem.object,
+            getSubjectName(subjectList, objectItem.subject),
+            hourItem.hour,
+          ];
+          objectItem.data.forEach((res) => {
+            const value =
+              res.date_value
+                ?.find((d) => d.date === dateItem.date)
+                ?.value.find((h) => h.hour === hourItem.hour)?.value || '-';
+            row.push(value);
+          });
+          wsData.push(row);
+        });
+      });
+    }
+
+    // Create worksheet and save to file
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const sheetName = `${table.name}_Object_${objectItem.object}`;
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    XLSX.writeFile(wb, `${sheetName}.xlsx`);
   };
 
   // Function to export individual subject table to Excel
@@ -405,6 +452,98 @@ const TableComponent = ({
           ))}
         </>
       ) : null}
+
+      {/* Render the objects table */}
+      <h2 className="text-lg font-semibold mb-4">Таблицы по Объектам</h2>
+      {table.objectConfig.map((objectItem) => (
+        <div key={objectItem.object} className="mb-6">
+          <div className="flex items-center space-x-4 mb-2">
+            <button
+              onClick={() => toggleObjectTableVisibility(objectItem.object)}
+              className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center space-x-1"
+            >
+              {visibleSubTables[objectItem.object]
+                ? `Скрыть данные для ${getObjectName(objects, objectItem.object)}`
+                : `Показать данные для ${getObjectName(objects, objectItem.object)}`}
+            </button>
+            <button
+              onClick={() => exportObjectToExcel(objectItem)}
+              className="p-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors flex items-center space-x-1"
+            >
+              <FaFileExport className="mr-1" />
+              <span>Экспортировать</span>
+            </button>
+          </div>
+
+          {visibleSubTables[objectItem.object] && (
+            <div className="overflow-x-auto mt-4">
+              {objectItem.data[0]?.date_value?.length > 0 ? (
+                <div className="mb-4">
+                  <table className="min-w-full bg-white border border-gray-200 shadow-md table-auto">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="px-2 py-1 text-left text-gray-700 font-semibold border-b">
+                          Дата
+                        </th>
+                        <th className="px-2 py-1 text-left text-gray-700 font-semibold border-b">
+                          Час
+                        </th>
+                        <th className="px-2 py-1 text-left text-gray-700 font-semibold border-b">
+                          Субъект
+                        </th>
+                        <th className="px-2 py-1 text-left text-gray-700 font-semibold border-b">
+                          Объект
+                        </th>
+                        {objectItem.data.map((res, colIdx) => (
+                          <th
+                            key={colIdx}
+                            className="px-2 py-1 text-left text-gray-700 font-semibold border-b"
+                          >
+                            {res.name}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {objectItem.data[0].date_value.map((dateItem, dateIdx) =>
+                        dateItem.value.map((hourItem, hourIdx, hourArr) => (
+                          <tr key={`${dateIdx}-${hourIdx}`} className="hover:bg-gray-50">
+                            {hourIdx === 0 && (
+                              <td
+                                rowSpan={hourArr.length}
+                                className="border px-2 py-1 text-gray-600 w-32"
+                              >
+                                {dateItem.date}
+                              </td>
+                            )}
+                            <td className="border px-2 py-1 text-gray-600">
+                              {hourItem.hour}
+                            </td>
+                            <td className="border px-2 py-1 text-gray-600">
+                              {getSubjectName(subjectList, objectItem.subject)}
+                            </td>
+                            <td className="border px-2 py-1 text-gray-600">
+                              {getObjectName(objects, objectItem.object)}
+                            </td>
+                            {objectItem.data.map((res, resIdx) => (
+                              <td key={resIdx} className="border px-2 py-1 text-gray-600">
+                                {res.date_value &&
+                                  res.date_value[dateIdx]?.value[hourIdx]?.value || '-'}
+                              </td>
+                            ))}
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div>Нет данных для отображения</div>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 };
