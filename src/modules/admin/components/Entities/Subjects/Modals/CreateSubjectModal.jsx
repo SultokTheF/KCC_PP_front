@@ -145,7 +145,7 @@ const CreateSubjectModal = ({ isOpen, closeModal, onSubmit }) => {
               >
                 <option value="">Выберите тип</option>
                 <option value="ЭПО">ЭПО</option>
-                <option value="РЭК" disabled>РЭК</option>
+                <option value="РЭК" >РЭК</option>
                 <option value="CONSUMER">ПОТРЕБИТЕЛЬ</option>
                 <option value="ВИЭ">ВИЭ</option>
                 <option value="ГП">ГП</option>

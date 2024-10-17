@@ -25,7 +25,7 @@ const ObjectsList = () => {
       return 'РЭК';
     }
 
-    return "Неизвестный тип";
+    return type;
   }
 
   const fetchData = async () => {
@@ -52,7 +52,7 @@ const ObjectsList = () => {
         <Sidebar />
         <div className="flex-1">
           <div className="flex justify-center items-center my-5">
-            <button 
+            <button
               className="flex items-center p-3 rounded-full text-white bg-blue-500 hover:bg-blue-300"
               onClick={() => setIsCeateObjectModalOpen(true)}
             >

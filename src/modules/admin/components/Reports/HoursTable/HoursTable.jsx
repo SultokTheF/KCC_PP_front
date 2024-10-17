@@ -198,7 +198,7 @@ const HoursTable = () => {
         ? subjectInfo.subject_type === 'CONSUMER'
           ? 'Потребитель'
           : subjectInfo.subject_type
-        : 'Неизвестный тип';
+        : subjectInfo.subject_type;
 
       return {
         id: hour.id,
