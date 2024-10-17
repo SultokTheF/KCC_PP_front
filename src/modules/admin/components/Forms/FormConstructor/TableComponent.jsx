@@ -14,6 +14,7 @@ const TableComponent = ({
   selectedOperation,
   setSelectedOperation,
   formulaInput,
+  setTables,
   setFormulaInput,
   addRow,
   addColumn,
