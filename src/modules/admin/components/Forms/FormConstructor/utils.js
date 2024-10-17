@@ -1,28 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
 
-export const mergeDataEntries = (dataEntries) => {
-  const mergedEntries = [];
-
-  dataEntries.forEach((entry) => {
-    const existingEntry = mergedEntries.find(
-      (e) =>
-        e.subject === entry.subject &&
-        e.plan === entry.plan &&
-        e.name === entry.name &&
-        e.operation === entry.operation &&
-        JSON.stringify(e.params) === JSON.stringify(entry.params)
-    );
-
-    if (existingEntry) {
-      existingEntry.date_value = existingEntry.date_value.concat(entry.date_value);
-    } else {
-      mergedEntries.push({ ...entry });
-    }
-  });
-
-  return mergedEntries;
-};
-
 export const processTableData = (tableData) => {
   const {
     name,
@@ -48,11 +25,6 @@ export const processTableData = (tableData) => {
       // Ensure each result has a unique identifier
       id: uuidv4(),
     });
-  });
-
-  // Merge data entries for each subject
-  Object.values(subjectsMap).forEach((subjectItem) => {
-    subjectItem.data = mergeDataEntries(subjectItem.data);
   });
 
   return {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 import { FaCheckCircle } from "react-icons/fa";
 import Sidebar from "../../Sidebar/Sidebar";
@@ -8,8 +8,8 @@ import useFetchData from './useFetchData';
 import { hourFields } from './constants';
 import { processTableData, getSubjectName } from './utils';
 import { v4 as uuidv4 } from 'uuid';
-import * as XLSX from 'xlsx';
-import { Circles } from 'react-loader-spinner';
+import * as XLSX from 'xlsx'; // Import XLSX library
+import { Circles } from 'react-loader-spinner'; // Loader component
 
 const FormConstructor = () => {
   const { id } = useParams();
@@ -20,82 +20,31 @@ const FormConstructor = () => {
   const [selectedOperation, setSelectedOperation] = useState("formula");
   const [formulaInput, setFormulaInput] = useState("");
   const [visibleSubTables, setVisibleSubTables] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState(null);
-  const [selectedObjects, setSelectedObjects] = useState([]);
-
-  // Fetch objects for a specific subject
-  const fetchObjectsForSubject = async (subjectId) => {
-    try {
-      const response = await axiosInstance.get(endpoints.OBJECTS, {
-        params: { sub: subjectId },
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching objects:', error);
-      setError('Failed to load objects.');
-      return [];
-    }
-  };
-
-  // Fetch objects for all subjects on initial load
-  useEffect(() => {
-    const fetchAllSubjectsObjects = async () => {
-      const updatedSubjects = await Promise.all(
-        subjectList.map(async (subject) => {
-          const objects = await fetchObjectsForSubject(subject.id);
-          return { ...subject, objects };
-        })
-      );
-      setTables((prevTables) =>
-        prevTables.map((table) => ({
-          ...table,
-          tableConfig: table.tableConfig.map((item) => {
-            const subjectData = updatedSubjects.find(
-              (sub) => sub.id === item.subject
-            );
-            return { ...item, objects: subjectData?.objects || [] };
-          }),
-        }))
-      );
-    };
-
-    if (subjectList.length > 0) {
-      fetchAllSubjectsObjects();
-    }
-  }, [subjectList]);
-
-  // Handle subject selection change
-  const handleSubjectChange = (e) => {
-    const subjectId = e.target.value;
-    setSelectedSubject(subjectId);
-    if (subjectId) {
-      fetchObjectsForSubject(subjectId);
-    }
-  };
+  const [isSubmitting, setIsSubmitting] = useState(false); // Loader state
 
   // Add a new row (subject) to a specific table
-  const addRow = async (tableIndex) => {
+  const addRow = (tableIndex) => {
     const subject = subjectList.find(
       (s) => s.id === parseInt(selectedSubject)
     );
 
     if (!subject) return;
 
-    const objects = await fetchObjectsForSubject(subject.id);
-
     setTables((prevTables) =>
       prevTables.map((table, idx) => {
         if (idx === tableIndex) {
           if (!table.tableConfig.find((item) => item.subject === subject.id)) {
+            // Get existing columns (data) from first subject
             const existingData =
               table.tableConfig.length > 0 ? table.tableConfig[0].data : [];
 
+            // Create new data for the new subject
             const newData = existingData.map((res) => ({
               ...res,
               subject: subject.id,
               value: null,
               date_value: null,
+              // Assign new IDs
               id: uuidv4(),
             }));
 
@@ -106,7 +55,6 @@ const FormConstructor = () => {
                 {
                   subject: subject.id,
                   data: newData,
-                  objects: objects,
                 },
               ],
             };
@@ -224,6 +172,7 @@ const FormConstructor = () => {
               excludeHolidays: newValue,
             };
           } else {
+            // Assume columnKey is a number for column index
             return {
               ...table,
               tableConfig: table.tableConfig.map((item) => {
@@ -250,47 +199,50 @@ const FormConstructor = () => {
 
   // Submit the tables data
   const handleSubmit = async () => {
-    setIsSubmitting(true);
+    setIsSubmitting(true); // Show loader
 
+    // Prepare the data to match the server's expected format
     const finalData = tables.map((table) => ({
-        name: table.name,
-        start_date: table.startDate,
-        end_date: table.endDate,
-        group_by_date: table.groupByDate,
-        group_by_hour: table.groupByHour,
-        exclude_holidays: table.excludeHolidays,
-        data: table.tableConfig
-            .map((item) => {
-                // Filter objects to include only selected ones
-                const filteredObjects = item.objects.filter(obj => selectedObjects.includes(obj.id));
-                return item.data.map((res) => ({
-                    subject: item.subject,
-                    objects: filteredObjects.map(obj => obj.id), // Include only selected objects
-                    plan: res.plan,
-                    name: res.name,
-                    operation: res.operation,
-                    params: res.params,
-                }));
-            })
-            .flat(),
+      name: table.name,
+      start_date: table.startDate,
+      end_date: table.endDate,
+      group_by_date: table.groupByDate,
+      group_by_hour: table.groupByHour,
+      exclude_holidays: table.excludeHolidays,
+      data: table.tableConfig
+        .map((item) =>
+          item.data.map((res) => ({
+            subject: item.subject,
+            plan: res.plan,
+            name: res.name,
+            operation: res.operation,
+            params: res.params,
+          }))
+        )
+        .flat(),
     }));
 
     try {
-        const dataToSend = finalData.length === 1 ? finalData[0] : finalData;
-        const response = await axiosInstance.put(endpoints.TABLE(id), dataToSend);
+      const dataToSend = finalData.length === 1 ? finalData[0] : finalData;
 
-        if (response.status === 200) {
-            // Fetch objects again after successfully updating the table
-            await fetchAllSubjectsObjects();
-        }
+      const response = await axiosInstance.put(endpoints.TABLE(id), dataToSend);
+
+      if (response.status === 200) {
+        const updatedTableResponse = await axiosInstance.get(
+          endpoints.TABLE(id)
+        );
+        const tablesData = Array.isArray(updatedTableResponse.data)
+          ? updatedTableResponse.data
+          : [updatedTableResponse.data];
+        const newTables = tablesData.map(processTableData);
+        setTables(newTables);
+      }
     } catch (error) {
-        console.error("Ошибка при отправке данных на сервер:", error);
+      console.error("Ошибка при отправке данных на сервер:", error);
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false); // Hide loader
     }
-};
-
-
+  };
 
   // Function to export tables to Excel
   const exportToExcel = () => {
@@ -300,43 +252,34 @@ const FormConstructor = () => {
       table.tableConfig.forEach((item) => {
         const wsData = [];
 
+        // Header row
         const header = ['Дата', 'Субъект', 'Час'];
         item.data.forEach((res) => {
           header.push(res.name);
         });
         wsData.push(header);
 
+        // Data rows
         if (item.data[0]?.date_value?.length > 0) {
-          const dateValueMap = {};
-          item.data.forEach((res) => {
-            res.date_value.forEach((dateItem) => {
-              if (!dateValueMap[dateItem.date]) {
-                dateValueMap[dateItem.date] = {};
-              }
-              dateItem.value.forEach((hourItem) => {
-                if (!dateValueMap[dateItem.date][hourItem.hour]) {
-                  dateValueMap[dateItem.date][hourItem.hour] = {};
-                }
-                dateValueMap[dateItem.date][hourItem.hour][res.name] = hourItem.value;
-              });
-            });
-          });
-
-          Object.keys(dateValueMap).forEach((date) => {
-            Object.keys(dateValueMap[date]).forEach((hour) => {
+          item.data[0].date_value.forEach((dateItem, dateIdx) => {
+            dateItem.value.forEach((hourItem, hourIdx) => {
               const row = [
-                date,
+                dateItem.date,
                 getSubjectName(subjectList, item.subject),
-                hour,
+                hourItem.hour,
               ];
               item.data.forEach((res) => {
-                const value = dateValueMap[date][hour][res.name] || '-';
+                const value =
+                  res.date_value
+                    ?.find((d) => d.date === dateItem.date)
+                    ?.value.find((h) => h.hour === hourItem.hour)?.value || '-';
                 row.push(value);
               });
               wsData.push(row);
             });
           });
         } else {
+          // If no date_value, add a single row
           const row = [
             table.startDate || '-',
             getSubjectName(subjectList, item.subject),
@@ -348,6 +291,7 @@ const FormConstructor = () => {
           wsData.push(row);
         }
 
+        // Create worksheet and add to workbook
         const ws = XLSX.utils.aoa_to_sheet(wsData);
         const sheetName = `${table.name}_${getSubjectName(
           subjectList,
@@ -357,6 +301,7 @@ const FormConstructor = () => {
       });
     });
 
+    // Save to file
     XLSX.writeFile(wb, 'exported_tables.xlsx');
   };
 
@@ -385,11 +330,10 @@ const FormConstructor = () => {
             updateColumnName={updateColumnName}
             visibleSubTables={visibleSubTables}
             setVisibleSubTables={setVisibleSubTables}
-            selectedObjects={selectedObjects}
-            setSelectedObjects={setSelectedObjects}
           />
         ))}
 
+        {/* Submit and Export buttons */}
         <div className="mt-6 flex space-x-4">
           <button
             onClick={handleSubmit}
@@ -408,6 +352,7 @@ const FormConstructor = () => {
           </button>
         </div>
 
+        {/* Loader */}
         {isSubmitting && (
           <div className="flex justify-center mt-4">
             <Circles color="#00BFFF" height={80} width={80} />
