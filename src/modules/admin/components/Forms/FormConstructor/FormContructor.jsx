@@ -5,9 +5,10 @@ import { FaCheckCircle } from "react-icons/fa";
 import Sidebar from "../../Sidebar/Sidebar";
 import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 import TableComponent from "./TableComponent";
+import CombinedTable from "./CombinedTable";
 import useFetchData from './useFetchData';
 import { hourFields } from './constants';
-import { processTableData, getSubjectName } from './utils';
+import { processTableData, processCombinedTableData, getSubjectName, getObjectName } from './utils';
 import { v4 as uuidv4 } from 'uuid';
 import * as XLSX from 'xlsx'; // Import XLSX library
 import { Circles } from 'react-loader-spinner'; // Loader component
@@ -24,6 +25,7 @@ const FormConstructor = () => {
   const [isSubmitting, setIsSubmitting] = useState(false); // Loader state
 
   const [objects, setObjects] = useState([]);
+  const [combinedData, setCombinedData] = useState([]);
 
   useEffect(() => {
     const fetchObjects = async () => {
@@ -36,6 +38,14 @@ const FormConstructor = () => {
     };
     fetchObjects();
   }, []);
+
+  useEffect(() => {
+    if (tables.length > 0 && subjectList.length > 0 && objects.length > 0) {
+      // Assuming you want to combine all tables; adjust if necessary
+      const allCombinedData = tables.flatMap(table => processCombinedTableData(table, subjectList, objects));
+      setCombinedData(allCombinedData);
+    }
+  }, [tables, subjectList, objects]);
 
   // Add a new row (subject) to a specific table
   const addRow = (tableIndex) => {
@@ -215,7 +225,7 @@ const FormConstructor = () => {
   // Submit the tables data
   const handleSubmit = async () => {
     setIsSubmitting(true);
-  
+
     // Prepare the data to match the server's expected format, including selected objects
     const finalData = tables.map((table) => ({
       name: table.name,
@@ -228,7 +238,7 @@ const FormConstructor = () => {
         .map((item) =>
           item.data.map((res) => ({
             subject: item.subject,
-            objects: item.selectedObjects || [], // Include selected objects here
+            objects: res.selectedObjects || [], // Include selected objects here
             plan: res.plan, // Take plan from the data entry as before
             name: res.name,
             operation: res.operation,
@@ -237,11 +247,11 @@ const FormConstructor = () => {
         )
         .flat(),
     }));
-  
+
     try {
       const dataToSend = finalData.length === 1 ? finalData[0] : finalData;
       const response = await axiosInstance.put(endpoints.TABLE(id), dataToSend);
-  
+
       if (response.status === 200) {
         const updatedTableResponse = await axiosInstance.get(endpoints.TABLE(id));
         const tablesData = Array.isArray(updatedTableResponse.data)
@@ -256,7 +266,6 @@ const FormConstructor = () => {
       setIsSubmitting(false);
     }
   };
-  
 
   // Function to export tables to Excel
   const exportToExcel = () => {
@@ -348,6 +357,10 @@ const FormConstructor = () => {
           />
         ))}
 
+        {/* Combined Table */}
+        <CombinedTable combinedData={combinedData} />
+
+        {/* Submit Button */}
         <div className="mt-6 flex space-x-4">
           <button
             onClick={handleSubmit}
@@ -358,6 +371,7 @@ const FormConstructor = () => {
           </button>
         </div>
 
+        {/* Loader */}
         {isSubmitting && (
           <div className="flex justify-center mt-4">
             <Circles color="#00BFFF" height={80} width={80} />

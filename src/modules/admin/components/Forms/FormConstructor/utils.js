@@ -1,6 +1,84 @@
 // utils.js
 import { v4 as uuidv4 } from 'uuid';
 
+export const processCombinedTableData = (tableData, subjectList, objectList) => {
+  try {
+    const { tableConfig, objectConfig } = tableData;
+
+    console.log("Table Config:", tableConfig);
+    console.log("Object Config:", objectConfig);
+
+    if (!tableConfig || !objectConfig) {
+      console.error("Table data is missing tableConfig or objectConfig");
+      return [];
+    }
+
+    const combinedData = [];
+
+    tableConfig.forEach(subjectItem => {
+      const subjectName = getSubjectName(subjectList, subjectItem.subject);
+
+      // Find objects associated with this subject
+      const relatedObjects = objectConfig.filter(obj => obj.subject === subjectItem.subject);
+
+      console.log(`Processing Subject: ${subjectName}, Operations: ${subjectItem.data.length}`);
+
+      subjectItem.data.forEach(subjectData => {
+        const { name: operationName, date_value } = subjectData;
+
+        console.log(`Processing Operation: ${operationName}`);
+
+        if (!date_value) {
+          console.warn(`No date_value for operation ${operationName} of subject ${subjectName}`);
+          return;
+        }
+
+        date_value.forEach(dateEntry => {
+          const { date, value: hourValues } = dateEntry;
+
+          hourValues.forEach(hourEntry => {
+            const { hour, value: subjectValue } = hourEntry;
+
+            relatedObjects.forEach(objectItem => {
+              const objectName = getObjectName(objectList, objectItem.object);
+              const objectOperation = objectItem.data.find(op => op.name === operationName);
+
+              let objectValue = '-'; // Default value
+
+              if (objectOperation) {
+                const objectDateEntry = objectOperation.date_value.find(d => d.date === date);
+                if (objectDateEntry) {
+                  const objectHourEntry = objectDateEntry.value.find(h => h.hour === hour);
+                  if (objectHourEntry) {
+                    objectValue = objectHourEntry.value;
+                  }
+                }
+              }
+
+              combinedData.push({
+                date,
+                hour,
+                subjectName,
+                operationName,
+                subjectValue,
+                objectName,
+                objectValue,
+              });
+            });
+          });
+        });
+      });
+    });
+
+    console.log("Combined Data:", combinedData);
+    return combinedData;
+  } catch (error) {
+    console.error("Error processing combined table data:", error);
+    return [];
+  }
+};
+
+
 export const processTableData = (tableData) => {
   const {
     name,
