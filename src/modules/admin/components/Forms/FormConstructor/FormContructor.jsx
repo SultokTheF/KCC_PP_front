@@ -27,6 +27,7 @@ const FormConstructor = () => {
   const [objects, setObjects] = useState([]);
   const [combinedData, setCombinedData] = useState([]);
 
+  // Fetch objects data
   useEffect(() => {
     const fetchObjects = async () => {
       try {
@@ -39,9 +40,10 @@ const FormConstructor = () => {
     fetchObjects();
   }, []);
 
+  // Process combined data whenever tables, subjects, or objects change
   useEffect(() => {
     if (tables.length > 0 && subjectList.length > 0 && objects.length > 0) {
-      // Assuming you want to combine all tables; adjust if necessary
+      // Combine data from all tables
       const allCombinedData = tables.flatMap(table => processCombinedTableData(table, subjectList, objects));
       setCombinedData(allCombinedData);
     }
@@ -69,6 +71,7 @@ const FormConstructor = () => {
               subject: subject.id,
               value: null,
               date_value: null,
+              selectedObjects: [], // Initialize selectedObjects
               // Assign new IDs
               id: uuidv4(),
             }));
@@ -100,6 +103,7 @@ const FormConstructor = () => {
         name: formulaInput || "Формула",
         operation: formulaInput,
         params: [],
+        selectedObjects: [], // Initialize selectedObjects
         id: uuidv4(),
       };
     } else if (selectedOperation === "array") {
@@ -108,6 +112,7 @@ const FormConstructor = () => {
         name: "Array",
         operation: "array",
         params: [],
+        selectedObjects: [], // Initialize selectedObjects
         id: uuidv4(),
       };
     }
@@ -328,6 +333,40 @@ const FormConstructor = () => {
     XLSX.writeFile(wb, 'exported_tables.xlsx');
   };
 
+  // Define handleObjectSelection and pass to TableComponent
+  const handleObjectSelection = (tableIndex, subjectIndex, operationIndex, objectId, isChecked) => {
+    setTables(prevTables =>
+      prevTables.map((table, tIdx) => {
+        if (tIdx !== tableIndex) return table;
+        return {
+          ...table,
+          tableConfig: table.tableConfig.map((subject, sIdx) => {
+            if (sIdx !== subjectIndex) return subject;
+            return {
+              ...subject,
+              data: subject.data.map((operation, oIdx) => {
+                if (oIdx !== operationIndex) return operation;
+                let updatedSelectedObjects = operation.selectedObjects || [];
+                if (isChecked) {
+                  // Avoid duplicates
+                  if (!updatedSelectedObjects.includes(objectId)) {
+                    updatedSelectedObjects = [...updatedSelectedObjects, objectId];
+                  }
+                } else {
+                  updatedSelectedObjects = updatedSelectedObjects.filter(id => id !== objectId);
+                }
+                return {
+                  ...operation,
+                  selectedObjects: updatedSelectedObjects,
+                };
+              }),
+            };
+          }),
+        };
+      })
+    );
+  };
+
   return (
     <div className="flex">
       <Sidebar />
@@ -354,6 +393,7 @@ const FormConstructor = () => {
             setVisibleSubTables={setVisibleSubTables}
             objects={objects}
             setTables={setTables}
+            handleObjectSelection={handleObjectSelection} // Pass the handler
           />
         ))}
 

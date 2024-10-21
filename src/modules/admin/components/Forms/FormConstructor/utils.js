@@ -1,6 +1,70 @@
 // utils.js
 import { v4 as uuidv4 } from 'uuid';
 
+// Function to process table data and initialize selectedObjects
+export const processTableData = (tableData) => {
+  const {
+    name,
+    start_date,
+    end_date,
+    group_by_date,
+    group_by_hour,
+    data,
+    exclude_holidays,
+  } = tableData;
+
+  // Ensure data is not null or undefined
+  const safeData = data || { subjects: [], objects: [] };
+
+  // Organize data by subjects
+  const subjectsMap = {};
+  (safeData.subjects || []).forEach((subject) => {
+    if (!subjectsMap[subject.subject]) {
+      subjectsMap[subject.subject] = {
+        subject: subject.subject,
+        data: [],
+      };
+    }
+    subjectsMap[subject.subject].data.push({
+      ...subject,
+      selectedObjects: [], // Initialize selectedObjects per operation
+      id: uuidv4(),
+    });
+  });
+
+  // Organize data by objects
+  const objectsMap = {};
+  (safeData.objects || []).forEach((object) => {
+    if (!objectsMap[object.object]) {
+      objectsMap[object.object] = {
+        object: object.object,
+        subject: object.subject, // Store the associated subject for display
+        data: [],
+      };
+    }
+    objectsMap[object.object].data.push({
+      ...object,
+      id: uuidv4(),
+    });
+  });
+
+  return {
+    name: name || "Без названия",
+    startDate: start_date ? new Date(start_date).toISOString().split("T")[0] : "",
+    endDate: end_date ? new Date(end_date).toISOString().split("T")[0] : "",
+    groupByDate: group_by_date || false,
+    groupByHour: group_by_hour || false,
+    excludeHolidays: exclude_holidays || {
+      Russia: false,
+      Kazakhstan: false,
+      Weekend: false,
+    },
+    tableConfig: Object.values(subjectsMap),
+    objectConfig: Object.values(objectsMap),
+  };
+};
+
+// Function to combine table data
 export const processCombinedTableData = (tableData, subjectList, objectList) => {
   try {
     const { tableConfig, objectConfig } = tableData;
@@ -15,7 +79,7 @@ export const processCombinedTableData = (tableData, subjectList, objectList) => 
 
     const combinedData = [];
 
-    tableConfig.forEach(subjectItem => {
+    tableConfig.forEach((subjectItem, subjectIndex) => {
       const subjectName = getSubjectName(subjectList, subjectItem.subject);
 
       // Find objects associated with this subject
@@ -23,7 +87,7 @@ export const processCombinedTableData = (tableData, subjectList, objectList) => 
 
       console.log(`Processing Subject: ${subjectName}, Operations: ${subjectItem.data.length}`);
 
-      subjectItem.data.forEach(subjectData => {
+      subjectItem.data.forEach((subjectData, operationIndex) => {
         const { name: operationName, date_value } = subjectData;
 
         console.log(`Processing Operation: ${operationName}`);
@@ -78,73 +142,13 @@ export const processCombinedTableData = (tableData, subjectList, objectList) => 
   }
 };
 
-
-export const processTableData = (tableData) => {
-  const {
-    name,
-    start_date,
-    end_date,
-    group_by_date,
-    group_by_hour,
-    data,
-    exclude_holidays,
-  } = tableData;
-
-  // Ensure data is not null or undefined
-  const safeData = data || { subjects: [], objects: [] };
-
-  // Organize data by subjects
-  const subjectsMap = {};
-  (safeData.subjects || []).forEach((subject) => {
-    if (!subjectsMap[subject.subject]) {
-      subjectsMap[subject.subject] = {
-        subject: subject.subject,
-        data: [],
-      };
-    }
-    subjectsMap[subject.subject].data.push({
-      ...subject,
-      id: uuidv4(),
-    });
-  });
-
-  // Organize data by objects
-  const objectsMap = {};
-  (safeData.objects || []).forEach((object) => {
-    if (!objectsMap[object.object]) {
-      objectsMap[object.object] = {
-        object: object.object,
-        subject: object.subject, // Store the associated subject for display
-        data: [],
-      };
-    }
-    objectsMap[object.object].data.push({
-      ...object,
-      id: uuidv4(),
-    });
-  });
-
-  return {
-    name: name || "Без названия",
-    startDate: start_date ? new Date(start_date).toISOString().split("T")[0] : "",
-    endDate: end_date ? new Date(end_date).toISOString().split("T")[0] : "",
-    groupByDate: group_by_date || false,
-    groupByHour: group_by_hour || false,
-    excludeHolidays: exclude_holidays || {
-      Russia: false,
-      Kazakhstan: false,
-      Weekend: false,
-    },
-    tableConfig: Object.values(subjectsMap),
-    objectConfig: Object.values(objectsMap),
-  };
-};
-
+// Helper function to get subject name
 export const getSubjectName = (subjectList, id) => {
   const subject = subjectList.find((s) => s.id === id);
   return subject ? subject.subject_name : "Неизвестный субъект";
 };
 
+// Helper function to get object name
 export const getObjectName = (objectList, id) => {
   const object = objectList.find((o) => o.id === id);
   return object ? object.object_name : "Неизвестный объект";

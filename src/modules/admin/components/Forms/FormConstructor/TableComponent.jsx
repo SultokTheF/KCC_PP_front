@@ -25,45 +25,11 @@ const TableComponent = ({
   visibleSubTables,
   setVisibleSubTables,
   objects,
+  handleObjectSelection, // Receive the handler function
 }) => {
   // Function to check if a sub-table for a subject is visible
   const isSubTableVisible = (subjectId) => {
     return visibleSubTables[subjectId] || false; // Ensure it returns `false` if not defined
-  };
-
-  const toggleObjectTableVisibility = (objectId) => {
-    setVisibleSubTables((prev) => ({
-      ...prev,
-      [objectId]: !prev[objectId],
-    }));
-  };
-
-
-  // Function to handle object checkbox changes
-  const handleObjectSelection = (subjectId, objectId, isChecked) => {
-    setTables((prevTables) =>
-      prevTables.map((table, idx) => {
-        if (idx === tableIndex) {
-          return {
-            ...table,
-            tableConfig: table.tableConfig.map((item) => {
-              if (item.subject === subjectId) {
-                const updatedObjects = isChecked
-                  ? [...(item.selectedObjects || []), objectId]
-                  : (item.selectedObjects || []).filter((id) => id !== objectId);
-
-                return {
-                  ...item,
-                  selectedObjects: updatedObjects,
-                };
-              }
-              return item;
-            }),
-          };
-        }
-        return table;
-      })
-    );
   };
 
   // Toggle visibility for each subject
@@ -298,7 +264,7 @@ const TableComponent = ({
             <thead>
               <tr className="bg-gray-100">
                 <th className="px-2 py-1 text-left text-gray-700 font-semibold border-b">
-                  Субъекты
+                  Субъекты / Операции
                 </th>
                 {table.tableConfig[0].data.map((res, index) => (
                   <th
@@ -326,45 +292,54 @@ const TableComponent = ({
               </tr>
             </thead>
             <tbody>
-              {table.tableConfig.map((item, rowIndex) => (
-                <tr key={rowIndex} className="hover:bg-gray-50">
-                  <td className="border px-2 py-1 text-gray-600">
-                    {getSubjectName(subjectList, item.subject)}
-                    <div className="mt-2">
-                      {objects
-                        .filter((obj) => obj.subject === item.subject)
-                        .map((obj) => (
-                          <label key={obj.id} className="block">
-                            <input
-                              type="checkbox"
-                              checked={(item.selectedObjects || []).includes(obj.id)}
-                              onChange={(e) =>
-                                handleObjectSelection(item.subject, obj.id, e.target.checked)
-                              }
-                              className="mr-2"
-                            />
-                            {obj.object_name}
-                          </label>
-                        ))}
-                    </div>
-                    <button
-                      className="ml-2 text-red-500 hover:text-red-700 flex items-center"
-                      onClick={() => deleteRow(tableIndex, rowIndex)}
-                    >
-                      <FaTrashAlt className="mr-1" />
-                      <span>Удалить</span>
-                    </button>
-                  </td>
-                  {item.data.map((res, colIndex) => (
-                    <td key={colIndex} className="border px-2 py-1 text-gray-600">
-                      {table.groupByDate || table.groupByHour
-                        ? '-'
-                        : Array.isArray(res.value)
-                          ? res.value.join(', ')
-                          : res.value || '-'}
+              {table.tableConfig.map((subjectItem, subjectIndex) => (
+                subjectItem.data.map((operation, operationIndex) => (
+                  <tr key={`${subjectItem.subject}-${operation.id}`} className="hover:bg-gray-50">
+                    <td className="border px-2 py-1 text-gray-600">
+                      {getSubjectName(subjectList, subjectItem.subject)} - {operation.operation}
+                      <button
+                        className="ml-2 text-red-500 hover:text-red-700 flex items-center"
+                        onClick={() => deleteRow(tableIndex, subjectIndex)}
+                      >
+                        <FaTrashAlt className="mr-1" />
+                        <span>Удалить</span>
+                      </button>
+                      {/* Object Selection */}
+                      <div className="mt-2">
+                        {objects
+                          .filter((obj) => obj.subject === subjectItem.subject)
+                          .map((obj) => (
+                            <label key={obj.id} className="inline-flex items-center mr-2">
+                              <input
+                                type="checkbox"
+                                checked={(operation.selectedObjects || []).includes(obj.id)}
+                                onChange={(e) =>
+                                  handleObjectSelection(
+                                    tableIndex,
+                                    subjectIndex,
+                                    operationIndex,
+                                    obj.id,
+                                    e.target.checked
+                                  )
+                                }
+                                className="mr-1"
+                              />
+                              {obj.object_name}
+                            </label>
+                          ))}
+                      </div>
                     </td>
-                  ))}
-                </tr>
+                    {operation.data && operation.data.map((res, colIndex) => (
+                      <td key={colIndex} className="border px-2 py-1 text-gray-600">
+                        {table.groupByDate || table.groupByHour
+                          ? '-'
+                          : Array.isArray(res.value)
+                            ? res.value.join(', ')
+                            : res.value || '-'}
+                      </td>
+                    ))}
+                  </tr>
+                ))
               ))}
             </tbody>
           </table>
@@ -468,10 +443,10 @@ const TableComponent = ({
           <div key={objectItem.object} className="mb-6">
             <div className="flex items-center space-x-4 mb-2">
               <button
-                onClick={() => toggleObjectTableVisibility(objectItem.object)}
+                onClick={() => toggleSubTableVisibility(objectItem.object)}
                 className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center space-x-1"
               >
-                {visibleSubTables[objectItem.object]
+                {isSubTableVisible(objectItem.object)
                   ? `Скрыть данные для ${getObjectName(objects, objectItem.object)}`
                   : `Показать данные для ${getObjectName(objects, objectItem.object)}`}
               </button>
@@ -484,7 +459,7 @@ const TableComponent = ({
               </button>
             </div>
 
-            {visibleSubTables[objectItem.object] && (
+            {isSubTableVisible(objectItem.object) && (
               <div className="overflow-x-auto mt-4">
                 {objectItem.data.length > 0 && objectItem.data[0]?.date_value?.length > 0 ? (
                   <div className="mb-4">
