@@ -236,7 +236,7 @@ const FormConstructor = () => {
       name: table.name,
       start_date: table.startDate,
       end_date: table.endDate,
-      group_by_date: table.groupByDate,
+      group_by_date: table.groupByHour,
       group_by_hour: table.groupByHour,
       exclude_holidays: table.excludeHolidays,
       data: table.tableConfig
