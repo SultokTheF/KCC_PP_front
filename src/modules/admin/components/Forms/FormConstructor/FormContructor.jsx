@@ -1,3 +1,4 @@
+// FormConstructor.js
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { FaCheckCircle } from "react-icons/fa";
@@ -23,7 +24,6 @@ const FormConstructor = () => {
   const [isSubmitting, setIsSubmitting] = useState(false); // Loader state
 
   const [objects, setObjects] = useState([]);
-
 
   useEffect(() => {
     const fetchObjects = async () => {
@@ -221,7 +221,7 @@ const FormConstructor = () => {
       name: table.name,
       start_date: table.startDate,
       end_date: table.endDate,
-      group_by_date: table.groupByHour,
+      group_by_date: table.groupByDate,
       group_by_hour: table.groupByHour,
       exclude_holidays: table.excludeHolidays,
       data: table.tableConfig

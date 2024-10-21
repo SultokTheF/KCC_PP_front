@@ -1,3 +1,4 @@
+// utils.js
 import { v4 as uuidv4 } from 'uuid';
 
 export const processTableData = (tableData) => {
@@ -11,9 +12,12 @@ export const processTableData = (tableData) => {
     exclude_holidays,
   } = tableData;
 
+  // Ensure data is not null or undefined
+  const safeData = data || { subjects: [], objects: [] };
+
   // Organize data by subjects
   const subjectsMap = {};
-  (data.subjects || []).forEach((subject) => {
+  (safeData.subjects || []).forEach((subject) => {
     if (!subjectsMap[subject.subject]) {
       subjectsMap[subject.subject] = {
         subject: subject.subject,
@@ -28,7 +32,7 @@ export const processTableData = (tableData) => {
 
   // Organize data by objects
   const objectsMap = {};
-  (data.objects || []).forEach((object) => {
+  (safeData.objects || []).forEach((object) => {
     if (!objectsMap[object.object]) {
       objectsMap[object.object] = {
         object: object.object,
@@ -66,4 +70,4 @@ export const getSubjectName = (subjectList, id) => {
 export const getObjectName = (objectList, id) => {
   const object = objectList.find((o) => o.id === id);
   return object ? object.object_name : "Неизвестный объект";
-}
+};
