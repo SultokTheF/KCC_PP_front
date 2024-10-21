@@ -47,12 +47,6 @@ const ProvidersTable = ({
     );
   });
 
-  const findHour = (subject, days, hours) => {
-    const day = days.find((d) => d.subject === subject);
-    const hour = hours.filter((h) => h.day === day?.id);
-    return hour[0];
-  };
-
   const handleDeleteProvider = async (providerId) => {
     try {
       await axiosInstance.delete(`${endpoints.PROVIDERS}${providerId}/`);
@@ -86,7 +80,6 @@ const ProvidersTable = ({
             <th className="py-1 px-2 border-b">#</th>
             <th className="py-1 px-2 border-b">subject</th>
             <th className="py-1 px-2 border-b">type</th>
-            <th className="py-1 px-2 border-b">prov_tariff</th>
             <th className="py-1 px-2 border-b">providers</th>
             {data.providers
               .filter((provider) => {
@@ -156,11 +149,6 @@ const ProvidersTable = ({
               <td className="py-1 px-2 border-b">{subject.subject_name}</td>
               <td className="py-1 px-2 border-b">
                 <FormatType type={subject.subject_type} />
-              </td>
-              <td className="py-1 px-2 border-b">
-                {findHour(subject.id, day, data.hours)?.Prov_T
-                  ? findHour(subject.id, day, data.hours)?.Prov_T
-                  : '-'}
               </td>
               <td className="py-1 px-2 border-b">
                 {selectedProviders[subject.id]

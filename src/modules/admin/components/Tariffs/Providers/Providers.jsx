@@ -9,7 +9,6 @@ const Providers = () => {
     subjects: [],
     providers: [],
     days: [],
-    hours: [],
   });
 
   const [loading, setLoading] = useState({ superButton: false });
@@ -43,17 +42,15 @@ const Providers = () => {
 
   const fetchData = async () => {
     try {
-      const [subjectsResponse, providersResponse, hoursResponse, daysResponse] = await Promise.all([
+      const [subjectsResponse, providersResponse, daysResponse] = await Promise.all([
         axiosInstance.get(endpoints.SUBJECTS),
         axiosInstance.get(endpoints.PROVIDERS),
-        axiosInstance.get(endpoints.HOURS),
         axiosInstance.get(endpoints.DAYS),
       ]);
 
       setData({
         subjects: subjectsResponse.data,
         providers: providersResponse.data,
-        hours: hoursResponse.data,
         days: daysResponse.data,
       });
 
