@@ -1,7 +1,7 @@
 import React from 'react';
 import { FaTrashAlt, FaPlusCircle, FaFileExport } from 'react-icons/fa';
 import FormulaEditor from './FormulaEditor';
-import { getSubjectName } from './utils';
+import { getSubjectName, getRowName } from './utils';
 import * as XLSX from 'xlsx'; // Import XLSX for export functionality
 
 const TableComponent = ({
@@ -23,7 +23,8 @@ const TableComponent = ({
   objectsList,
   selectedObjects,
   setSelectedObjects,
-  updateCellOperation, 
+  updateCellOperation,
+  allObjects,
 }) => {
   // Function to check if a sub-table for a subject is visible
   const isSubTableVisible = (subjectId) => {
@@ -302,9 +303,9 @@ const TableComponent = ({
           </thead>
           <tbody>
             {table.tableConfig.map((item, rowIndex) => (
-              <tr key={rowIndex} className="hover:bg-gray-50">
+              <tr key={`${tableIndex}-${rowIndex}`} className="hover:bg-gray-50">
                 <td className="border px-2 py-1 text-gray-600">
-                  {getSubjectName(subjectList, item.subject)}
+                  {getRowName(subjectList, allObjects, item.subject, item.objects)}
                   <button
                     className="ml-2 text-red-500 hover:text-red-700 flex items-center"
                     onClick={() => deleteRow(tableIndex, rowIndex)}
@@ -314,7 +315,7 @@ const TableComponent = ({
                   </button>
                 </td>
                 {item.data.map((res, colIndex) => (
-                  <td key={colIndex} className="border px-2 py-1 text-gray-600">
+                  <td key={`${tableIndex}-${rowIndex}-${colIndex}`} className="border px-2 py-1 text-gray-600">
                     {table.groupByDate || table.groupByHour
                       ? '-'
                       : Array.isArray(res.value)
@@ -342,8 +343,8 @@ const TableComponent = ({
                     className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center space-x-1"
                   >
                     {isSubTableVisible(item.subject)
-                      ? `Скрыть данные для ${getSubjectName(subjectList, item.subject)}`
-                      : `Показать данные для ${getSubjectName(subjectList, item.subject)}`}
+                      ? `Скрыть данные для ${getRowName(subjectList, allObjects, item.subject, item.objects)}`
+                      : `Показать данные для ${getRowName(subjectList, allObjects, item.subject, item.objects)}`}
                   </button>
                   <button
                     onClick={() => exportSubjectToExcel(item)}

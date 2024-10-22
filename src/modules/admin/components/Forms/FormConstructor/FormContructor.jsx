@@ -24,6 +24,7 @@ const FormConstructor = () => {
   const [visibleSubTables, setVisibleSubTables] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false); // Loader state
 
+  const [allObjects, setAllObjects] = useState([]);
   const [objectsList, setObjectsList] = useState([]);
   const [selectedObjects, setSelectedObjects] = useState([]);
 
@@ -40,6 +41,20 @@ const FormConstructor = () => {
       // Optionally, set an error state here
     }
   };
+
+  const fetchAllObjects = async () => {
+    try {
+      const objectsResponse = await axiosInstance.get(endpoints.OBJECTS);
+      setAllObjects(objectsResponse.data);
+    } catch (error) {
+      console.error('Error fetching objects:', error);
+      // Optionally, set an error state here
+    }
+  };
+
+  useEffect(() => {
+    fetchAllObjects();
+  }, []);
 
   useEffect(() => {
     if (selectedSubject) {
@@ -436,6 +451,7 @@ const FormConstructor = () => {
             selectedObjects={selectedObjects}
             setSelectedObjects={setSelectedObjects}
             updateCellOperation={updateCellOperation} // Pass the update function
+            allObjects={allObjects}
           />
         ))}
 

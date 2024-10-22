@@ -95,16 +95,16 @@ export const getSubjectName = (subjectList, id) => {
 };
 
 // Get object names from objectsList based on object IDs
-export const getObjectNames = (objectsList, objectIds) => {
-  return objectsList
+export const getObjectNames = (allObjects, objectIds) => {
+  return allObjects
     .filter(obj => objectIds.includes(obj.id))
-    .map(obj => obj.name)
+    .map(obj => obj.object_name) // Ensure you're accessing the correct property name
     .join(', ');
 };
 
 // Get row name combining subject name and object names
-export const getRowName = (subjectList, objectsList, subjectId, objectIds) => {
+export const getRowName = (subjectList, allObjects, subjectId, objectIds) => {
   const subjectName = getSubjectName(subjectList, subjectId);
-  const objectNames = getObjectNames(objectsList, objectIds);
+  const objectNames = getObjectNames(allObjects, objectIds); // Now using allObjects
   return `${subjectName} (${objectNames})`;
 };
