@@ -1,14 +1,12 @@
-// FormConstructor.js
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 import { FaCheckCircle } from "react-icons/fa";
 import Sidebar from "../../Sidebar/Sidebar";
 import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 import TableComponent from "./TableComponent";
-import CombinedTable from "./CombinedTable";
 import useFetchData from './useFetchData';
 import { hourFields } from './constants';
-import { processTableData, processCombinedTableData, getSubjectName, getObjectName } from './utils';
+import { processTableData, getSubjectName } from './utils';
 import { v4 as uuidv4 } from 'uuid';
 import * as XLSX from 'xlsx'; // Import XLSX library
 import { Circles } from 'react-loader-spinner'; // Loader component
@@ -23,31 +21,6 @@ const FormConstructor = () => {
   const [formulaInput, setFormulaInput] = useState("");
   const [visibleSubTables, setVisibleSubTables] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false); // Loader state
-
-  const [objects, setObjects] = useState([]);
-  const [combinedData, setCombinedData] = useState([]);
-
-  // Fetch objects data
-  useEffect(() => {
-    const fetchObjects = async () => {
-      try {
-        const response = await axiosInstance.get(endpoints.OBJECTS);
-        setObjects(response.data);
-      } catch (error) {
-        console.error("Error fetching objects:", error);
-      }
-    };
-    fetchObjects();
-  }, []);
-
-  // Process combined data whenever tables, subjects, or objects change
-  useEffect(() => {
-    if (tables.length > 0 && subjectList.length > 0 && objects.length > 0) {
-      // Combine data from all tables
-      const allCombinedData = tables.flatMap(table => processCombinedTableData(table, subjectList, objects));
-      setCombinedData(allCombinedData);
-    }
-  }, [tables, subjectList, objects]);
 
   // Add a new row (subject) to a specific table
   const addRow = (tableIndex) => {
@@ -71,7 +44,6 @@ const FormConstructor = () => {
               subject: subject.id,
               value: null,
               date_value: null,
-              selectedObjects: [], // Initialize selectedObjects
               // Assign new IDs
               id: uuidv4(),
             }));
@@ -103,7 +75,6 @@ const FormConstructor = () => {
         name: formulaInput || "Формула",
         operation: formulaInput,
         params: [],
-        selectedObjects: [], // Initialize selectedObjects
         id: uuidv4(),
       };
     } else if (selectedOperation === "array") {
@@ -112,7 +83,6 @@ const FormConstructor = () => {
         name: "Array",
         operation: "array",
         params: [],
-        selectedObjects: [], // Initialize selectedObjects
         id: uuidv4(),
       };
     }
@@ -229,22 +199,21 @@ const FormConstructor = () => {
 
   // Submit the tables data
   const handleSubmit = async () => {
-    setIsSubmitting(true);
+    setIsSubmitting(true); // Show loader
 
-    // Prepare the data to match the server's expected format, including selected objects
+    // Prepare the data to match the server's expected format
     const finalData = tables.map((table) => ({
       name: table.name,
       start_date: table.startDate,
       end_date: table.endDate,
-      group_by_date: table.groupByHour,
+      group_by_date: table.groupByDate,
       group_by_hour: table.groupByHour,
       exclude_holidays: table.excludeHolidays,
       data: table.tableConfig
         .map((item) =>
           item.data.map((res) => ({
             subject: item.subject,
-            objects: res.selectedObjects || [], // Include selected objects here
-            plan: res.plan, // Take plan from the data entry as before
+            plan: res.plan,
             name: res.name,
             operation: res.operation,
             params: res.params,
@@ -255,10 +224,13 @@ const FormConstructor = () => {
 
     try {
       const dataToSend = finalData.length === 1 ? finalData[0] : finalData;
+
       const response = await axiosInstance.put(endpoints.TABLE(id), dataToSend);
 
       if (response.status === 200) {
-        const updatedTableResponse = await axiosInstance.get(endpoints.TABLE(id));
+        const updatedTableResponse = await axiosInstance.get(
+          endpoints.TABLE(id)
+        );
         const tablesData = Array.isArray(updatedTableResponse.data)
           ? updatedTableResponse.data
           : [updatedTableResponse.data];
@@ -266,9 +238,9 @@ const FormConstructor = () => {
         setTables(newTables);
       }
     } catch (error) {
-      console.error("Error submitting data to the server:", error);
+      console.error("Ошибка при отправке данных на сервер:", error);
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false); // Hide loader
     }
   };
 
@@ -333,43 +305,10 @@ const FormConstructor = () => {
     XLSX.writeFile(wb, 'exported_tables.xlsx');
   };
 
-  // Define handleObjectSelection and pass to TableComponent
-  const handleObjectSelection = (tableIndex, subjectIndex, operationIndex, objectId, isChecked) => {
-    setTables(prevTables =>
-      prevTables.map((table, tIdx) => {
-        if (tIdx !== tableIndex) return table;
-        return {
-          ...table,
-          tableConfig: table.tableConfig.map((subject, sIdx) => {
-            if (sIdx !== subjectIndex) return subject;
-            return {
-              ...subject,
-              data: subject.data.map((operation, oIdx) => {
-                if (oIdx !== operationIndex) return operation;
-                let updatedSelectedObjects = operation.selectedObjects || [];
-                if (isChecked) {
-                  // Avoid duplicates
-                  if (!updatedSelectedObjects.includes(objectId)) {
-                    updatedSelectedObjects = [...updatedSelectedObjects, objectId];
-                  }
-                } else {
-                  updatedSelectedObjects = updatedSelectedObjects.filter(id => id !== objectId);
-                }
-                return {
-                  ...operation,
-                  selectedObjects: updatedSelectedObjects,
-                };
-              }),
-            };
-          }),
-        };
-      })
-    );
-  };
-
   return (
     <div className="flex">
       <Sidebar />
+
       <div className="flex-1 p-6 bg-gray-50 min-h-screen">
         {tables.map((table, tableIndex) => (
           <TableComponent
@@ -391,16 +330,10 @@ const FormConstructor = () => {
             updateColumnName={updateColumnName}
             visibleSubTables={visibleSubTables}
             setVisibleSubTables={setVisibleSubTables}
-            objects={objects}
-            setTables={setTables}
-            handleObjectSelection={handleObjectSelection} // Pass the handler
           />
         ))}
 
-        {/* Combined Table */}
-        <CombinedTable combinedData={combinedData} />
-
-        {/* Submit Button */}
+        {/* Submit and Export buttons */}
         <div className="mt-6 flex space-x-4">
           <button
             onClick={handleSubmit}
@@ -408,6 +341,14 @@ const FormConstructor = () => {
           >
             <FaCheckCircle className="mr-2" />
             <span>Отправить</span>
+          </button>
+
+          <button
+            onClick={exportToExcel}
+            className="p-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors w-1/3 flex items-center justify-center"
+          >
+            <FaCheckCircle className="mr-2" />
+            <span>Экспортировать в Excel</span>
           </button>
         </div>
 

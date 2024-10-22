@@ -1,4 +1,3 @@
-// useFetchData.js
 import { useState, useEffect } from 'react';
 import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 import { processTableData } from './utils';
