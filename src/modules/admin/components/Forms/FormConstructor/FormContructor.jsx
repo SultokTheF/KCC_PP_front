@@ -1,3 +1,5 @@
+// FormConstructor.jsx
+
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { FaCheckCircle } from "react-icons/fa";
@@ -6,7 +8,7 @@ import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 import TableComponent from "./TableComponent";
 import useFetchData from './useFetchData';
 import { hourFields } from './constants';
-import { processTableData, getSubjectName, mergeDataEntries } from './utils';
+import { processTableData, getRowName } from './utils';
 import { v4 as uuidv4 } from 'uuid';
 import * as XLSX from 'xlsx'; // Import XLSX library
 import { Circles } from 'react-loader-spinner'; // Loader component
@@ -22,10 +24,10 @@ const FormConstructor = () => {
   const [visibleSubTables, setVisibleSubTables] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false); // Loader state
 
-  const [objects, setObjects] = useState([]);
   const [objectsList, setObjectsList] = useState([]);
   const [selectedObjects, setSelectedObjects] = useState([]);
-  
+
+  // Fetch objects based on selected subject
   const fetchObjects = async (subjectId) => {
     try {
       const objectsResponse = await axiosInstance.get(endpoints.OBJECTS, {
@@ -35,7 +37,7 @@ const FormConstructor = () => {
       setSelectedObjects(objectsResponse.data.map((obj) => obj.id)); // Select all objects by default
     } catch (error) {
       console.error('Error fetching objects:', error);
-      setError('Failed to load objects.');
+      // Optionally, set an error state here
     }
   };
 
@@ -45,50 +47,65 @@ const FormConstructor = () => {
     }
   }, [selectedSubject]);
 
-  // Add a new row (subject) to a specific table
+  // Helper function to compare two arrays (order-insensitive)
+  const arraysEqual = (a, b) => {
+    if (a.length !== b.length) return false;
+    const sortedA = [...a].sort();
+    const sortedB = [...b].sort();
+    return sortedA.every((value, index) => value === sortedB[index]);
+  };
+
+  // Add a new row (subject + selected objects) to a specific table
   const addRow = (tableIndex) => {
-    const subject = subjectList.find(
-      (s) => s.id === parseInt(selectedSubject)
+    if (!selectedSubject) return; // Removed the objects selection requirement
+
+    // Check if a row with the same subject and objects already exists
+    const existingRow = tables[tableIndex].tableConfig.find(
+      (row) =>
+        row.subject === parseInt(selectedSubject) &&
+        arraysEqual(row.objects, selectedObjects.map(id => parseInt(id)))
     );
 
-    if (!subject) return;
+    if (existingRow) {
+      alert("Строка с выбранным субъектом и объектами уже существует.");
+      return;
+    }
 
     setTables((prevTables) =>
       prevTables.map((table, idx) => {
         if (idx === tableIndex) {
-          if (!table.tableConfig.find((item) => item.subject === subject.id)) {
-            // Get existing columns (data) from first subject
-            const existingData =
-              table.tableConfig.length > 0 ? table.tableConfig[0].data : [];
+          // Get existing columns (data) from first subject
+          const existingData =
+            table.tableConfig.length > 0 ? table.tableConfig[0].data : [];
 
-            // Create new data for the new subject
-            const newData = existingData.map((res) => ({
-              ...res,
-              subject: subject.id,
-              value: null,
-              date_value: null,
-              // Assign new IDs
-              id: uuidv4(),
-            }));
+          // Create new data for the new subject and objects
+          const newData = existingData.map((res) => ({
+            ...res,
+            subject: parseInt(selectedSubject),
+            objects: selectedObjects.map(id => parseInt(id)), // Can be an empty array
+            value: null,
+            date_value: null,
+            // Assign new IDs
+            id: uuidv4(),
+          }));
 
-            return {
-              ...table,
-              tableConfig: [
-                ...table.tableConfig,
-                {
-                  subject: subject.id,
-                  data: newData,
-                },
-              ],
-            };
-          }
+          return {
+            ...table,
+            tableConfig: [
+              ...table.tableConfig,
+              {
+                subject: parseInt(selectedSubject),
+                objects: selectedObjects.map(id => parseInt(id)),
+                data: newData,
+              },
+            ],
+          };
         }
         return table;
       })
     );
   };
 
-  // Add a new column (result) to a specific table
   // Add a new column (result) to a specific table
   const addColumn = (tableIndex) => {
     let newResult = null;
@@ -105,13 +122,15 @@ const FormConstructor = () => {
     } else if (selectedOperation === "array") {
       newResult = {
         plan: "array",
-        name: "Array",
+        name: "Массив",
         operation: "array",
         params: [],
         id: uuidv4(),
         date_value: [], // Ensure date_value is initialized
       };
     }
+
+    if (!newResult) return;
 
     setTables((prevTables) =>
       prevTables.map((table, idx) => {
@@ -129,7 +148,7 @@ const FormConstructor = () => {
     );
   };
 
-  // Delete a row (subject) from a specific table
+  // Delete a row (subject + objects) from a specific table
   const deleteRow = (tableIndex, rowIndex) => {
     setTables((prevTables) =>
       prevTables.map((table, idx) => {
@@ -223,6 +242,37 @@ const FormConstructor = () => {
     );
   };
 
+  // Update cell operation
+  const updateCellOperation = (tableIndex, rowIndex, columnIndex, newValue) => {
+    setTables((prevTables) =>
+      prevTables.map((table, idx) => {
+        if (idx === tableIndex) {
+          return {
+            ...table,
+            tableConfig: table.tableConfig.map((row, rIdx) => {
+              if (rIdx === rowIndex) {
+                return {
+                  ...row,
+                  data: row.data.map((cell, cIdx) => {
+                    if (cIdx === columnIndex) {
+                      return {
+                        ...cell,
+                        operation: newValue,
+                      };
+                    }
+                    return cell;
+                  }),
+                };
+              }
+              return row;
+            }),
+          };
+        }
+        return table;
+      })
+    );
+  };
+
   // Submit the tables data
   const handleSubmit = async () => {
     setIsSubmitting(true); // Show loader
@@ -239,7 +289,7 @@ const FormConstructor = () => {
         .map((item) =>
           item.data.map((res) => ({
             subject: item.subject,
-            objects: selectedObjects,
+            objects: item.objects, // Can be an empty array
             plan: res.plan,
             name: res.name,
             operation: res.operation,
@@ -269,6 +319,7 @@ const FormConstructor = () => {
       }
     } catch (error) {
       console.error("Ошибка при отправке данных на сервер:", error);
+      // Optionally, handle error state here
     } finally {
       setIsSubmitting(false); // Hide loader
     }
@@ -311,7 +362,7 @@ const FormConstructor = () => {
             Object.keys(dateValueMap[date]).forEach((hour) => {
               const row = [
                 date,
-                getSubjectName(subjectList, item.subject),
+                getRowName(subjectList, objectsList, item.subject, item.objects),
                 hour,
               ];
               item.data.forEach((res) => {
@@ -325,7 +376,7 @@ const FormConstructor = () => {
           // If no date_value, add a single row
           const row = [
             table.startDate || '-',
-            getSubjectName(subjectList, item.subject),
+            getRowName(subjectList, objectsList, item.subject, item.objects),
             '-',
           ];
           item.data.forEach((res) => {
@@ -336,10 +387,18 @@ const FormConstructor = () => {
 
         // Create worksheet and add to workbook
         const ws = XLSX.utils.aoa_to_sheet(wsData);
-        const sheetName = `${table.name}_${getSubjectName(
+        let sheetName = `${table.name}_${getRowName(
           subjectList,
-          item.subject
+          objectsList,
+          item.subject,
+          item.objects
         )}`;
+
+        // Ensure sheet name does not exceed 31 characters
+        if (sheetName.length > 31) {
+          sheetName = sheetName.substring(0, 31);
+        }
+
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
       });
     });
@@ -359,6 +418,7 @@ const FormConstructor = () => {
             table={table}
             tableIndex={tableIndex}
             subjectList={subjectList}
+            objectsList={objectsList}
             hourFields={hourFields}
             selectedSubject={selectedSubject}
             setSelectedSubject={setSelectedSubject}
@@ -373,9 +433,9 @@ const FormConstructor = () => {
             updateColumnName={updateColumnName}
             visibleSubTables={visibleSubTables}
             setVisibleSubTables={setVisibleSubTables}
-            objectsList={objectsList}
             selectedObjects={selectedObjects}
             setSelectedObjects={setSelectedObjects}
+            updateCellOperation={updateCellOperation} // Pass the update function
           />
         ))}
 

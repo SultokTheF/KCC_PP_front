@@ -23,6 +23,7 @@ const TableComponent = ({
   objectsList,
   selectedObjects,
   setSelectedObjects,
+  updateCellOperation, 
 }) => {
   // Function to check if a sub-table for a subject is visible
   const isSubTableVisible = (subjectId) => {
