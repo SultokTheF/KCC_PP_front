@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { FaCheckCircle } from "react-icons/fa";
 import Sidebar from "../../Sidebar/Sidebar";
@@ -21,6 +21,29 @@ const FormConstructor = () => {
   const [formulaInput, setFormulaInput] = useState("");
   const [visibleSubTables, setVisibleSubTables] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false); // Loader state
+
+  const [objects, setObjects] = useState([]);
+  const [objectsList, setObjectsList] = useState([]);
+  const [selectedObjects, setSelectedObjects] = useState([]);
+  
+  const fetchObjects = async (subjectId) => {
+    try {
+      const objectsResponse = await axiosInstance.get(endpoints.OBJECTS, {
+        params: { sub: subjectId },
+      });
+      setObjectsList(objectsResponse.data);
+      setSelectedObjects(objectsResponse.data.map((obj) => obj.id)); // Select all objects by default
+    } catch (error) {
+      console.error('Error fetching objects:', error);
+      setError('Failed to load objects.');
+    }
+  };
+
+  useEffect(() => {
+    if (selectedSubject) {
+      fetchObjects(selectedSubject);
+    }
+  }, [selectedSubject]);
 
   // Add a new row (subject) to a specific table
   const addRow = (tableIndex) => {
@@ -216,6 +239,7 @@ const FormConstructor = () => {
         .map((item) =>
           item.data.map((res) => ({
             subject: item.subject,
+            objects: selectedObjects,
             plan: res.plan,
             name: res.name,
             operation: res.operation,
@@ -349,6 +373,9 @@ const FormConstructor = () => {
             updateColumnName={updateColumnName}
             visibleSubTables={visibleSubTables}
             setVisibleSubTables={setVisibleSubTables}
+            objectsList={objectsList}
+            selectedObjects={selectedObjects}
+            setSelectedObjects={setSelectedObjects}
           />
         ))}
 

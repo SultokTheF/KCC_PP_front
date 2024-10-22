@@ -8,11 +8,9 @@ const TableComponent = ({
   table,
   tableIndex,
   subjectList,
-  hourFields,
   selectedSubject,
   setSelectedSubject,
   selectedOperation,
-  setSelectedOperation,
   formulaInput,
   setFormulaInput,
   addRow,
@@ -22,6 +20,9 @@ const TableComponent = ({
   updateColumnName,
   visibleSubTables,
   setVisibleSubTables,
+  objectsList,
+  selectedObjects,
+  setSelectedObjects,
 }) => {
   // Function to check if a sub-table for a subject is visible
   const isSubTableVisible = (subjectId) => {
@@ -34,6 +35,14 @@ const TableComponent = ({
       ...prev,
       [subjectId]: !prev[subjectId],
     }));
+  };
+
+  const handleObjectToggle = (objId) => {
+    setSelectedObjects((prevSelectedObjects) =>
+      prevSelectedObjects.includes(objId)
+        ? prevSelectedObjects.filter((id) => id !== objId) // Remove unchecked object
+        : [...prevSelectedObjects, objId] // Add checked object
+    );
   };
 
   // Function to export individual subject table to Excel
@@ -147,7 +156,7 @@ const TableComponent = ({
 
       {/* Group By Options */}
       <div className="flex items-center space-x-6 mb-6">
-      <label className="flex items-center">
+        <label className="flex items-center">
           <input
             type="checkbox"
             checked={table.groupByDate}
@@ -209,6 +218,25 @@ const TableComponent = ({
             </option>
           ))}
         </select>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {objectsList.map((obj) => (
+            <div key={obj.id} className="flex items-center">
+              <input
+                type="checkbox"
+                id={`object-${obj.id}`}
+                checked={selectedObjects.includes(obj.id)}
+                onChange={() => handleObjectToggle(obj.id)}
+                className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label
+                htmlFor={`object-${obj.id}`}
+                className="ml-3 text-gray-700"
+              >
+                {obj.object_name}
+              </label>
+            </div>
+          ))}
+        </div>
         <button
           onClick={() => addRow(tableIndex)}
           className="p-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors flex items-center space-x-1"
@@ -289,8 +317,8 @@ const TableComponent = ({
                     {table.groupByDate || table.groupByHour
                       ? '-'
                       : Array.isArray(res.value)
-                      ? res.value.join(', ')
-                      : res.value || '-'}
+                        ? res.value.join(', ')
+                        : res.value || '-'}
                   </td>
                 ))}
               </tr>
