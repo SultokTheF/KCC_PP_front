@@ -1,3 +1,5 @@
+// TableComponent.jsx
+
 import React from 'react';
 import { FaTrashAlt, FaPlusCircle, FaFileExport } from 'react-icons/fa';
 import FormulaEditor from './FormulaEditor';
@@ -53,7 +55,11 @@ const TableComponent = ({
     const wsData = [];
 
     // Header row
-    const header = ['Дата', 'Субъект', 'Час'];
+    const header = ['Дата'];
+    if (table.groupByHour) {
+      header.push('Час');
+    }
+    header.push('Субъект');
     subjectItem.data.forEach((res) => {
       header.push(res.name);
     });
@@ -65,38 +71,51 @@ const TableComponent = ({
       const dateValueMap = {};
       subjectItem.data.forEach((res) => {
         res.date_value.forEach((dateItem) => {
-          if (!dateValueMap[dateItem.date]) {
-            dateValueMap[dateItem.date] = {};
+          const date = dateItem.date;
+          const value = dateItem.value;
+          if (!dateValueMap[date]) {
+            dateValueMap[date] = {};
           }
-          dateItem.value.forEach((hourItem) => {
-            if (!dateValueMap[dateItem.date][hourItem.hour]) {
-              dateValueMap[dateItem.date][hourItem.hour] = {};
-            }
-            dateValueMap[dateItem.date][hourItem.hour][res.name] = hourItem.value;
-          });
+          if (Array.isArray(value)) {
+            // value is an array of hours
+            value.forEach((hourItem) => {
+              const hour = hourItem.hour;
+              if (!dateValueMap[date][hour]) {
+                dateValueMap[date][hour] = {};
+              }
+              dateValueMap[date][hour][res.name] = hourItem.value;
+            });
+          } else {
+            // value is a single number
+            dateValueMap[date][res.name] = value;
+          }
         });
       });
 
       Object.keys(dateValueMap).forEach((date) => {
-        Object.keys(dateValueMap[date]).forEach((hour) => {
-          const row = [
-            date,
-            getSubjectName(subjectList, subjectItem.subject),
-            hour,
-          ];
+        if (table.groupByHour) {
+          Object.keys(dateValueMap[date]).forEach((hour) => {
+            const row = [date, hour, getRowName(subjectList, allObjects, subjectItem.subject, subjectItem.objects)];
+            subjectItem.data.forEach((res) => {
+              const value = dateValueMap[date][hour][res.name] || '-';
+              row.push(value);
+            });
+            wsData.push(row);
+          });
+        } else {
+          const row = [date, getRowName(subjectList, allObjects, subjectItem.subject, subjectItem.objects)];
           subjectItem.data.forEach((res) => {
-            const value = dateValueMap[date][hour][res.name] || '-';
+            const value = dateValueMap[date][res.name] || '-';
             row.push(value);
           });
           wsData.push(row);
-        });
+        }
       });
     } else {
       // If no date_value, add a single row
       const row = [
         table.startDate || '-',
         getSubjectName(subjectList, subjectItem.subject),
-        '-',
       ];
       subjectItem.data.forEach((res) => {
         row.push(res.value || '-');
@@ -106,10 +125,16 @@ const TableComponent = ({
 
     // Create worksheet and add to workbook
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-    const sheetName = `${table.name}_${getSubjectName(
+    let sheetName = `${table.name}_${getSubjectName(
       subjectList,
       subjectItem.subject
     )}`;
+
+    // Ensure sheet name does not exceed 31 characters
+    if (sheetName.length > 31) {
+      sheetName = sheetName.substring(0, 31);
+    }
+
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
     // Save to file
@@ -336,13 +361,13 @@ const TableComponent = ({
           {table.tableConfig.map((item) => {
             // Data is already merged in processTableData
             return (
-              <div key={item.subject} className="mb-6">
+              <div key={`${item.subject}_${item.objects.join(',')}`} className="mb-6">
                 <div className="flex items-center space-x-4 mb-2">
                   <button
-                    onClick={() => toggleSubTableVisibility(item.subject)}
+                    onClick={() => toggleSubTableVisibility(`${item.subject}_${item.objects.join(',')}`)}
                     className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center space-x-1"
                   >
-                    {isSubTableVisible(item.subject)
+                    {isSubTableVisible(`${item.subject}_${item.objects.join(',')}`)
                       ? `Скрыть данные для ${getRowName(subjectList, allObjects, item.subject, item.objects)}`
                       : `Показать данные для ${getRowName(subjectList, allObjects, item.subject, item.objects)}`}
                   </button>
@@ -355,7 +380,7 @@ const TableComponent = ({
                   </button>
                 </div>
 
-                {isSubTableVisible(item.subject) && (
+                {isSubTableVisible(`${item.subject}_${item.objects.join(',')}`) && (
                   <div className="overflow-x-auto mt-4">
                     {item.data[0]?.date_value?.length > 0 ? (
                       <div className="mb-4">
@@ -365,9 +390,11 @@ const TableComponent = ({
                               <th className="px-2 py-1 text-left text-gray-700 font-semibold border-b">
                                 Дата
                               </th>
-                              <th className="px-2 py-1 text-left text-gray-700 font-semibold border-b">
-                                Час
-                              </th>
+                              {table.groupByHour && (
+                                <th className="px-2 py-1 text-left text-gray-700 font-semibold border-b">
+                                  Час
+                                </th>
+                              )}
                               {item.data.map((res, colIdx) => (
                                 <th
                                   key={colIdx}
@@ -384,44 +411,67 @@ const TableComponent = ({
                               const dateValueMap = {};
                               item.data.forEach((res) => {
                                 res.date_value.forEach((dateItem) => {
-                                  if (!dateValueMap[dateItem.date]) {
-                                    dateValueMap[dateItem.date] = {};
+                                  const date = dateItem.date;
+                                  const value = dateItem.value;
+                                  if (!dateValueMap[date]) {
+                                    dateValueMap[date] = {};
                                   }
-                                  dateItem.value.forEach((hourItem) => {
-                                    if (!dateValueMap[dateItem.date][hourItem.hour]) {
-                                      dateValueMap[dateItem.date][hourItem.hour] = {};
-                                    }
-                                    dateValueMap[dateItem.date][hourItem.hour][res.name] =
-                                      hourItem.value;
-                                  });
+                                  if (Array.isArray(value)) {
+                                    // value is an array of hours
+                                    value.forEach((hourItem) => {
+                                      const hour = hourItem.hour;
+                                      if (!dateValueMap[date][hour]) {
+                                        dateValueMap[date][hour] = {};
+                                      }
+                                      dateValueMap[date][hour][res.name] = hourItem.value;
+                                    });
+                                  } else {
+                                    // value is a single number
+                                    dateValueMap[date][res.name] = value;
+                                  }
                                 });
                               });
 
                               const rows = [];
                               Object.keys(dateValueMap).forEach((date) => {
-                                const hours = Object.keys(dateValueMap[date]);
-                                hours.forEach((hour, hourIdx) => {
-                                  rows.push(
-                                    <tr key={`${date}-${hour}`} className="hover:bg-gray-50">
-                                      {hourIdx === 0 && (
-                                        <td
-                                          rowSpan={hours.length}
-                                          className="border px-2 py-1 text-gray-600 w-32"
-                                        >
-                                          {date}
+                                if (table.groupByHour) {
+                                  const hours = Object.keys(dateValueMap[date]);
+                                  hours.forEach((hour, hourIdx) => {
+                                    rows.push(
+                                      <tr key={`${date}-${hour}`} className="hover:bg-gray-50">
+                                        {hourIdx === 0 && (
+                                          <td
+                                            rowSpan={hours.length}
+                                            className="border px-2 py-1 text-gray-600 w-32"
+                                          >
+                                            {date}
+                                          </td>
+                                        )}
+                                        <td className="border px-2 py-1 text-gray-600">
+                                          {hour}
                                         </td>
-                                      )}
+                                        {item.data.map((res, resIdx) => (
+                                          <td key={resIdx} className="border px-2 py-1 text-gray-600">
+                                            {dateValueMap[date][hour][res.name] || '-'}
+                                          </td>
+                                        ))}
+                                      </tr>
+                                    );
+                                  });
+                                } else {
+                                  rows.push(
+                                    <tr key={`${date}`} className="hover:bg-gray-50">
                                       <td className="border px-2 py-1 text-gray-600">
-                                        {hour}
+                                        {date}
                                       </td>
                                       {item.data.map((res, resIdx) => (
                                         <td key={resIdx} className="border px-2 py-1 text-gray-600">
-                                          {dateValueMap[date][hour][res.name] || '-'}
+                                          {dateValueMap[date][res.name] || '-'}
                                         </td>
                                       ))}
                                     </tr>
                                   );
-                                });
+                                }
                               });
                               return rows;
                             })()}

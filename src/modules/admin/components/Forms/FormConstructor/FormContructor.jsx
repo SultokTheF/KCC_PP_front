@@ -349,7 +349,11 @@ const FormConstructor = () => {
         const wsData = [];
 
         // Header row
-        const header = ['Дата', 'Субъект', 'Час'];
+        const header = ['Дата'];
+        if (table.groupByHour) {
+          header.push('Час');
+        }
+        header.push('Субъект');
         item.data.forEach((res) => {
           header.push(res.name);
         });
@@ -361,38 +365,51 @@ const FormConstructor = () => {
           const dateValueMap = {};
           item.data.forEach((res) => {
             res.date_value.forEach((dateItem) => {
-              if (!dateValueMap[dateItem.date]) {
-                dateValueMap[dateItem.date] = {};
+              const date = dateItem.date;
+              const value = dateItem.value;
+              if (!dateValueMap[date]) {
+                dateValueMap[date] = {};
               }
-              dateItem.value.forEach((hourItem) => {
-                if (!dateValueMap[dateItem.date][hourItem.hour]) {
-                  dateValueMap[dateItem.date][hourItem.hour] = {};
-                }
-                dateValueMap[dateItem.date][hourItem.hour][res.name] = hourItem.value;
-              });
+              if (Array.isArray(value)) {
+                // value is an array of hours
+                value.forEach((hourItem) => {
+                  const hour = hourItem.hour;
+                  if (!dateValueMap[date][hour]) {
+                    dateValueMap[date][hour] = {};
+                  }
+                  dateValueMap[date][hour][res.name] = hourItem.value;
+                });
+              } else {
+                // value is a single number
+                dateValueMap[date][res.name] = value;
+              }
             });
           });
 
           Object.keys(dateValueMap).forEach((date) => {
-            Object.keys(dateValueMap[date]).forEach((hour) => {
-              const row = [
-                date,
-                getRowName(subjectList, objectsList, item.subject, item.objects),
-                hour,
-              ];
+            if (table.groupByHour) {
+              Object.keys(dateValueMap[date]).forEach((hour) => {
+                const row = [date, hour, getRowName(subjectList, objectsList, item.subject, item.objects)];
+                item.data.forEach((res) => {
+                  const value = dateValueMap[date][hour][res.name] || '-';
+                  row.push(value);
+                });
+                wsData.push(row);
+              });
+            } else {
+              const row = [date, getRowName(subjectList, objectsList, item.subject, item.objects)];
               item.data.forEach((res) => {
-                const value = dateValueMap[date][hour][res.name] || '-';
+                const value = dateValueMap[date][res.name] || '-';
                 row.push(value);
               });
               wsData.push(row);
-            });
+            }
           });
         } else {
           // If no date_value, add a single row
           const row = [
             table.startDate || '-',
             getRowName(subjectList, objectsList, item.subject, item.objects),
-            '-',
           ];
           item.data.forEach((res) => {
             row.push(res.value || '-');
