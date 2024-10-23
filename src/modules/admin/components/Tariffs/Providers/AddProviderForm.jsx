@@ -32,9 +32,7 @@ const AddProviderForm = ({ fetchData, selectedMonth, subjects }) => {
         onChange={(e) => setSelectedSubjectId(e.target.value)}
         className="border border-gray-300 rounded px-2 py-1"
       >
-        <option value="" >
-          Выберите субъект
-        </option>
+        <option value="">Выберите субъект</option>
         {subjects.map((subject) => (
           <option key={subject.id} value={subject.id}>
             {subject.subject_name}

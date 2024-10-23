@@ -12,6 +12,8 @@ const endpoints = {
   // Subjects   
   SUBJECTS: `api/subjects/`,
   CALCULATE_P2: `api/subjects/calculate_p2/`,
+  SUBJECTS_UPDATES: 'api/subjects/bulk_update_providers/',
+  
 
   // Objects 
   OBJECTS: `api/objects/`,

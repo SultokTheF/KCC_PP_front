@@ -14,7 +14,7 @@ const Providers = () => {
   const [loading, setLoading] = useState({ superButton: false });
 
   const handleSuperButtonClick = async () => {
-    setLoading(prev => ({ ...prev, superButton: true }));
+    setLoading((prev) => ({ ...prev, superButton: true }));
     try {
       const accessToken = localStorage.getItem('accessToken');
       await axiosInstance.post(
@@ -28,7 +28,7 @@ const Providers = () => {
     } catch (error) {
       console.error('Ошибка при выполнении запроса супер кнопки:', error);
     } finally {
-      setLoading(prev => ({ ...prev, superButton: false }));
+      setLoading((prev) => ({ ...prev, superButton: false }));
     }
   };
 
@@ -48,56 +48,75 @@ const Providers = () => {
         axiosInstance.get(endpoints.DAYS),
       ]);
 
-      setData({
-        subjects: subjectsResponse.data,
-        providers: providersResponse.data,
-        days: daysResponse.data,
-      });
+      const subjectsData = subjectsResponse.data;
+      const providersData = providersResponse.data;
+
+      const monthyear = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}`;
 
       const initialSelectedProviders = {};
-      subjectsResponse.data.forEach((subject) => {
-        initialSelectedProviders[subject.id] = subject.providers;
+      subjectsData.forEach((subject) => {
+        // Map provider IDs to provider objects
+        const subjectProviders = subject.providers
+          .map((providerId) => providersData.find((provider) => provider.id === providerId))
+          .filter(Boolean); // Remove any undefined values
+
+        // Find the provider assigned for the selected month
+        const providerForMonth = subjectProviders.find((provider) => provider.month === monthyear);
+
+        initialSelectedProviders[subject.id] = {
+          providerId: providerForMonth ? providerForMonth.id : null,
+          monthyear: monthyear,
+        };
       });
+
       setSelectedProviders(initialSelectedProviders);
+
+      setData({
+        subjects: subjectsData,
+        providers: providersData,
+        days: daysResponse.data,
+      });
     } catch (error) {
       console.error('Ошибка при получении данных:', error);
-      // Optionally, set an error state here
     }
   };
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [selectedMonth]);
 
   const handleSave = async () => {
     try {
-      // Step 1: Construct the monthyear string in "YYYY-MM" format
-      const { year, month } = selectedMonth;
-      const formattedMonth = String(month + 1).padStart(2, '0');
-      const monthyear = `${year}-${formattedMonth}`;
-  
-      // Step 2: Iterate over each subject and prepare the providers data
-      for (const [subjectId, newProviders] of Object.entries(selectedProviders)) {
-        // Transform the array of provider IDs into the required format
-        const providersWithMonthYear = newProviders.map((providerId) => {
-          const provider = data.providers.find((p) => p.id === providerId);
-          // Include the ID only if the provider exists and is assigned, otherwise only include monthyear
-          return provider ? { id: providerId, monthyear } : { monthyear };
-        });
-  
-        try {
-          // Step 3: Send the PATCH request with the transformed providers array
-          await axiosInstance.patch(`${endpoints.SUBJECTS}${subjectId}/`, {
-            providers: providersWithMonthYear,
+      const updates = [];
+
+      for (const subjectId in selectedProviders) {
+        const providerAssignment = selectedProviders[subjectId];
+        const providersArray = [];
+
+        if (providerAssignment.providerId) {
+          providersArray.push({
+            id: providerAssignment.providerId,
+            monthyear: providerAssignment.monthyear,
           });
-        } catch (error) {
-          console.error(`Ошибка при обновлении провайдеров для subjectId ${subjectId}:`, error);
+        } else {
+          // Unassigning provider for this subject and month
+          providersArray.push({
+            monthyear: providerAssignment.monthyear,
+          });
         }
+
+        updates.push({
+          subject_id: parseInt(subjectId),
+          providers: providersArray,
+        });
       }
-  
-      // Refresh the data after saving to ensure the UI is up-to-date
+
+      // Send the updates array to the new endpoint
+      await axiosInstance.post(endpoints.SUBJECTS_UPDATES, { updates });
+
+      // Refresh the data after saving
       await fetchData();
-  
+
       // Display a success message to the user
       setSuccessMessage('Данные успешно сохранены!');
       // Clear the success message after 3 seconds
@@ -105,7 +124,7 @@ const Providers = () => {
     } catch (error) {
       console.error('Ошибка при сохранении данных:', error);
     }
-  };  
+  };
 
   return (
     <div className="flex">
@@ -134,14 +153,11 @@ const Providers = () => {
           <button onClick={handleSave} className="bg-blue-500 text-white py-2 px-4 rounded">
             Сохранить
           </button>
-          <button onClick={handleSuperButtonClick} className="bg-green-500 ml-5 text-white py-2 px-4 rounded">
-            {loading.superButton ? (
-              <span>Загрузка...</span>
-            ) : (
-              <>
-                Супер Кнопка
-              </>
-            )}
+          <button
+            onClick={handleSuperButtonClick}
+            className="bg-green-500 ml-5 text-white py-2 px-4 rounded"
+          >
+            {loading.superButton ? <span>Загрузка...</span> : <>Супер Кнопка</>}
           </button>
         </div>
       </div>

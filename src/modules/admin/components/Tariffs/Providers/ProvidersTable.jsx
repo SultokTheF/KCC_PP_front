@@ -18,34 +18,29 @@ const ProvidersTable = ({
     return type;
   };
 
-  const handleCheckboxChange = (subjectId, providerId) => {
-    setSelectedProviders((prevState) => {
-      const isSelected = prevState[subjectId]?.includes(providerId);
-      let newProviders = [];
+  const monthyear = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}`;
 
-      if (isSelected) {
-        // If the provider is already selected, remove it
-        newProviders = prevState[subjectId].filter((id) => id !== providerId);
+  const handleCheckboxChange = (subjectId, providerId, checked) => {
+    setSelectedProviders((prevState) => {
+      const newState = { ...prevState };
+
+      if (checked) {
+        // Assign the selected provider to the subject
+        newState[subjectId] = {
+          providerId: providerId,
+          monthyear: monthyear,
+        };
       } else {
-        // Replace with an array containing only the selected provider
-        newProviders = [providerId];
+        // Unassign the provider from the subject
+        newState[subjectId] = {
+          providerId: null,
+          monthyear: monthyear,
+        };
       }
 
-      return {
-        ...prevState,
-        [subjectId]: newProviders,
-      };
+      return newState;
     });
   };
-
-  const day = data.days.filter((day) => {
-    const dayDate = new Date(day.date);
-    return (
-      dayDate.getFullYear() === selectedMonth.year &&
-      dayDate.getMonth() === selectedMonth.month &&
-      dayDate.getDate() === 1
-    );
-  });
 
   const handleDeleteProvider = async (providerId) => {
     try {
@@ -78,16 +73,13 @@ const ProvidersTable = ({
         <thead>
           <tr>
             <th className="py-1 px-2 border-b">#</th>
-            <th className="py-1 px-2 border-b">subject</th>
-            <th className="py-1 px-2 border-b">type</th>
-            <th className="py-1 px-2 border-b">providers</th>
+            <th className="py-1 px-2 border-b">Субъект</th>
+            <th className="py-1 px-2 border-b">Тип</th>
+            <th className="py-1 px-2 border-b">Поставщик</th>
             {data.providers
               .filter((provider) => {
                 const providerDate = provider.month;
-                return (
-                  `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}` ===
-                  providerDate
-                );
+                return monthyear === providerDate;
               })
               .map((provider) => (
                 <th key={provider.id} className="py-1 px-2 border-b">
@@ -151,35 +143,30 @@ const ProvidersTable = ({
                 <FormatType type={subject.subject_type} />
               </td>
               <td className="py-1 px-2 border-b">
-                {selectedProviders[subject.id]
-                  ?.map((providerId) => {
-                    const provider = data.providers.find((provider) => {
-                      return provider.id === providerId;
-                    });
-                    const providerDate = provider?.month;
-                    const isCurrentMonth =
-                      `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}` ===
-                      providerDate;
-                    return provider && isCurrentMonth ? provider.name : null;
-                  })
-                  .filter((name) => name)
-                  .join(', ') || '-'}
+                {(() => {
+                  const providerId = selectedProviders[subject.id]?.providerId;
+                  if (providerId) {
+                    const provider = data.providers.find((p) => p.id === providerId);
+                    return provider ? provider.name : '-';
+                  } else {
+                    return '-';
+                  }
+                })()}
               </td>
               {data.providers
                 .filter((provider) => {
                   const providerDate = provider.month;
-                  return (
-                    `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}` ===
-                    providerDate
-                  );
+                  return monthyear === providerDate;
                 })
                 .map((provider) => (
                   <td key={provider.id} className="py-1 px-2 border-b">
                     <input
                       type="checkbox"
                       className="form-checkbox h-4 w-4 text-blue-600"
-                      checked={selectedProviders[subject.id]?.includes(provider.id) || false}
-                      onChange={() => handleCheckboxChange(subject.id, provider.id)}
+                      checked={selectedProviders[subject.id]?.providerId === provider.id}
+                      onChange={(e) =>
+                        handleCheckboxChange(subject.id, provider.id, e.target.checked)
+                      }
                     />
                   </td>
                 ))}
