@@ -7,7 +7,6 @@ import Sidebar from "../../Sidebar/Sidebar";
 import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 import TableComponent from "./TableComponent";
 import useFetchData from './useFetchData';
-import { hourFields } from './constants';
 import { processTableData, getRowName } from './utils';
 import { v4 as uuidv4 } from 'uuid';
 import * as XLSX from 'xlsx'; // Import XLSX library
@@ -466,7 +465,6 @@ const FormConstructor = () => {
             tableIndex={tableIndex}
             subjectList={subjectList}
             objectsList={objectsList}
-            hourFields={hourFields}
             selectedSubject={selectedSubject}
             setSelectedSubject={setSelectedSubject}
             selectedOperation={selectedOperation}

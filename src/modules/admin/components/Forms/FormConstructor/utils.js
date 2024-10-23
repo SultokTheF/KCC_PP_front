@@ -11,8 +11,8 @@ import { v4 as uuidv4 } from 'uuid';
 export const arraysEqual = (a, b) => {
   if (!Array.isArray(a) || !Array.isArray(b)) return false;
   if (a.length !== b.length) return false;
-  const sortedA = [...a].sort();
-  const sortedB = [...b].sort();
+  const sortedA = [...a].sort((x, y) => x - y);
+  const sortedB = [...b].sort((x, y) => x - y);
   return sortedA.every((value, index) => value === sortedB[index]);
 };
 
@@ -22,32 +22,29 @@ export const arraysEqual = (a, b) => {
  * @returns {Array}
  */
 export const mergeDataEntries = (dataEntries) => {
-  const mergedEntries = [];
+  const mergedMap = new Map();
 
   dataEntries.forEach((entry) => {
-    const existingEntry = mergedEntries.find(
-      (e) =>
-        e.subject === entry.subject &&
-        arraysEqual(e.objects, entry.objects) &&
-        e.plan === entry.plan &&
-        e.name === entry.name &&
-        e.operation === entry.operation &&
-        JSON.stringify(e.params) === JSON.stringify(entry.params)
-    );
+    // Ensure 'objects' is a sorted array
+    const sortedObjects = Array.isArray(entry.objects) ? [...entry.objects].sort((a, b) => a - b) : [];
+    // Ensure 'params' is a sorted array if applicable
+    const sortedParams = Array.isArray(entry.params) ? [...entry.params].sort() : [];
+    const key = `${entry.subject}_${sortedObjects.join(',')}_${entry.plan}_${entry.name}_${entry.operation}_${JSON.stringify(sortedParams)}`;
 
-    if (existingEntry) {
+    if (mergedMap.has(key)) {
+      const existingEntry = mergedMap.get(key);
       existingEntry.date_value = existingEntry.date_value.concat(entry.date_value);
     } else {
-      mergedEntries.push({ ...entry });
+      mergedMap.set(key, { ...entry });
     }
   });
 
-  return mergedEntries;
+  return Array.from(mergedMap.values());
 };
 
 /**
  * Processes the raw table data fetched from the server.
- * Ensures that the 'objects' field is always an array.
+ * Ensures that the 'objects' field is always an array and 'params' is consistently defined.
  * @param {Object} tableData - The raw table data fetched from the server.
  * @returns {Object} - The processed table data.
  */
@@ -65,18 +62,21 @@ export const processTableData = (tableData) => {
   // Organize data by subject and objects
   const subjectsMap = {};
   (data || []).forEach((result) => {
-    const key = `${result.subject}_${(result.objects || []).sort().join(',')}`;
+    const sortedObjects = Array.isArray(result.objects) ? [...result.objects].sort((a, b) => a - b) : [];
+    const key = `${result.subject}_${sortedObjects.join(',')}`;
+
     if (!subjectsMap[key]) {
       subjectsMap[key] = {
         subject: result.subject,
-        objects: Array.isArray(result.objects) ? result.objects.slice().sort((a, b) => a - b) : [],
+        objects: sortedObjects,
         data: [],
       };
     }
+
     subjectsMap[key].data.push({
       ...result,
-      // Ensure each result has a unique identifier
       id: uuidv4(),
+      params: Array.isArray(result.params) ? [...result.params].sort() : [], // Ensure 'params' is always a sorted array
     });
   });
 
