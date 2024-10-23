@@ -47,7 +47,7 @@ const FormConstructor = () => {
       const objectsResponse = await axiosInstance.get(endpoints.OBJECTS);
       setAllObjects(objectsResponse.data);
     } catch (error) {
-      console.error('Error fetching objects:', error);
+      console.error('Error fetching all objects:', error);
       // Optionally, set an error state here
     }
   };
@@ -59,6 +59,9 @@ const FormConstructor = () => {
   useEffect(() => {
     if (selectedSubject) {
       fetchObjects(selectedSubject);
+    } else {
+      setObjectsList([]); // Clear objects list if no subject is selected
+      setSelectedObjects([]); // Clear selected objects
     }
   }, [selectedSubject]);
 
@@ -72,7 +75,7 @@ const FormConstructor = () => {
 
   // Add a new row (subject + selected objects) to a specific table
   const addRow = (tableIndex) => {
-    if (!selectedSubject) return; // Removed the objects selection requirement
+    if (!selectedSubject) return; // Ensure a subject is selected
 
     // Check if a row with the same subject and objects already exists
     const existingRow = tables[tableIndex].tableConfig.find(
@@ -97,7 +100,7 @@ const FormConstructor = () => {
           const newData = existingData.map((res) => ({
             ...res,
             subject: parseInt(selectedSubject),
-            objects: selectedObjects.map(id => parseInt(id)), // Can be an empty array
+            objects: Array.isArray(selectedObjects) ? selectedObjects.map(id => parseInt(id)) : [],
             value: null,
             date_value: null,
             // Assign new IDs
@@ -110,7 +113,7 @@ const FormConstructor = () => {
               ...table.tableConfig,
               {
                 subject: parseInt(selectedSubject),
-                objects: selectedObjects.map(id => parseInt(id)),
+                objects: Array.isArray(selectedObjects) ? selectedObjects.map(id => parseInt(id)) : [],
                 data: newData,
               },
             ],
@@ -344,7 +347,7 @@ const FormConstructor = () => {
     }
   };
 
-  // Function to export tables to Excel
+  // Function to export all tables to Excel
   const exportToExcel = () => {
     const wb = XLSX.utils.book_new();
 
@@ -393,18 +396,25 @@ const FormConstructor = () => {
           Object.keys(dateValueMap).forEach((date) => {
             if (table.groupByHour) {
               Object.keys(dateValueMap[date]).forEach((hour) => {
-                const row = [date, hour, getRowName(subjectList, objectsList, item.subject, item.objects)];
+                const row = [
+                  date,
+                  hour,
+                  getRowName(subjectList, allObjects, item.subject, item.objects),
+                ];
                 item.data.forEach((res) => {
-                  const value = dateValueMap[date][hour][res.name] || '-';
-                  row.push(value);
+                  const value = dateValueMap[date][hour][res.name];
+                  row.push(value !== null && value !== undefined ? value : '-');
                 });
                 wsData.push(row);
               });
             } else {
-              const row = [date, getRowName(subjectList, objectsList, item.subject, item.objects)];
+              const row = [
+                date,
+                getRowName(subjectList, allObjects, item.subject, item.objects),
+              ];
               item.data.forEach((res) => {
-                const value = dateValueMap[date][res.name] || '-';
-                row.push(value);
+                const value = dateValueMap[date][res.name];
+                row.push(value !== null && value !== undefined ? value : '-');
               });
               wsData.push(row);
             }
@@ -413,10 +423,11 @@ const FormConstructor = () => {
           // If no date_value, add a single row
           const row = [
             table.startDate || '-',
-            getRowName(subjectList, objectsList, item.subject, item.objects),
+            getRowName(subjectList, allObjects, item.subject, item.objects),
           ];
           item.data.forEach((res) => {
-            row.push(res.value || '-');
+            const value = res.value;
+            row.push(value !== null && value !== undefined ? value : '-');
           });
           wsData.push(row);
         }
@@ -425,7 +436,7 @@ const FormConstructor = () => {
         const ws = XLSX.utils.aoa_to_sheet(wsData);
         let sheetName = `${table.name}_${getRowName(
           subjectList,
-          objectsList,
+          allObjects,
           item.subject,
           item.objects
         )}`;

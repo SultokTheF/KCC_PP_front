@@ -113,8 +113,8 @@ const TableComponent = ({
               getRowName(subjectList, allObjects, subjectItem.subject, subjectItem.objects),
             ];
             subjectItem.data.forEach((res) => {
-              const value = dateValueMap[date][hour][res.name] || '-';
-              row.push(value);
+              const value = dateValueMap[date][hour][res.name];
+              row.push(value !== null && value !== undefined ? value : '-');
             });
             wsData.push(row);
           });
@@ -124,8 +124,8 @@ const TableComponent = ({
             getRowName(subjectList, allObjects, subjectItem.subject, subjectItem.objects),
           ];
           subjectItem.data.forEach((res) => {
-            const value = dateValueMap[date][res.name] || '-';
-            row.push(value);
+            const value = dateValueMap[date][res.name];
+            row.push(value !== null && value !== undefined ? value : '-');
           });
           wsData.push(row);
         }
@@ -137,7 +137,8 @@ const TableComponent = ({
         getRowName(subjectList, allObjects, subjectItem.subject, subjectItem.objects),
       ];
       subjectItem.data.forEach((res) => {
-        row.push(res.value || '-');
+        const value = res.value;
+        row.push(value !== null && value !== undefined ? value : '-');
       });
       wsData.push(row);
     }
@@ -380,7 +381,7 @@ const TableComponent = ({
                           )}
                         </div>
                       ) : (
-                        res.value || '-'
+                        res.value !== null && res.value !== undefined ? res.value : '-'
                       )}
                     </td>
                   ))}
@@ -490,7 +491,9 @@ const TableComponent = ({
                                         </td>
                                         {item.data.map((res, resIdx) => (
                                           <td key={resIdx} className="border px-2 py-1 text-gray-600">
-                                            {dateValueMap[date][hour][res.name] || '-'}
+                                            {dateValueMap[date][hour][res.name] !== null && dateValueMap[date][hour][res.name] !== undefined
+                                              ? dateValueMap[date][hour][res.name]
+                                              : '-'}
                                           </td>
                                         ))}
                                       </tr>
@@ -504,7 +507,9 @@ const TableComponent = ({
                                       </td>
                                       {item.data.map((res, resIdx) => (
                                         <td key={resIdx} className="border px-2 py-1 text-gray-600">
-                                          {dateValueMap[date][res.name] || '-'}
+                                          {dateValueMap[date][res.name] !== null && dateValueMap[date][res.name] !== undefined
+                                            ? dateValueMap[date][res.name]
+                                            : '-'}
                                         </td>
                                       ))}
                                     </tr>

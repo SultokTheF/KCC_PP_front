@@ -1,7 +1,26 @@
+// utils.js
+
 import { v4 as uuidv4 } from 'uuid';
 
+/**
+ * Helper function to compare two arrays (order-insensitive).
+ * @param {Array} a 
+ * @param {Array} b 
+ * @returns {boolean}
+ */
+export const arraysEqual = (a, b) => {
+  if (!Array.isArray(a) || !Array.isArray(b)) return false;
+  if (a.length !== b.length) return false;
+  const sortedA = [...a].sort();
+  const sortedB = [...b].sort();
+  return sortedA.every((value, index) => value === sortedB[index]);
+};
 
-// Merge data entries based on subject, objects, plan, name, operation, and params
+/**
+ * Merges data entries based on subject, objects, plan, name, operation, and params.
+ * @param {Array} dataEntries 
+ * @returns {Array}
+ */
 export const mergeDataEntries = (dataEntries) => {
   const mergedEntries = [];
 
@@ -26,15 +45,12 @@ export const mergeDataEntries = (dataEntries) => {
   return mergedEntries;
 };
 
-// Helper function to compare two arrays (order-insensitive)
-const arraysEqual = (a, b) => {
-  if (a.length !== b.length) return false;
-  const sortedA = [...a].sort();
-  const sortedB = [...b].sort();
-  return sortedA.every((value, index) => value === sortedB[index]);
-};
-
-// Process table data, grouping by subject and objects
+/**
+ * Processes the raw table data fetched from the server.
+ * Ensures that the 'objects' field is always an array.
+ * @param {Object} tableData - The raw table data fetched from the server.
+ * @returns {Object} - The processed table data.
+ */
 export const processTableData = (tableData) => {
   const {
     name,
@@ -49,11 +65,11 @@ export const processTableData = (tableData) => {
   // Organize data by subject and objects
   const subjectsMap = {};
   (data || []).forEach((result) => {
-    const key = `${result.subject}_${result.objects.sort().join(',')}`;
+    const key = `${result.subject}_${(result.objects || []).sort().join(',')}`;
     if (!subjectsMap[key]) {
       subjectsMap[key] = {
         subject: result.subject,
-        objects: result.objects.sort(),
+        objects: Array.isArray(result.objects) ? result.objects.slice().sort((a, b) => a - b) : [],
         data: [],
       };
     }
@@ -88,23 +104,49 @@ export const processTableData = (tableData) => {
   };
 };
 
-// Get subject name
-export const getSubjectName = (subjectList, id) => {
-  const subject = subjectList.find((s) => s.id === id);
-  return subject ? subject.subject_name : "Неизвестный субъект";
+/**
+ * Generates a display name for a row based on subject and objects.
+ * Handles cases where objects might be an empty array.
+ * @param {Array} subjectList - List of all subjects.
+ * @param {Array} allObjects - List of all objects.
+ * @param {number} subjectId - The ID of the subject.
+ * @param {Array} objectIds - The IDs of the objects.
+ * @returns {string} - The formatted row name.
+ */
+export const getRowName = (subjectList, allObjects, subjectId, objectIds) => {
+  const subject = subjectList.find((subj) => subj.id === subjectId);
+  const subjectName = subject ? subject.subject_name : 'Unknown Subject';
+
+  if (Array.isArray(objectIds) && objectIds.length > 0) {
+    const objects = allObjects.filter((obj) => objectIds.includes(obj.id));
+    const objectNames = objects.map((obj) => obj.object_name).join(', ');
+    return `${subjectName} - ${objectNames}`;
+  }
+
+  // If no objects are associated, return only the subject name with a placeholder
+  return `${subjectName} - Без объектов`; // "Без объектов" means "No Objects" in Russian
 };
 
-// Get object names from objectsList based on object IDs
+/**
+ * Get subject name by ID.
+ * @param {Array} subjectList 
+ * @param {number} id 
+ * @returns {string}
+ */
+export const getSubjectName = (subjectList, id) => {
+  const subject = subjectList.find((s) => s.id === id);
+  return subject ? subject.subject_name : "Неизвестный субъект"; // "Unknown Subject"
+};
+
+/**
+ * Get object names from allObjects based on object IDs.
+ * @param {Array} allObjects 
+ * @param {Array} objectIds 
+ * @returns {string}
+ */
 export const getObjectNames = (allObjects, objectIds) => {
   return allObjects
     .filter(obj => objectIds.includes(obj.id))
     .map(obj => obj.object_name) // Ensure you're accessing the correct property name
     .join(', ');
-};
-
-// Get row name combining subject name and object names
-export const getRowName = (subjectList, allObjects, subjectId, objectIds) => {
-  const subjectName = getSubjectName(subjectList, subjectId);
-  const objectNames = getObjectNames(allObjects, objectIds); // Now using allObjects
-  return `${subjectName} (${objectNames})`;
 };
