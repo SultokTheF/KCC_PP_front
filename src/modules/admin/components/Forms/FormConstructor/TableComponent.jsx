@@ -1,6 +1,6 @@
 // TableComponent.jsx
 
-import React from 'react';
+import React, { useState } from 'react';
 import { FaTrashAlt, FaPlusCircle, FaFileExport } from 'react-icons/fa';
 import FormulaEditor from './FormulaEditor';
 import { getSubjectName, getRowName } from './utils';
@@ -28,16 +28,28 @@ const TableComponent = ({
   updateCellOperation,
   allObjects,
 }) => {
+  // State to track expanded cells
+  const [expandedCells, setExpandedCells] = useState({});
+
   // Function to check if a sub-table for a subject is visible
-  const isSubTableVisible = (subjectId) => {
-    return visibleSubTables[subjectId];
+  const isSubTableVisible = (uniqueKey) => {
+    return visibleSubTables[uniqueKey];
   };
 
   // Toggle visibility for each subject
-  const toggleSubTableVisibility = (subjectId) => {
+  const toggleSubTableVisibility = (uniqueKey) => {
     setVisibleSubTables((prev) => ({
       ...prev,
-      [subjectId]: !prev[subjectId],
+      [uniqueKey]: !prev[uniqueKey],
+    }));
+  };
+
+  // Toggle expanded state for a specific cell
+  const toggleExpanded = (tableIdx, rowIdx, colIdx) => {
+    const key = `${tableIdx}-${rowIdx}-${colIdx}`;
+    setExpandedCells((prev) => ({
+      ...prev,
+      [key]: !prev[key],
     }));
   };
 
@@ -95,7 +107,11 @@ const TableComponent = ({
       Object.keys(dateValueMap).forEach((date) => {
         if (table.groupByHour) {
           Object.keys(dateValueMap[date]).forEach((hour) => {
-            const row = [date, hour, getRowName(subjectList, allObjects, subjectItem.subject, subjectItem.objects)];
+            const row = [
+              date,
+              hour,
+              getRowName(subjectList, allObjects, subjectItem.subject, subjectItem.objects),
+            ];
             subjectItem.data.forEach((res) => {
               const value = dateValueMap[date][hour][res.name] || '-';
               row.push(value);
@@ -103,7 +119,10 @@ const TableComponent = ({
             wsData.push(row);
           });
         } else {
-          const row = [date, getRowName(subjectList, allObjects, subjectItem.subject, subjectItem.objects)];
+          const row = [
+            date,
+            getRowName(subjectList, allObjects, subjectItem.subject, subjectItem.objects),
+          ];
           subjectItem.data.forEach((res) => {
             const value = dateValueMap[date][res.name] || '-';
             row.push(value);
@@ -115,7 +134,7 @@ const TableComponent = ({
       // If no date_value, add a single row
       const row = [
         table.startDate || '-',
-        getSubjectName(subjectList, subjectItem.subject),
+        getRowName(subjectList, allObjects, subjectItem.subject, subjectItem.objects),
       ];
       subjectItem.data.forEach((res) => {
         row.push(res.value || '-');
@@ -328,27 +347,45 @@ const TableComponent = ({
           </thead>
           <tbody>
             {table.tableConfig.map((item, rowIndex) => (
-              <tr key={`${tableIndex}-${rowIndex}`} className="hover:bg-gray-50">
-                <td className="border px-2 py-1 text-gray-600">
-                  {getRowName(subjectList, allObjects, item.subject, item.objects)}
-                  <button
-                    className="ml-2 text-red-500 hover:text-red-700 flex items-center"
-                    onClick={() => deleteRow(tableIndex, rowIndex)}
-                  >
-                    <FaTrashAlt className="mr-1" />
-                    <span>Удалить</span>
-                  </button>
-                </td>
-                {item.data.map((res, colIndex) => (
-                  <td key={`${tableIndex}-${rowIndex}-${colIndex}`} className="border px-2 py-1 text-gray-600">
-                    {table.groupByDate || table.groupByHour
-                      ? '-'
-                      : Array.isArray(res.value)
-                        ? res.value.join(', ')
-                        : res.value || '-'}
+              <React.Fragment key={`${tableIndex}-${rowIndex}`}>
+                <tr className="hover:bg-gray-50">
+                  <td className="border px-2 py-1 text-gray-600">
+                    {getRowName(subjectList, allObjects, item.subject, item.objects)}
+                    <button
+                      className="ml-2 text-red-500 hover:text-red-700 flex items-center"
+                      onClick={() => deleteRow(tableIndex, rowIndex)}
+                    >
+                      <FaTrashAlt className="mr-1" />
+                      <span>Удалить</span>
+                    </button>
                   </td>
-                ))}
-              </tr>
+                  {item.data.map((res, colIndex) => (
+                    <td key={`${tableIndex}-${rowIndex}-${colIndex}`} className="border px-2 py-1 text-gray-600">
+                      {table.groupByDate || table.groupByHour ? (
+                        '-'
+                      ) : Array.isArray(res.value) ? (
+                        <div>
+                          <button
+                            className="text-blue-500 underline"
+                            onClick={() => toggleExpanded(tableIndex, rowIndex, colIndex)}
+                          >
+                            {expandedCells[`${tableIndex}-${rowIndex}-${colIndex}`]
+                              ? 'Скрыть массив'
+                              : 'Показать массив'}
+                          </button>
+                          {expandedCells[`${tableIndex}-${rowIndex}-${colIndex}`] && (
+                            <span className="mt-2 block">
+                              {res.value.join(', ')}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        res.value || '-'
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              </React.Fragment>
             ))}
           </tbody>
         </table>
@@ -359,15 +396,16 @@ const TableComponent = ({
         <>
           <h2 className="text-lg font-semibold mb-4">Таблицы по субъектам</h2>
           {table.tableConfig.map((item) => {
-            // Data is already merged in processTableData
+            // Unique key combining subject and objects
+            const uniqueKey = `${item.subject}_${item.objects.join(',')}`;
             return (
-              <div key={`${item.subject}_${item.objects.join(',')}`} className="mb-6">
+              <div key={uniqueKey} className="mb-6">
                 <div className="flex items-center space-x-4 mb-2">
                   <button
-                    onClick={() => toggleSubTableVisibility(`${item.subject}_${item.objects.join(',')}`)}
+                    onClick={() => toggleSubTableVisibility(uniqueKey)}
                     className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center space-x-1"
                   >
-                    {isSubTableVisible(`${item.subject}_${item.objects.join(',')}`)
+                    {isSubTableVisible(uniqueKey)
                       ? `Скрыть данные для ${getRowName(subjectList, allObjects, item.subject, item.objects)}`
                       : `Показать данные для ${getRowName(subjectList, allObjects, item.subject, item.objects)}`}
                   </button>
@@ -380,7 +418,7 @@ const TableComponent = ({
                   </button>
                 </div>
 
-                {isSubTableVisible(`${item.subject}_${item.objects.join(',')}`) && (
+                {isSubTableVisible(uniqueKey) && (
                   <div className="overflow-x-auto mt-4">
                     {item.data[0]?.date_value?.length > 0 ? (
                       <div className="mb-4">

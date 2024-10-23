@@ -309,6 +309,10 @@ const FormConstructor = () => {
             name: res.name,
             operation: res.operation,
             params: res.params,
+            // Include value or date_value based on grouping
+            ...(table.groupByDate || table.groupByHour
+              ? { date_value: res.date_value }
+              : { value: res.value }),
           }))
         )
         .flat(),
@@ -344,8 +348,8 @@ const FormConstructor = () => {
   const exportToExcel = () => {
     const wb = XLSX.utils.book_new();
 
-    tables.forEach((table) => {
-      table.tableConfig.forEach((item) => {
+    tables.forEach((table, tableIndex) => {
+      table.tableConfig.forEach((item, itemIndex) => {
         const wsData = [];
 
         // Header row
