@@ -17,9 +17,12 @@ const Providers = () => {
     setLoading((prev) => ({ ...prev, superButton: true }));
     try {
       const accessToken = localStorage.getItem('accessToken');
+      const body = {
+        month: `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}`,
+      };
       await axiosInstance.post(
         '/api/days/superButton/',
-        {},
+        body,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
@@ -30,7 +33,7 @@ const Providers = () => {
     } finally {
       setLoading((prev) => ({ ...prev, superButton: false }));
     }
-  };
+  };  
 
   const [selectedMonth, setSelectedMonth] = useState({
     year: new Date().getFullYear(),
