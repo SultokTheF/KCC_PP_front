@@ -28,15 +28,18 @@ const TableComponent = ({
   updateCellOperation,
   allObjects,
 }) => {
-  // State to track expanded cells
+  // State to track expanded cells in the main table
   const [expandedCells, setExpandedCells] = useState({});
+
+  // State to track expanded cells in the subject-specific tables
+  const [expandedSubTableCells, setExpandedSubTableCells] = useState({});
 
   // Function to check if a sub-table for a subject is visible
   const isSubTableVisible = (uniqueKey) => {
     return visibleSubTables[uniqueKey];
   };
 
-  // Toggle visibility for each subject
+  // Toggle visibility for each subject's sub-table
   const toggleSubTableVisibility = (uniqueKey) => {
     setVisibleSubTables((prev) => ({
       ...prev,
@@ -44,10 +47,19 @@ const TableComponent = ({
     }));
   };
 
-  // Toggle expanded state for a specific cell
+  // Toggle expanded state for a specific cell in the main table
   const toggleExpanded = (tableIdx, rowIdx, colIdx) => {
     const key = `${tableIdx}-${rowIdx}-${colIdx}`;
     setExpandedCells((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  // Toggle expanded state for a specific cell in the sub-tables
+  const toggleSubTableCellExpanded = (uniqueKey, date, resName) => {
+    const key = `${uniqueKey}-${date}-${resName}`;
+    setExpandedSubTableCells((prev) => ({
       ...prev,
       [key]: !prev[key],
     }));
@@ -89,14 +101,19 @@ const TableComponent = ({
             dateValueMap[date] = {};
           }
           if (Array.isArray(value)) {
-            // value is an array of hours
-            value.forEach((hourItem) => {
-              const hour = hourItem.hour;
-              if (!dateValueMap[date][hour]) {
-                dateValueMap[date][hour] = {};
-              }
-              dateValueMap[date][hour][res.name] = hourItem.value;
-            });
+            // When group_by_hour is true, value might be an array of objects with hour and value
+            if (table.groupByHour) {
+              value.forEach((hourItem) => {
+                const hour = hourItem.hour;
+                if (!dateValueMap[date][hour]) {
+                  dateValueMap[date][hour] = {};
+                }
+                dateValueMap[date][hour][res.name] = hourItem.value;
+              });
+            } else {
+              // When group_by_hour is false, value is an array of numbers
+              dateValueMap[date][res.name] = value;
+            }
           } else {
             // value is a single number
             dateValueMap[date][res.name] = value;
@@ -361,7 +378,10 @@ const TableComponent = ({
                     </button>
                   </td>
                   {item.data.map((res, colIndex) => (
-                    <td key={`${tableIndex}-${rowIndex}-${colIndex}`} className="border px-2 py-1 text-gray-600">
+                    <td
+                      key={`${tableIndex}-${rowIndex}-${colIndex}`}
+                      className="border px-2 py-1 text-gray-600"
+                    >
                       {table.groupByDate || table.groupByHour ? (
                         '-'
                       ) : Array.isArray(res.value) ? (
@@ -456,14 +476,19 @@ const TableComponent = ({
                                     dateValueMap[date] = {};
                                   }
                                   if (Array.isArray(value)) {
-                                    // value is an array of hours
-                                    value.forEach((hourItem) => {
-                                      const hour = hourItem.hour;
-                                      if (!dateValueMap[date][hour]) {
-                                        dateValueMap[date][hour] = {};
-                                      }
-                                      dateValueMap[date][hour][res.name] = hourItem.value;
-                                    });
+                                    if (table.groupByHour) {
+                                      // value is an array of objects with hour and value
+                                      value.forEach((hourItem) => {
+                                        const hour = hourItem.hour;
+                                        if (!dateValueMap[date][hour]) {
+                                          dateValueMap[date][hour] = {};
+                                        }
+                                        dateValueMap[date][hour][res.name] = hourItem.value;
+                                      });
+                                    } else {
+                                      // value is an array of numbers
+                                      dateValueMap[date][res.name] = value;
+                                    }
                                   } else {
                                     // value is a single number
                                     dateValueMap[date][res.name] = value;
@@ -500,6 +525,7 @@ const TableComponent = ({
                                     );
                                   });
                                 } else {
+                                  // When groupByHour is false
                                   rows.push(
                                     <tr key={`${date}`} className="hover:bg-gray-50">
                                       <td className="border px-2 py-1 text-gray-600">
@@ -507,9 +533,34 @@ const TableComponent = ({
                                       </td>
                                       {item.data.map((res, resIdx) => (
                                         <td key={resIdx} className="border px-2 py-1 text-gray-600">
-                                          {dateValueMap[date][res.name] !== null && dateValueMap[date][res.name] !== undefined
-                                            ? dateValueMap[date][res.name]
-                                            : '-'}
+                                          {(() => {
+                                            const cellValue = dateValueMap[date][res.name];
+                                            if (Array.isArray(cellValue)) {
+                                              // New Feature: Toggle Array Display as Comma-Separated String
+                                              const subTableKey = `${uniqueKey}-${date}-${res.name}`;
+                                              return (
+                                                <div>
+                                                  <button
+                                                    className="text-blue-500 underline"
+                                                    onClick={() => toggleSubTableCellExpanded(uniqueKey, date, res.name)}
+                                                  >
+                                                    {expandedSubTableCells[subTableKey]
+                                                      ? 'Скрыть массив'
+                                                      : 'Показать массив'}
+                                                  </button>
+                                                  {expandedSubTableCells[subTableKey] && (
+                                                    <span className="mt-2 block">
+                                                      {cellValue.join(', ')}
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              );
+                                            } else {
+                                              return cellValue !== null && cellValue !== undefined
+                                                ? cellValue
+                                                : '-';
+                                            }
+                                          })()}
                                         </td>
                                       ))}
                                     </tr>
