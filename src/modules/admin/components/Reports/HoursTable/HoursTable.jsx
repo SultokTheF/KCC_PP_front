@@ -1,4 +1,4 @@
-// HoursTable.js
+// HoursTable.jsx
 import React, { useState, useEffect } from 'react';
 import dayjs from 'dayjs'; // Import Day.js for date manipulation
 import { axiosInstance, endpoints } from '../../../../../services/apiConfig';
@@ -18,8 +18,8 @@ const HoursTable = () => {
   // State for form inputs
   const [formData, setFormData] = useState({
     object: 0,
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0],
+    startDate: dayjs().format('YYYY-MM-DD'), // YYYY-MM-DD
+    endDate: dayjs().format('YYYY-MM-DD'),   // YYYY-MM-DD
     subject: 0,
     startHour: 1,
     endHour: 24,
@@ -123,14 +123,15 @@ const HoursTable = () => {
     }
   };
 
-  // Fetch providers data
-  const fetchProviders = async (dates, subject) => {
+  // Fetch providers data with corrected date format
+  const fetchProviders = async (subject) => {
     try {
       const response = await axiosInstance.get(endpoints.PROVIDERS, {
         params: {
           sub: subject,
-          start_date: formData.startDate,
-          end_date: formData.endDate,
+          // Format dates to 'YYYY-MM' as required by the API
+          start_date: dayjs(formData.startDate).format('YYYY-MM'),
+          end_date: dayjs(formData.endDate).format('YYYY-MM'),
         },
       });
 
@@ -141,15 +142,14 @@ const HoursTable = () => {
         return {};
       }
 
-      // Assuming the response includes a date field for each provider entry
-      // and that providers are associated with specific dates
+      // Assuming the response includes a 'month' field for each provider entry
       const providersMap = {};
       response.data.forEach((provider) => {
-        const date = provider.date.split('T')[0]; // Extract date in YYYY-MM-DD
-        if (!providersMap[date]) {
-          providersMap[date] = [];
+        const month = provider.month; // e.g., '2024-10'
+        if (!providersMap[month]) {
+          providersMap[month] = [];
         }
-        providersMap[date].push(provider.name);
+        providersMap[month].push(provider.name);
       });
 
       console.log('Providers Map:', providersMap);
@@ -189,8 +189,9 @@ const HoursTable = () => {
       const key = `${date}_${hour.hour}`;
       const baseTariff = tariffMap[key];
 
-      // Fetch providers for this date
-      const providers = providersMap[date] ? providersMap[date].join(', ') : 'Нет Провайдеров';
+      // Extract month from the date to fetch providers
+      const month = dayjs(date).format('YYYY-MM');
+      const providers = providersMap[month] ? providersMap[month].join(', ') : 'Нет Провайдеров';
 
       const subjectInfo = subjectsList.find((subj) => subj.id === formData.subject);
       const subjectName = subjectInfo ? subjectInfo.subject_name : 'Неизвестный субъект';
@@ -198,7 +199,7 @@ const HoursTable = () => {
         ? subjectInfo.subject_type === 'CONSUMER'
           ? 'Потребитель'
           : subjectInfo.subject_type
-        : subjectInfo.subject_type;
+        : 'Неизвестный тип';
 
       return {
         id: hour.id,
@@ -259,15 +260,8 @@ const HoursTable = () => {
         console.warn('No base tariffs found, proceeding with hours data only.');
       }
 
-      // Step 3: Fetch providers
-      // Collect unique dates based on the number of hours and startDate
-      const totalDays = Math.ceil(hours.length / 24);
-      const startDate = dayjs(formData.startDate);
-      const dates = Array.from({ length: totalDays }, (_, i) =>
-        startDate.add(i, 'day').format('YYYY-MM-DD')
-      );
-
-      const providersMap = await fetchProviders(dates, formData.subject);
+      // Step 3: Fetch providers with corrected date format
+      const providersMap = await fetchProviders(formData.subject);
 
       // Step 4: Merge data
       const mergedData = mergeData(hours, baseTariffs, providersMap);
