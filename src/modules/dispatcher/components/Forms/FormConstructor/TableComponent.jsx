@@ -1,15 +1,40 @@
+// TableComponent.jsx
+
 import React, { useState } from 'react';
-import { FaCheckCircle } from 'react-icons/fa';
-import { getRowName } from './utils';
+import { FaTrashAlt, FaPlusCircle, FaCheckCircle } from 'react-icons/fa';
+import FormulaEditor from './FormulaEditor';
+import { getSubjectName, getRowName } from './utils';
+import * as XLSX from 'xlsx';
+import { Circles } from 'react-loader-spinner';
 
 const TableComponent = ({
   table,
   tableIndex,
   subjectList,
+  selectedSubject,
+  setSelectedSubject,
+  selectedOperation,
+  setSelectedOperation,
+  formulaInput,
+  setFormulaInput,
+  addRow,
+  addColumn,
+  deleteRow,
+  deleteColumn,
+  updateColumnName,
   visibleSubTables,
   setVisibleSubTables,
+  objectsList,
+  selectedObjects,
+  setSelectedObjects,
+  updateCellOperation,
   allObjects,
+  users,
+  selectedUsers = [], // Ensure selectedUsers is always an array
+  setSelectedUsers,
+  handleSubmit,
   exportToExcel,
+  isSubmitting,
 }) => {
   // State to track expanded cells in the main table
   const [expandedCells, setExpandedCells] = useState({});
@@ -48,11 +73,171 @@ const TableComponent = ({
     }));
   };
 
+  const handleObjectToggle = (objId) => {
+    setSelectedObjects((prevSelectedObjects) =>
+      prevSelectedObjects.includes(objId)
+        ? prevSelectedObjects.filter((id) => id !== objId) // Remove unchecked object
+        : [...prevSelectedObjects, objId] // Add checked object
+    );
+  };
+
+  // Function to handle user selection toggle
+  const handleUserToggle = (userId) => {
+    const updatedSelectedUsers = selectedUsers.includes(userId)
+      ? selectedUsers.filter((id) => id !== userId)
+      : [...selectedUsers, userId];
+
+    setSelectedUsers(updatedSelectedUsers);
+  };
+
   return (
     <div className="mb-10">
-      {/* Table Name Display */}
+      {/* Table Name Input */}
       <div className="mb-6">
-        <label className="block text-gray-700 mb-1">Название таблицы: {table.name}</label>
+        <label className="block text-gray-700 mb-1">Название таблицы:</label>
+        <input
+          type="text"
+          value={table.name}
+          onChange={(e) => updateColumnName(tableIndex, 'name', e.target.value)}
+          className="mt-1 p-2 border border-gray-300 rounded-md w-full focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      {/* Global Date Inputs */}
+      <div className="flex space-x-6 mb-6">
+        <div className="w-1/2">
+          <label className="block text-gray-700 mb-1">Дата начала</label>
+          <input
+            type="date"
+            value={table.startDate}
+            onChange={(e) =>
+              updateColumnName(tableIndex, 'startDate', e.target.value)
+            }
+            className="mt-1 p-2 border border-gray-300 rounded-md w-full focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div className="w-1/2">
+          <label className="block text-gray-700 mb-1">Дата окончания</label>
+          <input
+            type="date"
+            value={table.endDate}
+            onChange={(e) =>
+              updateColumnName(tableIndex, 'endDate', e.target.value)
+            }
+            className="mt-1 p-2 border border-gray-300 rounded-md w-full focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
+      {/* Group By Options */}
+      <div className="flex items-center space-x-6 mb-6">
+        <label className="flex items-center">
+          <input
+            type="checkbox"
+            checked={table.groupByDate}
+            onChange={(e) =>
+              updateColumnName(tableIndex, 'groupByDate', e.target.checked)
+            }
+            className="mr-2"
+          />
+          Группировать по дате
+        </label>
+        <label className="flex items-center">
+          <input
+            type="checkbox"
+            checked={table.groupByHour}
+            onChange={(e) =>
+              updateColumnName(tableIndex, 'groupByHour', e.target.checked)
+            }
+            className="mr-2"
+          />
+          Группировать по часу
+        </label>
+      </div>
+
+      {/* Exclude Holidays Options */}
+      <div className="mb-6">
+        <label className="block text-gray-700 mb-1">Исключить праздничные дни:</label>
+        <div className="flex items-center space-x-6">
+          {['Russia', 'Kazakhstan', 'Weekend'].map((country) => (
+            <label key={country} className="flex items-center">
+              <input
+                type="checkbox"
+                checked={table.excludeHolidays[country]}
+                onChange={(e) =>
+                  updateColumnName(tableIndex, 'excludeHolidays', {
+                    ...table.excludeHolidays,
+                    [country]: e.target.checked,
+                  })
+                }
+                className="mr-2"
+              />
+              {country}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Add Row Section */}
+      <div className="mb-6 space-x-4 flex items-center">
+        <label className="block text-gray-700">Выберите субъект:</label>
+        <select
+          value={selectedSubject}
+          onChange={(e) => setSelectedSubject(e.target.value)}
+          className="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Выберите субъект</option>
+          {subjectList.map((subject) => (
+            <option key={subject.id} value={subject.id}>
+              {subject.subject_name} - {subject.subject_type === "CONSUMER" ? "Потребитель" : subject.subject_type}
+            </option>
+          ))}
+        </select>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {objectsList.map((obj) => (
+            <div key={obj.id} className="flex items-center">
+              <input
+                type="checkbox"
+                id={`object-${obj.id}`}
+                checked={selectedObjects.includes(obj.id)}
+                onChange={() => handleObjectToggle(obj.id)}
+                className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label
+                htmlFor={`object-${obj.id}`}
+                className="ml-3 text-gray-700"
+              >
+                {obj.object_name}
+              </label>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={() => addRow(tableIndex)}
+          className="p-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors flex items-center space-x-1"
+        >
+          <FaPlusCircle className="mr-1" />
+          <span>Добавить строку</span>
+        </button>
+      </div>
+
+      {/* Add Column Section */}
+      <div className="mb-6 space-x-4 flex items-center">
+        {selectedOperation === "formula" && (
+          <div className="flex items-center space-x-4">
+            <label className="block text-gray-700">Введите формулу:</label>
+            <FormulaEditor value={formulaInput} onChange={setFormulaInput} />
+          </div>
+        )}
+
+        <button
+          onClick={() => addColumn(tableIndex)}
+          className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center space-x-1"
+        >
+          <FaPlusCircle className="mr-1" />
+          <span>Добавить колонку</span>
+        </button>
       </div>
 
       {/* Main Table Structure */}
@@ -70,7 +255,22 @@ const TableComponent = ({
                     key={res.id}
                     className="px-2 py-1 text-left text-gray-700 font-semibold border-b"
                   >
-                    {res.name}
+                    <input
+                      type="text"
+                      value={res.name}
+                      onChange={(e) =>
+                        updateColumnName(tableIndex, index, e.target.value)
+                      }
+                      className="border border-gray-300 rounded-md p-1 focus:ring-2 focus:ring-blue-500"
+                      style={{ width: "100px" }}
+                    />
+                    <button
+                      className="ml-2 text-red-500 hover:text-red-700 flex items-center"
+                      onClick={() => deleteColumn(tableIndex, index)}
+                    >
+                      <FaTrashAlt className="mr-1" />
+                      <span>Удалить</span>
+                    </button>
                   </th>
                 ))}
             </tr>
@@ -81,6 +281,13 @@ const TableComponent = ({
                 <tr className="hover:bg-gray-50">
                   <td className="border px-2 py-1 text-gray-600">
                     {getRowName(subjectList, allObjects, item.subject, item.objects)}
+                    <button
+                      className="ml-2 text-red-500 hover:text-red-700 flex items-center"
+                      onClick={() => deleteRow(tableIndex, rowIndex)}
+                    >
+                      <FaTrashAlt className="mr-1" />
+                      <span>Удалить</span>
+                    </button>
                   </td>
                   {item.data.map((res, colIndex) => (
                     <td
@@ -117,9 +324,19 @@ const TableComponent = ({
         </table>
       </div>
 
-      {/* Export Button */}
+      {/* User Selection and Submit/Export Buttons */}
       <div className="mb-6">
+        {/* Submit and Export buttons */}
         <div className="flex space-x-4">
+          <button
+            onClick={handleSubmit}
+            className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors w-1/2 flex items-center justify-center"
+            disabled={isSubmitting} // Disable button when submitting
+          >
+            <FaCheckCircle className="mr-2" />
+            <span>Отправить</span>
+          </button>
+
           <button
             onClick={exportToExcel}
             className="p-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors w-1/2 flex items-center justify-center"
@@ -128,6 +345,13 @@ const TableComponent = ({
             <span>Экспортировать в Excel</span>
           </button>
         </div>
+
+        {/* Loader */}
+        {isSubmitting && (
+          <div className="flex justify-center mt-4">
+            <Circles color="#00BFFF" height={80} width={80} />
+          </div>
+        )}
       </div>
 
       {/* Subject-Specific Tables */}

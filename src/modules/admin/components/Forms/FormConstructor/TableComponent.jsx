@@ -190,7 +190,7 @@ const TableComponent = ({
           <option value="">Выберите субъект</option>
           {subjectList.map((subject) => (
             <option key={subject.id} value={subject.id}>
-              {subject.subject_name}
+              {subject.subject_name} - {subject.subject_type === "CONSUMER" ? "Потребитель" : subject.subject_type}
             </option>
           ))}
         </select>

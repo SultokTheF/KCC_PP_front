@@ -63,27 +63,6 @@ const TableOverview = () => {
     return subject ? subject.subject_name : "Неизвестный субъект";
   };
 
-  // Handle table deletion
-  const handleDeleteTable = async (id) => {
-    if (!window.confirm("Вы уверены, что хотите удалить эту таблицу?")) {
-      return;
-    }
-
-    try {
-      await axiosInstance.delete(`${endpoints.TABLES}${id}/`);
-      setTables((prevTables) => prevTables.filter((table) => table.id !== id));
-      // Remove from expandedTables if it's expanded
-      setExpandedTables((prev) => {
-        const newState = { ...prev };
-        delete newState[id];
-        return newState;
-      });
-    } catch (error) {
-      console.error("Ошибка при удалении таблицы:", error);
-      alert("Не удалось удалить таблицу. Попробуйте позже.");
-    }
-  };
-
   return (
     <div className="flex">
       <Sidebar />
@@ -144,69 +123,10 @@ const TableOverview = () => {
                         </td>
                         <td className="px-6 py-4 border-b">
                           <Link to={`/forms/table/${table.id}`} className="text-blue-500 hover:text-blue-700 mr-4">
-                            Редактировать
+                            Перейти
                           </Link>
-                          <button
-                            onClick={() => handleDeleteTable(table.id)}
-                            className="text-red-500 hover:text-red-700 flex items-center"
-                          >
-                            <FaTrashAlt className="mr-1" />
-                            <span>Удалить</span>
-                          </button>
                         </td>
                       </tr>
-
-                      {/* Expanded table content */}
-                      {expandedTables[table.id] && (
-                        <tr className="bg-gray-100">
-                          <td colSpan="4" className="px-6 py-4">
-                            {expandedTables[table.id].isLoading ? (
-                              <div className="flex justify-center">
-                                <Circles color="#00BFFF" height={80} width={80} />
-                              </div>
-                            ) : expandedTables[table.id].error ? (
-                              <p className="text-red-500">{expandedTables[table.id].error}</p>
-                            ) : expandedTables[table.id].data.length === 0 ? (
-                              <p className="text-gray-500">Эта таблица пуста.</p>
-                            ) : (
-                              <>
-                                <h3 className="font-semibold text-gray-800 mb-2">
-                                  Содержание таблицы: {table.name}
-                                </h3>
-
-                                <div className="overflow-x-auto">
-                                  <table className="min-w-full bg-white shadow-md rounded-lg">
-                                    <thead>
-                                      <tr className="bg-gray-200">
-                                        <th className="px-4 py-2 border-b">Субъект</th>
-                                        {expandedTables[table.id].data[0]?.data.map(
-                                          (col, colIndex) => (
-                                            <th key={colIndex} className="px-4 py-2 border-b">
-                                              {col.plan === "formula"
-                                                ? `Формула (${col.operation})`
-                                                : `${col.plan} (${operationMappings[col.operation] || col.operation})`}
-                                            </th>
-                                          )
-                                        )}
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {expandedTables[table.id].data.map((row, rowIndex) => (
-                                        <tr key={rowIndex}>
-                                          <td className="border px-4 py-2">{getSubjectName(row.subject)}</td>
-                                          {row.data.map((col, colIndex) => (
-                                            <td key={colIndex} className="border px-4 py-2">{col.value}</td>
-                                          ))}
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </>
-                            )}
-                          </td>
-                        </tr>
-                      )}
                     </React.Fragment>
                   ))}
                 </tbody>

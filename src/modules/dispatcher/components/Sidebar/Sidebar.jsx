@@ -83,6 +83,16 @@ export default function Sidebar() {
                 </ListItem>
               </a>
             </List>
+            <List className="p-0">
+              <a href="/forms/table/">
+                <ListItem>
+                  <ListItemPrefix>
+                    <ChevronRightIcon strokeWidth={3} className="h-3 w-5" />
+                  </ListItemPrefix>
+                    Отчетные формы
+                </ListItem>
+              </a>
+            </List>
           </AccordionBody>
         </Accordion>
         <hr className="my-2 border-blue-gray-50" />
