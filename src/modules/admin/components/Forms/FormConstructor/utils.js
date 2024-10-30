@@ -57,6 +57,7 @@ export const processTableData = (tableData) => {
     group_by_hour,
     data,
     exclude_holidays,
+    users, // Include the 'users' field
   } = tableData;
 
   // Organize data by subject and objects
@@ -100,6 +101,7 @@ export const processTableData = (tableData) => {
       Kazakhstan: false,
       Weekend: false,
     },
+    users: users || [], // Preserve the 'users' array
     tableConfig: Object.values(subjectsMap),
   };
 };

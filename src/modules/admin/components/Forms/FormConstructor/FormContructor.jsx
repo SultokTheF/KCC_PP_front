@@ -28,7 +28,7 @@ const FormConstructor = () => {
   const [selectedObjects, setSelectedObjects] = useState([]);
 
   const [users, setUsers] = useState([]);
-  const [selectedUsers, setSelectedUsers] = useState([]); // Added state for selected users
+  const [selectedUsers, setSelectedUsers] = useState({}); // Changed to an object for multiple tables
 
   const fetchUsers = async () => {
     try {
@@ -76,6 +76,17 @@ const FormConstructor = () => {
       setSelectedObjects([]); // Clear selected objects
     }
   }, [selectedSubject]);
+
+  // Set selectedUsers based on fetched table data
+  useEffect(() => {
+    if (tables.length > 0) {
+      const initialSelectedUsers = {};
+      tables.forEach((table, index) => {
+        initialSelectedUsers[index] = table.users || [];
+      });
+      setSelectedUsers(initialSelectedUsers);
+    }
+  }, [tables]);
 
   // Helper function to compare two arrays (order-insensitive)
   const arraysEqual = (a, b) => {
@@ -315,7 +326,7 @@ const FormConstructor = () => {
       group_by_date: table.groupByDate,
       group_by_hour: table.groupByHour,
       exclude_holidays: table.excludeHolidays,
-      users: selectedUsers, // Include selected users
+      users: selectedUsers[tables.indexOf(table)] || [], // Include selected users per table
       data: table.tableConfig
         .map((item) =>
           item.data.map((res) => ({
@@ -497,8 +508,11 @@ const FormConstructor = () => {
             updateCellOperation={updateCellOperation} // Pass the update function
             allObjects={allObjects}
             users={users} // Pass users
-            selectedUsers={selectedUsers} // Pass selectedUsers
-            setSelectedUsers={setSelectedUsers} // Pass setSelectedUsers
+            selectedUsers={selectedUsers[tableIndex] || []} // Pass selectedUsers per table
+            setSelectedUsers={(newSelectedUsers) => setSelectedUsers(prev => ({
+              ...prev,
+              [tableIndex]: newSelectedUsers,
+            }))} // Pass setSelectedUsers per table
             handleSubmit={handleSubmit} // Pass handleSubmit
             exportToExcel={exportToExcel} // Pass exportToExcel
             isSubmitting={isSubmitting} // Pass isSubmitting

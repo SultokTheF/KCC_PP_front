@@ -29,8 +29,8 @@ const TableComponent = ({
   updateCellOperation,
   allObjects,
   users, // Passed from FormConstructor
-  selectedUsers, // Passed from FormConstructor
-  setSelectedUsers, // Passed from FormConstructor
+  selectedUsers, // Passed from FormConstructor (specific to this table)
+  setSelectedUsers, // Passed from FormConstructor (specific to this table)
   handleSubmit, // Passed from FormConstructor
   exportToExcel, // Passed from FormConstructor
   isSubmitting, // Passed from FormConstructor
