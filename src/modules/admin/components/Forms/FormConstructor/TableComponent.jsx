@@ -1,11 +1,11 @@
 // TableComponent.jsx
 
 import React, { useState } from 'react';
-import { FaTrashAlt, FaPlusCircle, FaCheckCircle } from 'react-icons/fa'; // Added FaCheckCircle
+import { FaTrashAlt, FaPlusCircle, FaCheckCircle } from 'react-icons/fa';
 import FormulaEditor from './FormulaEditor';
 import { getSubjectName, getRowName } from './utils';
-import * as XLSX from 'xlsx'; // Import XLSX for export functionality
-import { Circles } from 'react-loader-spinner'; // Import loader
+import * as XLSX from 'xlsx';
+import { Circles } from 'react-loader-spinner';
 
 const TableComponent = ({
   table,
@@ -14,6 +14,7 @@ const TableComponent = ({
   selectedSubject,
   setSelectedSubject,
   selectedOperation,
+  setSelectedOperation,
   formulaInput,
   setFormulaInput,
   addRow,
@@ -28,12 +29,12 @@ const TableComponent = ({
   setSelectedObjects,
   updateCellOperation,
   allObjects,
-  users, // Passed from FormConstructor
-  selectedUsers, // Passed from FormConstructor (specific to this table)
-  setSelectedUsers, // Passed from FormConstructor (specific to this table)
-  handleSubmit, // Passed from FormConstructor
-  exportToExcel, // Passed from FormConstructor
-  isSubmitting, // Passed from FormConstructor
+  users,
+  selectedUsers = [], // Ensure selectedUsers is always an array
+  setSelectedUsers,
+  handleSubmit,
+  exportToExcel,
+  isSubmitting,
 }) => {
   // State to track expanded cells in the main table
   const [expandedCells, setExpandedCells] = useState({});
@@ -82,11 +83,11 @@ const TableComponent = ({
 
   // Function to handle user selection toggle
   const handleUserToggle = (userId) => {
-    setSelectedUsers((prevSelectedUsers) =>
-      prevSelectedUsers.includes(userId)
-        ? prevSelectedUsers.filter((id) => id !== userId) // Remove unchecked user
-        : [...prevSelectedUsers, userId] // Add checked user
-    );
+    const updatedSelectedUsers = selectedUsers.includes(userId)
+      ? selectedUsers.filter((id) => id !== userId)
+      : [...selectedUsers, userId];
+
+    setSelectedUsers(updatedSelectedUsers);
   };
 
   return (
@@ -392,7 +393,6 @@ const TableComponent = ({
                       ? `Скрыть данные для ${getRowName(subjectList, allObjects, item.subject, item.objects)}`
                       : `Показать данные для ${getRowName(subjectList, allObjects, item.subject, item.objects)}`}
                   </button>
-                  {/* Removed the export button */}
                 </div>
 
                 {isSubTableVisible(uniqueKey) && (

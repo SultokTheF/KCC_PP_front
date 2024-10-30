@@ -319,14 +319,14 @@ const FormConstructor = () => {
     setIsSubmitting(true); // Show loader
 
     // Prepare the data to match the server's expected format
-    const finalData = tables.map((table) => ({
+    const finalData = tables.map((table, tableIndex) => ({
       name: table.name,
       start_date: table.startDate,
       end_date: table.endDate,
       group_by_date: table.groupByDate,
       group_by_hour: table.groupByHour,
       exclude_holidays: table.excludeHolidays,
-      users: selectedUsers[tables.indexOf(table)] || [], // Include selected users per table
+      users: selectedUsers[tableIndex] || [], // Include selected users per table
       data: table.tableConfig
         .map((item) =>
           item.data.map((res) => ({
@@ -518,8 +518,6 @@ const FormConstructor = () => {
             isSubmitting={isSubmitting} // Pass isSubmitting
           />
         ))}
-
-        {/* Removed Submit and Export buttons from here */}
       </div>
     </div>
   );
