@@ -143,13 +143,10 @@ const TableOverview = () => {
                     Имя таблицы
                   </th>
                   <th className="text-left px-6 py-4 text-gray-700 font-semibold">
-                    Дата создания
+                    Период создания
                   </th>
                   <th className="text-left px-6 py-4 text-gray-700 font-semibold">
                     Действия
-                  </th>
-                  <th className="text-left px-6 py-4 text-gray-700 font-semibold">
-                    Содержание
                   </th>
                 </tr>
               </thead>
@@ -161,7 +158,7 @@ const TableOverview = () => {
                   >
                     <td className="px-6 py-4 border-b">{table.name}</td>
                     <td className="px-6 py-4 border-b">
-                      {new Date(table.created_at).toLocaleDateString()}
+                      {new Date(table.start_date).toLocaleDateString()} - {new Date(table.end_date).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 border-b">
                       <Link
@@ -178,89 +175,8 @@ const TableOverview = () => {
                         <span>Удалить</span>
                       </button>
                     </td>
-                    <td className="px-6 py-4 border-b">
-                      <button
-                        onClick={() => toggleExpandTable(table.id)}
-                        className="text-blue-500 hover:text-blue-700 flex items-center"
-                      >
-                        {expandedTables[table.id] ? (
-                          <>
-                            <FaChevronUp className="mr-1" />
-                            Скрыть
-                          </>
-                        ) : (
-                          <>
-                            <FaChevronDown className="mr-1" />
-                            Показать
-                          </>
-                        )}
-                      </button>
-                    </td>
                   </tr>
                 ))}
-
-                {/* Expanded table content */}
-                {tables.map(
-                  (table) =>
-                    expandedTables[table.id] && (
-                      <tr key={`content-${table.id}`} className="bg-gray-100">
-                        <td colSpan="4" className="px-6 py-4">
-                          <h3 className="font-semibold text-gray-800 mb-2">
-                            Содержание таблицы: {table.name}
-                          </h3>
-
-                          {/* Handle case where table data is empty */}
-                          {expandedTables[table.id].data === null ? (
-                            <p className="text-gray-500">Эта таблица пуста.</p>
-                          ) : (
-                            <div className="overflow-x-auto">
-                              <table className="min-w-full bg-white shadow-md rounded-lg">
-                                <thead>
-                                  <tr className="bg-gray-200">
-                                    <th className="px-4 py-2 border-b">
-                                      Субъект
-                                    </th>
-                                    {expandedTables[table.id].data[0]?.columns.map(
-                                      (col, colIndex) => (
-                                        <th
-                                          key={colIndex}
-                                          className="px-4 py-2 border-b"
-                                        >
-                                          {/* Conditional display for formulas */}
-                                          {col.plan === "formula"
-                                            ? `Формула (${col.operation})`
-                                            : `${col.plan} (${operationMappings[col.operation] || col.operation})`}
-                                        </th>
-                                      )
-                                    )}
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {expandedTables[table.id].data.map(
-                                    (row, rowIndex) => (
-                                      <tr key={rowIndex}>
-                                        <td className="border px-4 py-2">
-                                          {getSubjectName(row.subject)}
-                                        </td>
-                                        {row.columns.map((col, colIndex) => (
-                                          <td
-                                            key={colIndex}
-                                            className="border px-4 py-2"
-                                          >
-                                            {col.value}
-                                          </td>
-                                        ))}
-                                      </tr>
-                                    )
-                                  )}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                )}
               </tbody>
             </table>
           ) : (
