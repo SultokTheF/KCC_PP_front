@@ -27,6 +27,18 @@ const FormConstructor = () => {
   const [objectsList, setObjectsList] = useState([]);
   const [selectedObjects, setSelectedObjects] = useState([]);
 
+  const [users, setUsers] = useState([]);
+  const [selectedUsers, setSelectedUsers] = useState([]); // Added state for selected users
+
+  const fetchUsers = async () => {
+    try {
+      const usersResponse = await axiosInstance.get(endpoints.USERS);
+      setUsers(usersResponse.data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
   // Fetch objects based on selected subject
   const fetchObjects = async (subjectId) => {
     try {
@@ -53,6 +65,7 @@ const FormConstructor = () => {
 
   useEffect(() => {
     fetchAllObjects();
+    fetchUsers();
   }, []);
 
   useEffect(() => {
@@ -302,6 +315,7 @@ const FormConstructor = () => {
       group_by_date: table.groupByDate,
       group_by_hour: table.groupByHour,
       exclude_holidays: table.excludeHolidays,
+      users: selectedUsers, // Include selected users
       data: table.tableConfig
         .map((item) =>
           item.data.map((res) => ({
@@ -482,34 +496,16 @@ const FormConstructor = () => {
             setSelectedObjects={setSelectedObjects}
             updateCellOperation={updateCellOperation} // Pass the update function
             allObjects={allObjects}
+            users={users} // Pass users
+            selectedUsers={selectedUsers} // Pass selectedUsers
+            setSelectedUsers={setSelectedUsers} // Pass setSelectedUsers
+            handleSubmit={handleSubmit} // Pass handleSubmit
+            exportToExcel={exportToExcel} // Pass exportToExcel
+            isSubmitting={isSubmitting} // Pass isSubmitting
           />
         ))}
 
-        {/* Submit and Export buttons */}
-        <div className="mt-6 flex space-x-4">
-          <button
-            onClick={handleSubmit}
-            className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors w-1/3 flex items-center justify-center"
-          >
-            <FaCheckCircle className="mr-2" />
-            <span>Отправить</span>
-          </button>
-
-          <button
-            onClick={exportToExcel}
-            className="p-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors w-1/3 flex items-center justify-center"
-          >
-            <FaCheckCircle className="mr-2" />
-            <span>Экспортировать в Excel</span>
-          </button>
-        </div>
-
-        {/* Loader */}
-        {isSubmitting && (
-          <div className="flex justify-center mt-4">
-            <Circles color="#00BFFF" height={80} width={80} />
-          </div>
-        )}
+        {/* Removed Submit and Export buttons from here */}
       </div>
     </div>
   );

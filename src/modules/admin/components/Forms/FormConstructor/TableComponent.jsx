@@ -1,10 +1,11 @@
 // TableComponent.jsx
 
 import React, { useState } from 'react';
-import { FaTrashAlt, FaPlusCircle, FaFileExport } from 'react-icons/fa';
+import { FaTrashAlt, FaPlusCircle, FaCheckCircle } from 'react-icons/fa'; // Added FaCheckCircle
 import FormulaEditor from './FormulaEditor';
 import { getSubjectName, getRowName } from './utils';
 import * as XLSX from 'xlsx'; // Import XLSX for export functionality
+import { Circles } from 'react-loader-spinner'; // Import loader
 
 const TableComponent = ({
   table,
@@ -27,11 +28,17 @@ const TableComponent = ({
   setSelectedObjects,
   updateCellOperation,
   allObjects,
+  users, // Passed from FormConstructor
+  selectedUsers, // Passed from FormConstructor
+  setSelectedUsers, // Passed from FormConstructor
+  handleSubmit, // Passed from FormConstructor
+  exportToExcel, // Passed from FormConstructor
+  isSubmitting, // Passed from FormConstructor
 }) => {
   // State to track expanded cells in the main table
   const [expandedCells, setExpandedCells] = useState({});
 
-  // State to track expanded cells in the subject-specific tables
+  // State to track expanded cells in the sub-tables
   const [expandedSubTableCells, setExpandedSubTableCells] = useState({});
 
   // Function to check if a sub-table for a subject is visible
@@ -73,109 +80,13 @@ const TableComponent = ({
     );
   };
 
-  // Function to export individual subject table to Excel
-  const exportSubjectToExcel = (subjectItem) => {
-    const wb = XLSX.utils.book_new();
-    const wsData = [];
-
-    // Header row
-    const header = ['Дата'];
-    if (table.groupByHour) {
-      header.push('Час');
-    }
-    header.push('Субъект');
-    subjectItem.data.forEach((res) => {
-      header.push(res.name);
-    });
-    wsData.push(header);
-
-    // Data rows
-    if (subjectItem.data[0]?.date_value?.length > 0) {
-      // Merge date_value arrays
-      const dateValueMap = {};
-      subjectItem.data.forEach((res) => {
-        res.date_value.forEach((dateItem) => {
-          const date = dateItem.date;
-          const value = dateItem.value;
-          if (!dateValueMap[date]) {
-            dateValueMap[date] = {};
-          }
-          if (Array.isArray(value)) {
-            // When group_by_hour is true, value might be an array of objects with hour and value
-            if (table.groupByHour) {
-              value.forEach((hourItem) => {
-                const hour = hourItem.hour;
-                if (!dateValueMap[date][hour]) {
-                  dateValueMap[date][hour] = {};
-                }
-                dateValueMap[date][hour][res.name] = hourItem.value;
-              });
-            } else {
-              // When group_by_hour is false, value is an array of numbers
-              dateValueMap[date][res.name] = value;
-            }
-          } else {
-            // value is a single number
-            dateValueMap[date][res.name] = value;
-          }
-        });
-      });
-
-      Object.keys(dateValueMap).forEach((date) => {
-        if (table.groupByHour) {
-          Object.keys(dateValueMap[date]).forEach((hour) => {
-            const row = [
-              date,
-              hour,
-              getRowName(subjectList, allObjects, subjectItem.subject, subjectItem.objects),
-            ];
-            subjectItem.data.forEach((res) => {
-              const value = dateValueMap[date][hour][res.name];
-              row.push(value !== null && value !== undefined ? value : '-');
-            });
-            wsData.push(row);
-          });
-        } else {
-          const row = [
-            date,
-            getRowName(subjectList, allObjects, subjectItem.subject, subjectItem.objects),
-          ];
-          subjectItem.data.forEach((res) => {
-            const value = dateValueMap[date][res.name];
-            row.push(value !== null && value !== undefined ? value : '-');
-          });
-          wsData.push(row);
-        }
-      });
-    } else {
-      // If no date_value, add a single row
-      const row = [
-        table.startDate || '-',
-        getRowName(subjectList, allObjects, subjectItem.subject, subjectItem.objects),
-      ];
-      subjectItem.data.forEach((res) => {
-        const value = res.value;
-        row.push(value !== null && value !== undefined ? value : '-');
-      });
-      wsData.push(row);
-    }
-
-    // Create worksheet and add to workbook
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    let sheetName = `${table.name}_${getSubjectName(
-      subjectList,
-      subjectItem.subject
-    )}`;
-
-    // Ensure sheet name does not exceed 31 characters
-    if (sheetName.length > 31) {
-      sheetName = sheetName.substring(0, 31);
-    }
-
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
-
-    // Save to file
-    XLSX.writeFile(wb, `${sheetName}.xlsx`);
+  // Function to handle user selection toggle
+  const handleUserToggle = (userId) => {
+    setSelectedUsers((prevSelectedUsers) =>
+      prevSelectedUsers.includes(userId)
+        ? prevSelectedUsers.filter((id) => id !== userId) // Remove unchecked user
+        : [...prevSelectedUsers, userId] // Add checked user
+    );
   };
 
   return (
@@ -412,6 +323,57 @@ const TableComponent = ({
         </table>
       </div>
 
+      {/* User Selection and Submit/Export Buttons */}
+      <div className="mb-6">
+        <h2 className="text-lg font-semibold mb-4">Выбор пользователей</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+          {users.map((user) => (
+            <div key={user.id} className="flex items-center">
+              <input
+                type="checkbox"
+                id={`user-${user.id}`}
+                checked={selectedUsers.includes(user.id)}
+                onChange={() => handleUserToggle(user.id)}
+                className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label
+                htmlFor={`user-${user.id}`}
+                className="ml-3 text-gray-700"
+              >
+                {user.email} ({user.role})
+              </label>
+            </div>
+          ))}
+        </div>
+
+        {/* Submit and Export buttons */}
+        <div className="flex space-x-4">
+          <button
+            onClick={handleSubmit}
+            className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors w-1/2 flex items-center justify-center"
+            disabled={isSubmitting} // Disable button when submitting
+          >
+            <FaCheckCircle className="mr-2" />
+            <span>Отправить</span>
+          </button>
+
+          <button
+            onClick={exportToExcel}
+            className="p-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors w-1/2 flex items-center justify-center"
+          >
+            <FaCheckCircle className="mr-2" />
+            <span>Экспортировать в Excel</span>
+          </button>
+        </div>
+
+        {/* Loader */}
+        {isSubmitting && (
+          <div className="flex justify-center mt-4">
+            <Circles color="#00BFFF" height={80} width={80} />
+          </div>
+        )}
+      </div>
+
       {/* Subject-Specific Tables */}
       {table.groupByDate || table.groupByHour ? (
         <>
@@ -430,13 +392,7 @@ const TableComponent = ({
                       ? `Скрыть данные для ${getRowName(subjectList, allObjects, item.subject, item.objects)}`
                       : `Показать данные для ${getRowName(subjectList, allObjects, item.subject, item.objects)}`}
                   </button>
-                  <button
-                    onClick={() => exportSubjectToExcel(item)}
-                    className="p-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors flex items-center space-x-1"
-                  >
-                    <FaFileExport className="mr-1" />
-                    <span>Экспортировать</span>
-                  </button>
+                  {/* Removed the export button */}
                 </div>
 
                 {isSubTableVisible(uniqueKey) && (
