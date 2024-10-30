@@ -5,9 +5,14 @@ import Profile from "./components/Profile/Profile";
 import Graphs from "./components/Reports/Graphs";
 import HoursTable from "./components/Reports/HoursTable";
 
+import TableOverview from "./components/Reports/Forms/TableOverview/TableOverview";
+import FormConstructor from "./components/Reports/Forms/FormConstructor/FormContructor";
+
 export {
   Dashboard,
   Profile,
   Graphs,
-  HoursTable
+  HoursTable,
+  TableOverview as UserTableOverview,
+  FormConstructor as UserFormConstructor,
 }

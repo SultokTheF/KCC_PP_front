@@ -2,7 +2,9 @@ import {
   Dashboard as UserDashboard,
   Profile as UserProfile,
   Graphs as UserGraphs,
-  HoursTable as UserHoursTable
+  HoursTable as UserHoursTable,
+  UserTableOverview, 
+  UserFormConstructor
 } from "./user";
 
 import {
@@ -38,7 +40,9 @@ export {
   UserDashboard,
   UserProfile,
   UserGraphs,
-  UserHoursTable
+  UserHoursTable,
+  UserTableOverview,
+  UserFormConstructor,
 }
 
 export {

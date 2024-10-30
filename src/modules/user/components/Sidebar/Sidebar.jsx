@@ -90,6 +90,14 @@ export default function Sidebar() {
                   Просмотр Данных
                 </ListItem>
               </a>
+              <a href="/forms/table">
+                <ListItem>
+                  <ListItemPrefix>
+                    <ChevronRightIcon strokeWidth={3} className="h-3 w-5" />
+                  </ListItemPrefix>
+                  Отчетные Формы
+                </ListItem>
+              </a>
             </List>
           </AccordionBody>
         </Accordion>

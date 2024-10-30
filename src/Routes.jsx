@@ -12,6 +12,8 @@ import {
   UserProfile,
   UserGraphs,
   UserHoursTable,
+  UserTableOverview,
+  UserFormConstructor,
 
   // Dispatcher
   DispatcherProfile,
@@ -59,6 +61,8 @@ const Router = ({ userRole }) => {
 
           <Route path="/graphs" element={<UserGraphs />} />
           <Route path="/hours-table" element={<UserHoursTable />} />
+          <Route path="/forms/table" element={<UserTableOverview />} />
+          <Route path="/forms/table/:id" element={<UserFormConstructor />} />
           <Route path="*" element={<PageNotFound />} />
         </>
       )}
