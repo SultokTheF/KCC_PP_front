@@ -25,6 +25,7 @@ import SingleObject from './components/Entities/Objects/SingleObject';
 // Forms
 import FormContructor from './components/Forms/FormConstructor/FormContructor'
 import TableOverview from './components/Forms/TableOverview/TableOverview';
+import FormulaConstructor from './components/Forms/FormulaConstructor/FomulaConstructor';
 
 import SubjectPlans from './components/Plans/SubjectPlans';
 
@@ -62,4 +63,5 @@ export {
   // Forms
   FormContructor,
   TableOverview,
+  FormulaConstructor
 }

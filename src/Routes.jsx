@@ -43,6 +43,7 @@ import {
   AdminVolumes,
   AdminFormContructor,
   AdminTableOverview,
+  AdminFormulaConstructor
 } from "./modules";
 
 const Router = ({ userRole }) => {
@@ -95,6 +96,7 @@ const Router = ({ userRole }) => {
           <Route path="/reports/hour-table" element={<AdminHoursTable />} />
           <Route path="/forms/table" element={<AdminTableOverview />} />
           <Route path="/forms/table/:id" element={<AdminFormContructor />} />
+          <Route path="/forms/formula" element={<AdminFormulaConstructor />} />
 
           <Route path="/subjects" element={<AdminSubjectsList />} />
           <Route path="/subjects/:id" element={<AdminSingleSubject />} />

@@ -286,6 +286,14 @@ export default function Sidebar() {
                     Конструктор отчетов
                 </ListItem>
               </a>
+              <a href="/forms/formula">
+                <ListItem>
+                  <ListItemPrefix>
+                    <ChevronRightIcon strokeWidth={3} className="h-3 w-5" />
+                  </ListItemPrefix>
+                    Конструктор формул
+                </ListItem>
+              </a>
             </List>
           </AccordionBody>
         </Accordion>

@@ -44,6 +44,7 @@ const endpoints = {
   // Tables
   TABLE: (tableId) => `api/table/${tableId}/`,
   TABLES: `api/table/`,
+  FORMULA: `api/formula/`
 };
 
 const axiosInstance = axios.create({
