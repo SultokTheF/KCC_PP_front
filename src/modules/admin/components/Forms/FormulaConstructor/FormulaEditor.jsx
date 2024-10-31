@@ -1,9 +1,10 @@
-// FormulaEditor.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Editor from '@monaco-editor/react';
 
 const FormulaEditor = ({ value, onChange, existingFormulas = [] }) => {
   const [editorValue, setEditorValue] = useState(value);
+  const monacoRef = useRef(null);
+  const completionProviderRef = useRef(null);
 
   // Define the functions and variables
   const allowedFunctions = [
@@ -52,13 +53,25 @@ const FormulaEditor = ({ value, onChange, existingFormulas = [] }) => {
     });
   };
 
-  // onMount gives access to the Monaco instance
   const handleEditorDidMount = (editor, monaco) => {
+    monacoRef.current = monaco;
+
     defineCustomTheme(monaco);
     monaco.editor.setTheme('customLightTheme');
 
-    // Register autocompletion for functions and variables
-    monaco.languages.registerCompletionItemProvider('plaintext', {
+    // Register the completion provider initially
+    registerCompletionProvider(monaco);
+  };
+
+  // Function to register or update the completion provider
+  const registerCompletionProvider = (monaco) => {
+    // Dispose of the previous completion provider if it exists
+    if (completionProviderRef.current) {
+      completionProviderRef.current.dispose();
+    }
+
+    // Register a new completion provider
+    completionProviderRef.current = monaco.languages.registerCompletionItemProvider('plaintext', {
       provideCompletionItems: () => {
         const suggestions = [
           ...allowedFunctions.map((func) => ({
@@ -78,6 +91,19 @@ const FormulaEditor = ({ value, onChange, existingFormulas = [] }) => {
       },
     });
   };
+
+  // Re-register the completion provider whenever allVariables change
+  useEffect(() => {
+    if (monacoRef.current) {
+      registerCompletionProvider(monacoRef.current);
+    }
+    // Cleanup function to dispose of the provider when the component unmounts
+    return () => {
+      if (completionProviderRef.current) {
+        completionProviderRef.current.dispose();
+      }
+    };
+  }, [allVariables]);
 
   return (
     <Editor

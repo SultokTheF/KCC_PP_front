@@ -1,8 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Editor from '@monaco-editor/react';
+import { axiosInstance, endpoints } from '../../../../../services/apiConfig';
 
 const FormulaEditor = ({ value, onChange }) => {
   const [editorValue, setEditorValue] = useState(value);
+  const monacoRef = useRef(null);
+  const completionProviderRef = useRef(null);
+  const [formulaList, setFormulaList] = useState([]);
+
+  // Fetch existing formulas when the component mounts
+  useEffect(() => {
+    fetchFormulaVariables();
+  }, []);
+
+  const fetchFormulaVariables = async () => {
+    try {
+      const response = await axiosInstance.get(endpoints.FORMULA);
+      setFormulaList(response.data);
+    } catch (error) {
+      console.error("Ошибка при получении формул", error);
+    }
+  };
 
   // Define the functions and variables
   const allowedFunctions = [
@@ -10,9 +28,19 @@ const FormulaEditor = ({ value, onChange }) => {
   ];
 
   const allowedVariables = [
-    'P1', 'P2', 'P3', 'F1', 'F2', 'P1_Gen', 'P2_Gen', 'P3_Gen', 'F1_Gen', 'F2_Gen', 'EZ_T', 'EZ_Base_T', 'EZ_T_ВИЭ', 'EZ_T_РЭК', 
+    'P1', 'P2', 'P3', 'F1', 'F2', 'P1_Gen', 'P2_Gen', 'P3_Gen', 'F1_Gen', 'F2_Gen', 'EZ_T', 'EZ_Base_T', 'EZ_T_ВИЭ', 'EZ_T_РЭК',
     'Pred_T', 'Wo_Prov_T', 'W_Prov_T', 'BE_T', 'OD_T', 'T_Coef', 'plan_t', 'direction',
   ];
+
+  // Include existing formulas as variables
+  const formulaVariables = formulaList.map((formula) => formula.name);
+
+  // Merge allowed variables and formula variables
+  const allVariables = [...allowedVariables, ...formulaVariables];
+
+  useEffect(() => {
+    setEditorValue(value);
+  }, [value]);
 
   const handleEditorChange = (newValue) => {
     setEditorValue(newValue);
@@ -41,32 +69,57 @@ const FormulaEditor = ({ value, onChange }) => {
     });
   };
 
-  // onMount gives access to the Monaco instance
   const handleEditorDidMount = (editor, monaco) => {
+    monacoRef.current = monaco;
+
     defineCustomTheme(monaco);
     monaco.editor.setTheme('customLightTheme');
 
-    // Register autocompletion for functions and variables
-    monaco.languages.registerCompletionItemProvider('plaintext', {
+    // Register the completion provider initially
+    registerCompletionProvider(monaco);
+  };
+
+  // Function to register or update the completion provider
+  const registerCompletionProvider = (monaco) => {
+    // Dispose of the previous completion provider if it exists
+    if (completionProviderRef.current) {
+      completionProviderRef.current.dispose();
+    }
+
+    // Register a new completion provider
+    completionProviderRef.current = monaco.languages.registerCompletionItemProvider('plaintext', {
       provideCompletionItems: () => {
         const suggestions = [
-          ...allowedFunctions.map(func => ({
+          ...allowedFunctions.map((func) => ({
             label: func,
             kind: monaco.languages.CompletionItemKind.Function,
             insertText: `${func}()`,
-            documentation: `${func} function`,
+            documentation: `${func} функция`,
           })),
-          ...allowedVariables.map(variable => ({
+          ...allVariables.map((variable) => ({
             label: variable,
             kind: monaco.languages.CompletionItemKind.Variable,
             insertText: variable,
-            documentation: `${variable} variable`,
+            documentation: `Переменная ${variable}`,
           })),
         ];
         return { suggestions };
       },
     });
   };
+
+  // Re-register the completion provider whenever allVariables change
+  useEffect(() => {
+    if (monacoRef.current) {
+      registerCompletionProvider(monacoRef.current);
+    }
+    // Cleanup function to dispose of the provider when the component unmounts
+    return () => {
+      if (completionProviderRef.current) {
+        completionProviderRef.current.dispose();
+      }
+    };
+  }, [allVariables]);
 
   return (
     <Editor
