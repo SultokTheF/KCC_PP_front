@@ -40,26 +40,26 @@ const Dashboard = () => {
   };
 
   const fetchDaysAndHours = async () => {
-    if (selectedDate) {
+    if (selectedDate && selectedData.selectedSubject) {
       try {
-        const dayPromises = subjectsList.map(subject =>
-          axiosInstance.get(endpoints.DAYS, {
-            params: {
-              day: selectedDate,
-              sub: subject.id,
-            }
-          }).catch((error) => {
-            if (error.response && error.response.status === 404) {
-              return { data: [] };  // Return an empty array if no days are found
-            }
-            throw error;
-          })
-        );
+        // Fetch days
+        const daysResponse = await axiosInstance.get(endpoints.DAYS, {
+          params: {
+            day: selectedDate,
+            sub: selectedData.selectedSubject,
+          }
+        }).catch((error) => {
+          if (error.response && error.response.status === 404) {
+            return { data: [] };  // Return an empty array if no days are found
+          }
+          throw error;
+        });
+        const allDays = daysResponse.data || [];
+        setDaysList(allDays);
 
-        const daysResponses = await Promise.all(dayPromises);
-        const allDays = daysResponses.map(response => response.data).flat();
-
-        if (selectedData.selectedSubject) {
+        // Fetch hours
+        if (allDays.length > 0) {
+          const dayPlan = allDays[0];  // Assuming the first dayPlan
           const hoursResponse = await axiosInstance.get(endpoints.HOURS, {
             params: {
               day: selectedDate,
@@ -73,15 +73,16 @@ const Dashboard = () => {
           });
           setHoursList(hoursResponse.data);
         } else {
-          setHoursList([]);  // Set empty if no selected subject
+          setHoursList([]);  // No dayPlan, so no hours
         }
-
-        setDaysList(allDays);
       } catch (error) {
         console.error('Error fetching days and hours:', error);
         setDaysList([]);  // Reset days list to empty on error
         setHoursList([]);  // Reset hours list to empty on error
       }
+    } else {
+      setDaysList([]);
+      setHoursList([]);
     }
   };
 
@@ -91,7 +92,17 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDaysAndHours();
-  }, [selectedDate]);
+  }, [selectedDate, selectedData.selectedSubject]);
+
+  // Ensure the selected subject is set only once if not already set
+  useEffect(() => {
+    if (subjectsList.length > 0 && !selectedData.selectedSubject) {
+      setSelectedData((prevData) => ({
+        ...prevData,
+        selectedSubject: subjectsList[0].id
+      }));
+    }
+  }, [subjectsList, setSelectedData]);
 
   return (
     <div className="flex">

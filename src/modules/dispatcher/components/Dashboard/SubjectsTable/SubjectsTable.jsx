@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
+import * as XLSX from 'xlsx'; // Import the xlsx library
 
 const timeIntervals = [
   '00 - 01', '01 - 02', '02 - 03', '03 - 04', '04 - 05', '05 - 06',
@@ -12,60 +13,78 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
   const selectedSubject = subjectsList.find(subject => subject.id === selectedData.selectedSubject);
   const dayPlan = daysList?.find(day => day.subject === selectedSubject?.id && day.date.split('T')[0] === selectedDate.split('T')[0]) || null;
 
-  const hourPlan = dayPlan ? hoursList.filter(hour => hour.day === dayPlan?.id).sort((a, b) => a.hour - b.hour) : [];
+  // Initialize localHourPlan with hoursList data
+  const [localHourPlan, setLocalHourPlan] = useState([]);
+
+  useEffect(() => {
+    // Map hoursList to localHourPlan, ensuring index corresponds to hour
+    const initialHourPlan = Array(24).fill({}).map((_, index) => {
+      const hourData = hoursList.find(hour => hour.hour === index + 1); // Assuming hours are from 1 to 24
+      return {
+        hour: index + 1,
+        P1: hourData?.P1 || 0,
+        P1_Gen: hourData?.P1_Gen || 0,
+        coefficient: hourData?.coefficient || 0,
+        volume: hourData?.volume || 0,
+        message: hourData?.message || '',
+        // Other fields as needed
+      };
+    });
+    setLocalHourPlan(initialHourPlan);
+  }, [hoursList]);
 
   const [showMessageCol, setShowMessageCol] = useState(false);
-  const [messages, setMessages] = useState([]);
   const [showButtons, setShowButtons] = useState(true);
   const [warningMessage, setWarningMessage] = useState('');
 
-  // Ensure the selected subject is set only once if not already set
-  useEffect(() => {
-    if (subjectsList.length > 0 && !selectedData.selectedSubject) {
-      setSelectedData((prevData) => ({
-        ...prevData,
-        selectedSubject: subjectsList[0].id
-      }));
-    }
-  }, [subjectsList, setSelectedData]);
+  const fileInputRef = useRef(null);
 
-  // Update messages based on hourPlan
-  useEffect(() => {
-    if (hourPlan.length > 0) {
-      setMessages(hourPlan.map(hour => hour.message || ""));
-    }
-  }, []);
+  const statusMap = {
+    "PRIMARY_PLAN": "Первичный план",
+    "KCCPP_PLAN": "План КЦПП",
+    "KEGOS_PLAN": "План КЕГОС",
+    "FACT1": "Факт 1",
+    "FACT2": "Факт 2",
+    "COMPLETED": "Завершен",
+    // ... other statuses if any
+  };
 
   const getStatus = (subject) => {
     const day = daysList?.find(day => day.subject === subject.id && day.date.split('T')[0] === selectedDate.split('T')[0]);
 
-    if (day?.status === "PRIMARY_PLAN") {
-      return "-П1-";
-    } else if (day?.status === "KCCPP_PLAN") {
-      return "-П1-П2-";
-    } else if (day?.status === "KEGOS_PLAN") {
-      return "-П1-П2-П3-";
-    } else if (day?.status === "FACT1" || day?.status === "FACT2" || day?.status === "COMPLETED") {
-      return "-П1-П2-П3-Ф-";
-    }
-
-    return "-";
+    return statusMap[day?.status] || "Нет данных";
   };
 
   const handleMessagesChange = (index, value) => {
-    const updatedMessages = [...messages];
-    updatedMessages[index] = value;
-    setMessages(updatedMessages);
+    const updatedHourPlan = [...localHourPlan];
+    updatedHourPlan[index].message = value;
+    setLocalHourPlan(updatedHourPlan);
   };
 
   const calculateP2 = (index, P1) => {
-    const P2 = P1 * 1;
-    return P2 < 0 ? "П2 отрицательное" : P2;
+    const coefficient = localHourPlan[index]?.coefficient || 0;
+    const volume = localHourPlan[index]?.volume || 0;
+    const P2 = P1 * coefficient + volume;
+    return P2 < 0 ? "П2 отрицательное" : P2.toFixed(2);
   };
 
   const calculateP2Gen = (index, P1Gen) => {
-    const P2Gen = P1Gen * 1;
-    return P2Gen < 0 ? "П2_Gen отрицательное" : P2Gen;
+    const coefficient = localHourPlan[index]?.coefficient || 0;
+    const volume = localHourPlan[index]?.volume || 0;
+    const P2Gen = P1Gen * coefficient + volume;
+    return P2Gen < 0 ? "П2_Gen отрицательное" : P2Gen.toFixed(2);
+  };
+
+  const handleCoefficientChange = (index, value) => {
+    const updatedHourPlan = [...localHourPlan];
+    updatedHourPlan[index].coefficient = parseFloat(value) || 0;
+    setLocalHourPlan(updatedHourPlan);
+  };
+
+  const handleVolumeChange = (index, value) => {
+    const updatedHourPlan = [...localHourPlan];
+    updatedHourPlan[index].volume = parseInt(value, 10) || 0;
+    setLocalHourPlan(updatedHourPlan);
   };
 
   const handleDisapprove = () => {
@@ -87,7 +106,8 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
         const calculateP2Response = await axiosInstance.post(endpoints.CALCULATE_P2, {
           subject: selectedSubject.id,
           date: selectedDate,
-          volume: hourPlan.map(hour => hour.volume || 0), // Example for volumes
+          volume: localHourPlan.map(hour => hour.volume || 0),
+          coefficient: localHourPlan.map(hour => hour.coefficient || 0),
           plan: "P2"
         });
 
@@ -102,6 +122,93 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
     }
   };
 
+  const handleSave = async () => {
+    try {
+      const coefficients = localHourPlan.map(hour => hour.coefficient);
+      const volumes = localHourPlan.map(hour => hour.volume);
+
+      const response = await axiosInstance.post(endpoints.PLANS_CREATE(dayPlan?.id), {
+        plan: {
+          coefficient: coefficients,
+          // volume: volumes,
+        }
+      });
+
+      const response_2 = await axiosInstance.post(endpoints.PLANS_CREATE(dayPlan?.id), {
+        plan: {
+          // coefficient: coefficients,
+          volume: volumes,
+        }
+      });
+
+      if (response.status === 201 && response_2.status === 201) {
+        setWarningMessage('Данные успешно сохранены.');
+      } else {
+        setWarningMessage('Ошибка при сохранении данных.');
+      }
+    } catch (error) {
+      console.error('Ошибка при сохранении данных:', error);
+      setWarningMessage('Ошибка при сохранении данных.');
+    }
+  };
+
+  const handleImportFromFile = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        parseExcelData(jsonData);
+      };
+      reader.readAsArrayBuffer(file);
+    }
+  };
+
+  const parseExcelData = (rows) => {
+    const updatedHourPlan = [...localHourPlan];
+    rows.forEach((row, index) => {
+      if (index === 0) return; // Skip header row
+      const [hourStr, coefficientStr, volumeStr] = row;
+      const hour = parseInt(hourStr, 10);
+      const coefficient = parseFloat(coefficientStr);
+      const volume = parseInt(volumeStr, 10);
+      const idx = hour - 1; // Assuming hours are from 1 to 24
+      if (idx >= 0 && idx < 24) {
+        updatedHourPlan[idx].coefficient = coefficient;
+        updatedHourPlan[idx].volume = volume;
+      }
+    });
+    setLocalHourPlan(updatedHourPlan);
+  };
+
+  const handleExport = () => {
+    const exportData = [
+      ['Hour', 'Coefficient', 'Volume'],
+      ...localHourPlan.map(hourData => [hourData.hour, hourData.coefficient, hourData.volume])
+    ];
+    const worksheet = XLSX.utils.aoa_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Coefficients_Volumes');
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(data);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `coefficients_volumes_${selectedSubject.subject_name}_${selectedDate}.xlsx`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div>
       {warningMessage && (
@@ -110,6 +217,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
         </div>
       )}
 
+      {/* Existing Status Table */}
       <table className="w-full text-sm text-center rtl:text-right text-gray-500 dark:text-gray-40 mb-3">
         <thead className="text-xs text-gray-700 uppercase bg-gray-300 dark:bg-gray-700 dark:text-gray-400">
           <tr>
@@ -138,6 +246,32 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
         </tbody>
       </table>
 
+      {/* Import and Export Buttons */}
+      <div className="flex justify-end space-x-2 my-4">
+        <button
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+          onClick={handleImportFromFile}
+        >
+          Импорт из файла
+        </button>
+        <button
+          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
+          onClick={handleExport}
+        >
+          Экспорт
+        </button>
+      </div>
+
+      {/* Hidden File Input */}
+      <input
+        type="file"
+        accept=".xlsx"
+        ref={fileInputRef}
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+      />
+
+      {/* Existing Table */}
       <table className="w-full text-sm text-center rtl:text-right text-gray-500 dark:text-gray-40 mb-3">
         <thead className="text-xs text-gray-700 uppercase bg-gray-300 dark:bg-gray-700 dark:text-gray-400">
           <tr>
@@ -152,49 +286,68 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
           </tr>
         </thead>
         <tbody>
-          {timeIntervals.map((time, index) => (
-            <tr key={time}>
-              <td className={`border`}>{time}</td>
-              <td className={`border`}>{hourPlan[index]?.P1 || "-"}</td>
-              {selectedSubject?.subject_type === "ЭПО" && <td className={`border`}>{hourPlan[index]?.P1_Gen || "-"}</td>}
-              <td className={`border`}>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={hourPlan[index]?.coefficient || ""}
-                  className="w-full text-center rounded"
-                />
-              </td>
-              <td className={`border`}>
-                <input
-                  type="number"
-                  value={hourPlan[index]?.volume || ""}
-                  className="w-full text-center rounded"
-                />
-              </td>
-              <td className={`border`}>
-                {calculateP2(index, hourPlan[index]?.P1 || 0)}
-              </td>
-              {selectedSubject?.subject_type === "ЭПО" && (
-                <td className={`border`}>
-                  {calculateP2Gen(index, hourPlan[index]?.P1_Gen || 0)}
-                </td>
-              )}
-              {showMessageCol && (
+          {timeIntervals.map((time, index) => {
+            const P1 = localHourPlan[index]?.P1 || 0;
+            const P1_Gen = localHourPlan[index]?.P1_Gen || 0;
+            const P2 = calculateP2(index, P1);
+            const P2Gen = selectedSubject?.subject_type === "ЭПО" ? calculateP2Gen(index, P1_Gen) : null;
+
+            return (
+              <tr key={time}>
+                <td className={`border`}>{time}</td>
+                <td className={`border`}>{P1}</td>
+                {selectedSubject?.subject_type === "ЭПО" && <td className={`border`}>{P1_Gen}</td>}
                 <td className={`border`}>
                   <input
-                    type="text"
-                    value={messages[index] || ""}
-                    onChange={(e) => handleMessagesChange(index, e.target.value)}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={localHourPlan[index]?.coefficient || ""}
+                    onChange={(e) => handleCoefficientChange(index, e.target.value)}
                     className="w-full text-center rounded"
                   />
                 </td>
-              )}
-            </tr>
-          ))}
+                <td className={`border`}>
+                  <input
+                    type="number"
+                    value={localHourPlan[index]?.volume || ""}
+                    onChange={(e) => handleVolumeChange(index, e.target.value)}
+                    className="w-full text-center rounded"
+                  />
+                </td>
+                <td className={`border ${P2 < 0 ? 'bg-red-100' : ''}`}>
+                  {P2}
+                </td>
+                {selectedSubject?.subject_type === "ЭПО" && (
+                  <td className={`border ${P2Gen < 0 ? 'bg-red-100' : ''}`}>
+                    {P2Gen}
+                  </td>
+                )}
+                {showMessageCol && (
+                  <td className={`border`}>
+                    <input
+                      type="text"
+                      value={localHourPlan[index]?.message || ""}
+                      onChange={(e) => handleMessagesChange(index, e.target.value)}
+                      className="w-full text-center rounded"
+                    />
+                  </td>
+                )}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
+
+      {/* Save Button */}
+      <div className="flex justify-end space-x-2 mt-4">
+        <button
+          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
+          onClick={handleSave}
+        >
+          Сохранить
+        </button>
+      </div>
 
       {showButtons && (
         <div className="flex justify-end space-x-2 mt-4">
@@ -237,6 +390,6 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
       )}
     </div>
   );
-}
+};
 
 export default SubjectTable;

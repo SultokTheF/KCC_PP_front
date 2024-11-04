@@ -55,6 +55,7 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
 
         if (response.status >= 200 && response.status < 300) {
           console.log('Plan created successfully:', response.data);
+          
           window.location.href = '/dashboard';
         }
 
