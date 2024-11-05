@@ -8,6 +8,7 @@ const endpoints = {
   LOGIN: `user/token/login/`,
   USERS: `user/users/`,
   GET_USER: `user/token/get`,
+  CHANGE_PASSWORD: (id) => `user/token/change-password/${id}/`,
 
   // Subjects   
   SUBJECTS: `api/subjects/`,
