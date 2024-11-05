@@ -228,11 +228,11 @@ const HoursTable = () => {
         EZ_T_ВИЭ: baseTariff ? baseTariff.EZ_T_ВИЭ : 0.0,
         EZ_T_РЭК: baseTariff ? baseTariff.EZ_T_РЭК : 0.0,
         T_Coef: hour.T_Coef,
-        W_Prov_P1_Gen: hour.W_Prov_P1_Gen,
+        // W_Prov_P1_Gen: hour.W_Prov_P1_Gen,
         W_Prov_P3: hour.W_Prov_P3,
         W_Prov_P3_Gen: hour.W_Prov_P3_Gen,
         W_Prov_F1: hour.W_Prov_F1,
-        // W_Prov_F1_Gen: hour.W_Prov_F1_Gen,
+        W_Prov_F1_Gen: hour.W_Prov_F1_Gen,
         W_Prov_F2: hour.W_Prov_F2,
         W_Prov_F2_Gen: hour.W_Prov_F2_Gen,
         direction: baseTariff ? baseTariff.direction : '-',
@@ -447,10 +447,11 @@ const HoursTable = () => {
                       'BE_T',
                       'OD_T',
                       'T_Coef',
-                      'W_Prov_P1_Gen',
+                      // 'W_Prov_P1_Gen',
                       'W_Prov_P3',
                       'W_Prov_P3_Gen',
                       'W_Prov_F1',
+                      'W_Prov_F1_Gen',
                       'W_Prov_F2',
                       'W_Prov_F2_Gen',
                       'direction',
@@ -562,9 +563,9 @@ const HoursTable = () => {
                         <td className="px-2 py-1 border-b border-gray-200">
                           {row.T_Coef}
                         </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
+                        {/* <td className="px-2 py-1 border-b border-gray-200">
                           {row.W_Prov_P1_Gen}
-                        </td>
+                        </td> */}
                         <td className="px-2 py-1 border-b border-gray-200">
                           {row.W_Prov_P3}
                         </td>
@@ -574,9 +575,9 @@ const HoursTable = () => {
                         <td className="px-2 py-1 border-b border-gray-200">
                           {row.W_Prov_F1}
                         </td>
-                        {/* <td className="px-2 py-1 border-b border-gray-200">
+                        <td className="px-2 py-1 border-b border-gray-200">
                           {row.W_Prov_F1_Gen}
-                        </td> */}
+                        </td>
                         <td className="px-2 py-1 border-b border-gray-200">
                           {row.W_Prov_F2}
                         </td>
