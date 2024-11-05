@@ -13,7 +13,7 @@ const FormulaEditor = ({ value, onChange, existingFormulas = [] }) => {
 
   const allowedVariables = [
     'P1', 'P2', 'P3', 'F1', 'F2', 'P1_Gen', 'P2_Gen', 'P3_Gen', 'F1_Gen', 'F2_Gen', 'EZ_T', 'EZ_Base_T', 'EZ_T_ВИЭ', 'EZ_T_РЭК',
-    'Pred_T', 'Wo_Prov_T', 'W_Prov_T', 'BE_T', 'OD_T', 'T_Coef', 'plan_t', 'direction',
+    'Pred_T', 'Wo_Prov_T', 'W_Prov_T', 'W_Prov_P3', 'W_Prov_P3_Gen', 'W_Prov_F1', 'W_Prov_F1_Gen', 'W_Prov_F2', 'W_Prov_F2_Gen', 'BE_T', 'OD_T', 'T_Coef', 'plan_t', 'direction', 'subject_name', 'subject_type', 'subject_bin', 'object_name'
   ];
 
   // Include existing formulas as variables
