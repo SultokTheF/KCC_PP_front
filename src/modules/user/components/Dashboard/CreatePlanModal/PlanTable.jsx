@@ -1,3 +1,5 @@
+// PlanTable.js
+
 import React, { useState, useEffect } from "react";
 
 const PlanTable = ({ date, object, mode, handleTableChange, plansP }) => {
@@ -54,9 +56,18 @@ const PlanTable = ({ date, object, mode, handleTableChange, plansP }) => {
   }
 
   useEffect(() => {
+    console.log('plansP:', plansP);
+    console.log('mode:', mode);
     const updatedPlans = [];
     for (let i = 0; i < 24; i++) {
-      const planValue = plansP[i] ? (plansP[i][getPlanMode(mode)] || plansP[i]) : '';
+      let planValue = '';
+      if (plansP[i] !== undefined && plansP[i] !== null) {
+        if (typeof plansP[i] === 'object') {
+          planValue = plansP[i][getPlanMode(mode)] || '';
+        } else {
+          planValue = plansP[i];
+        }
+      }
       updatedPlans.push(planValue);
     }
     setPlans(updatedPlans);
@@ -64,7 +75,7 @@ const PlanTable = ({ date, object, mode, handleTableChange, plansP }) => {
 
   const handleChange = (index, value) => {
     const updatedPlans = [...plans];
-    updatedPlans[index] = parseInt(value);
+    updatedPlans[index] = parseInt(value) || 0;
     setPlans(updatedPlans);
     handleTableChange(object, date, updatedPlans, mode);
   };
@@ -89,7 +100,7 @@ const PlanTable = ({ date, object, mode, handleTableChange, plansP }) => {
                       required
                     />
                     <label htmlFor={index}>МВт</label> <br />
-                    {mode === "P1" && plansP[index + 12]?.message !== "В ожидании" && <label className="text-orange-500" htmlFor={index}>{plansP[index]?.message}</label>}
+                    {mode === "P1" && plansP[index]?.message !== "В ожидании" && <label className="text-orange-500" htmlFor={index}>{plansP[index]?.message}</label>}
                   </div>
                   <div className="border px-3 bg-gray-200 mx-3 my-1 rounded-lg text-center">
                     <label htmlFor={index + 12}>{timeIntervals[index + 12]}</label>

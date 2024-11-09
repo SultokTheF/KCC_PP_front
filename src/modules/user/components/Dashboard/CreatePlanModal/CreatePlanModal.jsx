@@ -1,3 +1,5 @@
+// PlanModal.js
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@material-tailwind/react";
 import Modal from 'react-modal';
@@ -18,10 +20,11 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
   const [formData, setFormData] = useState({
     object: selectedObject?.id || 0,
     date: selectedDate.split('T')[0] || new Date().toISOString().split('T')[0],
-    plan: plans,
+    plan: [],
     mode: planMode
   });
 
+  // Handle table changes
   const handleTableChange = (object, date, plans, mode) => {
     setFormData({
       object: object,
@@ -39,7 +42,7 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
       plan: plans,
       mode: planMode
     }));
-  }, [selectedDate, selectedObject, planMode]);
+  }, [selectedDate, selectedObject, planMode, plans]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -87,10 +90,12 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
 
     // Create a new workbook and worksheet
     const workbook = XLSXUtils.book_new();
-    const worksheet = XLSXUtils.aoa_to_sheet([
+    const worksheetData = [
       [`Объект: ${selectedObject?.object_name}`, `Дата: ${date}`, mode],
-      ...plan.map((item) => ['', '', item[mode]]),
-    ]);
+      ['Час', 'Значение'],
+      ...slicedPlan.map((value, index) => [index + 1, value])
+    ];
+    const worksheet = XLSXUtils.aoa_to_sheet(worksheetData);
 
     // Add the worksheet to the workbook
     XLSXUtils.book_append_sheet(workbook, worksheet, 'PlanData');
@@ -112,13 +117,14 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
         const workbook = XLSXRead(data, { type: 'array' });
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         const parsedData = XLSXUtils.sheet_to_json(worksheet, { header: 1 });
+        
+        // Assuming that the data starts from row 3 (after headers)
+        const planValues = parsedData.slice(2).map(row => row[1]);
 
-        setFormData({
-          object: formData.object,
-          date: formData.date,
-          plan: parsedData.slice(1).map(item => item[2]),
-          mode: formData.mode,
-        });
+        setFormData((prevData) => ({
+          ...prevData,
+          plan: planValues,
+        }));
       };
 
       fileReader.readAsArrayBuffer(importedData);
@@ -142,9 +148,11 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
       const response = await axiosInstance.get(endpoints.PLANS_GET(formData.object, formData.date, 'P2'));
       if (response.status === 200) {
         const planData = response.data.plan;
+        console.log('P2 data fetched:', planData);
+
         setFormData((prevData) => ({
           ...prevData,
-          plan: planData,
+          plan: planData, // Assuming planData is an array of numbers
         }));
       }
     } catch (error) {
@@ -157,6 +165,8 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
       const response = await axiosInstance.get(endpoints.PLANS_GET(formData.object, formData.date, 'P3'));
       if (response.status === 200) {
         const planData = response.data.plan;
+        console.log('P3 data fetched:', planData);
+
         setFormData((prevData) => ({
           ...prevData,
           plan: planData,
@@ -229,6 +239,8 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
                     >
                       <option value="P1">Первичный план</option>
                       {selectedObject?.object_type === "ЭПО" && (<option value="GP1">Первичный план Генерации</option>)}
+                      <option value="P2">План КЦПП</option>
+                      {selectedObject?.object_type === "ЭПО" && (<option value="GP2">План Генерации КЦПП</option>)}
                       <option value="P3">План KEGOC</option>
                       {selectedObject?.object_type === "ЭПО" && (<option value="GP3">План Генерации KEGOC</option>)}
                       <option value="F1">Факт</option>
