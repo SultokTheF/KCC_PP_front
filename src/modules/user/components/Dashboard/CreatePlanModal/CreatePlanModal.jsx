@@ -54,12 +54,12 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
         });
 
         if (response.status >= 200 && response.status < 300) {
-          console.log('Plan created successfully:', response.data);
+          console.log('План успешно создан:', response.data);
           
           window.location.href = '/dashboard';
         }
 
-        console.log('API response:', response.data);
+        console.log('Ответ API:', response.data);
       } else {
         const response = await axiosInstance.post(endpoints.PLANS_CREATE(plans[0].day), {
           plan: {
@@ -68,29 +68,27 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
         });
 
         if (response.status === 201) {
-          console.log('Plan created successfully:', response.data);
+          console.log('План успешно создан:', response.data);
           window.location.href = '/dashboard';
         }
 
-        console.log('API response:', response.data);
+        console.log('Ответ API:', response.data);
       }
     } catch (error) {
-      console.error('There was a problem with the API request:', error);
+      console.error('Произошла ошибка при запросе к API:', error);
     }
   };
 
   const handleExport = () => {
     const { object, date, plan, mode } = formData;
 
-    console.log(plan[mode]);
-
-    // Slice the P1 array to get only the first 24 elements
+    // Slice the plan array to get only the first 24 elements
     const slicedPlan = plan.slice(0, 24);
 
     // Create a new workbook and worksheet
     const workbook = XLSXUtils.book_new();
     const worksheet = XLSXUtils.aoa_to_sheet([
-      [`Object: ${selectedObject?.object_name}`, `Date ${date}`, mode],
+      [`Объект: ${selectedObject?.object_name}`, `Дата: ${date}`, mode],
       ...plan.map((item) => ['', '', item[mode]]),
     ]);
 
@@ -103,7 +101,7 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
 
   const handleImport = async () => {
     if (!importedData) {
-      console.error('No file selected for import.');
+      console.error('Файл для импорта не выбран.');
       return;
     }
 
@@ -125,7 +123,7 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
 
       fileReader.readAsArrayBuffer(importedData);
     } catch (error) {
-      console.error('Error while importing data:', error);
+      console.error('Ошибка при импорте данных:', error);
     }
   };
 
@@ -137,6 +135,36 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
       ...prevData,
       plan: updatedPlan,
     }));
+  };
+
+  const handlePullFromP2 = async () => {
+    try {
+      const response = await axiosInstance.get(endpoints.PLANS_GET(formData.object, formData.date, 'P2'));
+      if (response.status === 200) {
+        const planData = response.data.plan;
+        setFormData((prevData) => ({
+          ...prevData,
+          plan: planData,
+        }));
+      }
+    } catch (error) {
+      console.error('Ошибка при получении данных из P2:', error);
+    }
+  };
+
+  const handlePullFromP3 = async () => {
+    try {
+      const response = await axiosInstance.get(endpoints.PLANS_GET(formData.object, formData.date, 'P3'));
+      if (response.status === 200) {
+        const planData = response.data.plan;
+        setFormData((prevData) => ({
+          ...prevData,
+          plan: planData,
+        }));
+      }
+    } catch (error) {
+      console.error('Ошибка при получении данных из P3:', error);
+    }
   };
 
   return (
@@ -201,13 +229,31 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
                     >
                       <option value="P1">Первичный план</option>
                       {selectedObject?.object_type === "ЭПО" && (<option value="GP1">Первичный план Генерации</option>)}
-                      {/* <option value="P2">План СН KCC PP</option> */}
-                      {/* <option value="GP2">План Генерации СН KCC PP</option> */}
                       <option value="P3">План KEGOC</option>
                       {selectedObject?.object_type === "ЭПО" && (<option value="GP3">План Генерации KEGOC</option>)}
                       <option value="F1">Факт</option>
                       {selectedObject?.object_type === "ЭПО" && (<option value="GF1">Генерация Факт</option>)}
                     </select>
+
+                    {formData.mode === 'P3' && (
+                      <button
+                        className="border rounded px-6 py-3 my-2 hover:bg-gray-300"
+                        type="button"
+                        onClick={handlePullFromP2}
+                      >
+                        Загрузить данные из P2
+                      </button>
+                    )}
+
+                    {formData.mode === 'F1' && (
+                      <button
+                        className="border rounded px-6 py-3 my-2 hover:bg-gray-300"
+                        type="button"
+                        onClick={handlePullFromP3}
+                      >
+                        Загрузить данные из P3
+                      </button>
+                    )}
 
                     <label htmlFor="date" className="block text-gray-700 font-medium my-2">
                       Выберите дату

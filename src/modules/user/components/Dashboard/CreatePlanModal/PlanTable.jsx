@@ -54,15 +54,13 @@ const PlanTable = ({ date, object, mode, handleTableChange, plansP }) => {
   }
 
   useEffect(() => {
-    for (let i = 0; i < plansP.length; i++) {
-      setPlans((prevPlans) => {
-        const newPlans = [...prevPlans];
-        newPlans[i] = plansP[i][getPlanMode(mode)] ? plansP[i][getPlanMode(mode)] : plansP[i];
-        return newPlans;
-      });
+    const updatedPlans = [];
+    for (let i = 0; i < 24; i++) {
+      const planValue = plansP[i] ? (plansP[i][getPlanMode(mode)] || plansP[i]) : '';
+      updatedPlans.push(planValue);
     }
+    setPlans(updatedPlans);
   }, [mode, plansP]);
-
 
   const handleChange = (index, value) => {
     const updatedPlans = [...plans];
@@ -75,43 +73,43 @@ const PlanTable = ({ date, object, mode, handleTableChange, plansP }) => {
     <>
       <div className="relative overflow-x-auto sm:rounded-lg">
         <div>
-            {timeIntervals.map((time, index) => (
-              <React.Fragment key={index}>
-                {index <= 11 && (
-                  <div className="flex text-gray-600 text-sm items-center justify-center">
-                    <div className="border px-3 bg-gray-200 mx-3 my-1 rounded-lg text-center">
-                      <label htmlFor={index}>{timeIntervals[index]}</label>
-                      <input
-                        className="h-full text-gray-900 rounded-sm mx-5 text-center"
-                        id={index}
-                        type="number"
-                        value={plans[index]}
-                        onChange={(e) => handleChange(index, e.target.value)}
-                        min={0}
-                        required
-                      />
-                      <label htmlFor={index}>МВт</label> <br />
-                      {mode === "P1" && plansP[index + 12]?.message !== "В ожидании" && <label className="text-orange-500" htmlFor={index}>{plansP[index]?.message}</label>}
-                    </div>
-                    <div className="border px-3 bg-gray-200 mx-3 my-1 rounded-lg text-center">
-                      <label htmlFor={index + 12}>{timeIntervals[index + 12]}</label>
-                      <input
-                        className="h-full text-gray-900 rounded-sm mx-5 text-center"
-                        id={index + 12}
-                        type="number"
-                        value={plans[index + 12]}
-                        onChange={(e) => handleChange(index + 12, e.target.value)}
-                        min={0}
-                        required
-                      />
-                      <label htmlFor={index + 12}>МВт</label> <br />
-                      {mode === "P1" && plansP[index + 12]?.message !== "В ожидании" && <label className="text-orange-500" htmlFor={index + 12}>{plansP[index + 12]?.message}</label>}
-                    </div>
+          {timeIntervals.map((time, index) => (
+            <React.Fragment key={index}>
+              {index <= 11 && (
+                <div className="flex text-gray-600 text-sm items-center justify-center">
+                  <div className="border px-3 bg-gray-200 mx-3 my-1 rounded-lg text-center">
+                    <label htmlFor={index}>{timeIntervals[index]}</label>
+                    <input
+                      className="h-full text-gray-900 rounded-sm mx-5 text-center"
+                      id={index}
+                      type="number"
+                      value={plans[index]}
+                      onChange={(e) => handleChange(index, e.target.value)}
+                      min={0}
+                      required
+                    />
+                    <label htmlFor={index}>МВт</label> <br />
+                    {mode === "P1" && plansP[index + 12]?.message !== "В ожидании" && <label className="text-orange-500" htmlFor={index}>{plansP[index]?.message}</label>}
                   </div>
-                )}
-              </React.Fragment>
-            ))}
-          </div>
+                  <div className="border px-3 bg-gray-200 mx-3 my-1 rounded-lg text-center">
+                    <label htmlFor={index + 12}>{timeIntervals[index + 12]}</label>
+                    <input
+                      className="h-full text-gray-900 rounded-sm mx-5 text-center"
+                      id={index + 12}
+                      type="number"
+                      value={plans[index + 12]}
+                      onChange={(e) => handleChange(index + 12, e.target.value)}
+                      min={0}
+                      required
+                    />
+                    <label htmlFor={index + 12}>МВт</label> <br />
+                    {mode === "P1" && plansP[index + 12]?.message !== "В ожидании" && <label className="text-orange-500" htmlFor={index + 12}>{plansP[index + 12]?.message}</label>}
+                  </div>
+                </div>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
       </div>
     </>
   );
