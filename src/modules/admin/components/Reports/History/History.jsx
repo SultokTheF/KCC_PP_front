@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { axiosInstance } from "../../../../../services/apiConfig";
-
 import Sidebar from "../../Sidebar/Sidebar";
 
 const History = () => {
@@ -8,14 +7,22 @@ const History = () => {
   const [filters, setFilters] = useState({
     action: '',
     modelName: '',
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
   });
 
   const fetchData = async () => {
     try {
       const accessToken = localStorage.getItem('accessToken');
-      const historyResponse = await axiosInstance.get('/api/history/', { headers: { Authorization: `Bearer ${accessToken}` } });
+      const params = {};
+
+      if (filters.action) params.action = filters.action;
+      if (filters.modelName) params.model_name = filters.modelName;
+      if (filters.date) params.date = filters.date;
+
+      const historyResponse = await axiosInstance.get('/api/history/', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        params: params,
+      });
       setHistory(historyResponse.data);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -24,7 +31,7 @@ const History = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [filters]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -34,20 +41,11 @@ const History = () => {
     }));
   };
 
-  const formatTime = (timeString) => {
-    const [hours, minutes] = timeString.split(':');
-    return `${hours}:${minutes}`;
-  };
-
-  const filterHistory = (history) => {
-    return history.filter(item => {
-      const actionMatch = filters.action ? item.action === filters.action : true;
-      const modelNameMatch = filters.modelName ? item.model_name === filters.modelName : true;
-      const startDateMatch = filters.startDate ? new Date(item.date) >= new Date(filters.startDate) : true;
-      const endDateMatch = filters.endDate ? new Date(item.date) <= new Date(filters.endDate) : true;
-
-      return actionMatch && modelNameMatch && startDateMatch && endDateMatch;
-    });
+  const formatDateTime = (timestamp) => {
+    const dateObj = new Date(timestamp);
+    const date = dateObj.toLocaleDateString();
+    const time = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return { date, time };
   };
 
   return (
@@ -77,23 +75,16 @@ const History = () => {
               <option value="">Все сущности</option>
               <option value="Subject">Субъекты</option>
               <option value="Object">Объекты</option>
-              <option value="Day">Day</option>
-              <option value="Hour">Hour</option>
+              <option value="Day">День</option>
+              <option value="Hour">Час</option>
             </select>
           </div>
 
           <div className="flex space-x-4">
             <input
               type="date"
-              name="startDate"
-              value={filters.startDate}
-              onChange={handleFilterChange}
-              className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-            />
-            <input
-              type="date"
-              name="endDate"
-              value={filters.endDate}
+              name="date"
+              value={filters.date}
               onChange={handleFilterChange}
               className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
             />
@@ -104,6 +95,7 @@ const History = () => {
           <table className="table-auto w-full bg-white rounded shadow-md">
             <thead>
               <tr className="bg-gray-100">
+                <th className="px-4 py-2 border">Пользователь</th>
                 <th className="px-4 py-2 border">Операция</th>
                 <th className="px-4 py-2 border">Сущность</th>
                 <th className="px-4 py-2 border">Сообщение</th>
@@ -112,15 +104,19 @@ const History = () => {
               </tr>
             </thead>
             <tbody>
-              {filterHistory(history).map((history, index) => (
-                <tr key={index} className="hover:bg-gray-100">
-                  <td className="border px-4 py-2">{history.action}</td>
-                  <td className="border px-4 py-2">{history.model_name}</td>
-                  <td className="border px-4 py-2">{history.message}</td>
-                  <td className="border px-4 py-2">{history.date}</td>
-                  <td className="border px-4 py-2">{formatTime(history.time)}</td>
-                </tr>
-              ))}
+              {history.map((historyItem, index) => {
+                const { date, time } = formatDateTime(historyItem.timestamp);
+                return (
+                  <tr key={index} className="hover:bg-gray-100">
+                    <td className="border px-4 py-2">{historyItem?.user}</td>
+                    <td className="border px-4 py-2">{historyItem?.action}</td>
+                    <td className="border px-4 py-2">{historyItem?.model_name}</td>
+                    <td className="border px-4 py-2">{historyItem?.message}</td>
+                    <td className="border px-4 py-2">{date}</td>
+                    <td className="border px-4 py-2">{time}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
