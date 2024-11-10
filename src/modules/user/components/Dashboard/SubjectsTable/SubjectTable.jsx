@@ -1,5 +1,6 @@
 // src/components/Dashboard/SubjectsTable/SubjectTable.js
 import React, { useState, useEffect } from 'react';
+import { axiosInstance, endpoints } from '../../../../../services/apiConfig';
 import useDataFetching from '../../../../../hooks/useDataFetching';
 
 const timeIntervals = [
@@ -17,25 +18,75 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
   const dayPlan = daysList?.find(day => day.subject === selectedSubject?.id && day.date.split('T')[0] === selectedDate.split('T')[0]);
   const hourPlan = hoursList?.filter(hour => hour.day === dayPlan?.id);
 
-  const getStatus = (subject) => {
-    const day = daysList?.find(day => day.subject === subject.id && day.date.split('T')[0] === selectedDate.split('T')[0]);
+  // State Variables for Status Management
+  const [statusMap, setStatusMap] = useState({});
+  const [loadingStatuses, setLoadingStatuses] = useState(true);
+  const [statusError, setStatusError] = useState(null);
 
-    switch (day?.status) {
-      case 'PRIMARY_PLAN':
-        return '-П1-';
-      case 'KCCPP_PLAN':
-        return '-П1-П2-';
-      case 'KEGOS_PLAN':
-        return '-П1-П2-П3-';
-      case 'FACT1':
-      case 'FACT2':
-      case 'COMPLETED':
-        return '-П1-П2-П3-Ф-';
-      default:
-        return '-';
+  // Status Display Map
+  const statusDisplayMap = {
+    "PRIMARY_PLAN": "Первичный план",
+    "KCCPP_PLAN": "План КЦПП",
+    "KEGOS_PLAN": "План КЕГОС",
+    "FACT1": "Факт 1",
+    "FACT2": "Факт 2",
+    "COMPLETED": "Завершен",
+    "Ошибка при загрузке": "Нет данных",
+    // ... add other statuses if necessary
+  };
+
+  // Asynchronous Function to Fetch Status
+  const getPlanStatus = async (date, subject) => {
+    try {
+      const response = await axiosInstance.get(endpoints.GET_STATUS, {
+        params: {
+          date,
+          subject: subject.id,
+        },
+      });
+      return response.data.status || "Нет данных";
+    } catch (error) {
+      console.error(`Error fetching status for subject ${subject.id}:`, error);
+      return "Ошибка при загрузке";
     }
   };
 
+  // Fetch All Statuses When selectedDate or subjectsList Change
+  useEffect(() => {
+    const fetchAllStatuses = async () => {
+      setLoadingStatuses(true);
+      setStatusError(null);
+      const newStatusMap = {};
+
+      try {
+        const statusPromises = subjectsList.map((subject) =>
+          getPlanStatus(selectedDate, subject).then((status) => ({
+            id: subject.id,
+            status,
+          }))
+        );
+
+        const statuses = await Promise.all(statusPromises);
+
+        statuses.forEach(({ id, status }) => {
+          newStatusMap[id] = status;
+        });
+
+        setStatusMap(newStatusMap);
+      } catch (error) {
+        setStatusError("Ошибка при загрузке статусов.");
+        console.error("Error fetching statuses:", error);
+      } finally {
+        setLoadingStatuses(false);
+      }
+    };
+
+    if (selectedDate && subjectsList.length > 0) {
+      fetchAllStatuses();
+    }
+  }, [selectedDate, subjectsList]);
+
+  // Set Default Selected Subject if Not Already Selected
   useEffect(() => {
     if (!selectedData.selectedSubject && subjectsList.length > 0) {
       setSelectedData(prevData => ({
@@ -43,10 +94,11 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
         selectedSubject: subjectsList[0]?.id || 0,
       }));
     }
-  }, [subjectsList]);
+  }, [subjectsList, setSelectedData, selectedData.selectedSubject]);
 
   return (
     <>
+      {/* Status Table */}
       <table className="w-full text-sm text-center text-gray-500 mb-3">
         <thead className="text-xs text-gray-700 uppercase bg-gray-300">
           <tr>
@@ -68,25 +120,152 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
                   selectedSubject: subject.id,
                 }))}
               >
-                {getStatus(subject)}
+                {loadingStatuses ? (
+                  "Загрузка..."
+                ) : statusError ? (
+                  statusError
+                ) : (
+                  statusDisplayMap[statusMap[subject.id]] || "Нет данных"
+                )}
               </td>
             ))}
           </tr>
         </tbody>
       </table>
 
+      {/* Plan Tables */}
       <table className="w-full text-sm text-center text-gray-500 mb-3">
         <thead className="text-xs text-gray-700 uppercase bg-gray-300">
           <tr>
             <th></th>
-            <th>П1</th>
-            {selectedSubject?.subject_type === 'ЭПО' && <th>ГП1</th>}
-            <th>П2</th>
-            {selectedSubject?.subject_type === 'ЭПО' && <th>ГП2</th>}
-            <th>П3</th>
-            {selectedSubject?.subject_type === 'ЭПО' && <th>ГП3</th>}
-            <th>Ф</th>
-            {selectedSubject?.subject_type === 'ЭПО' && <th>ГФ</th>}
+            <th>
+              П1
+              <button
+                className="text-base mx-1"
+                onClick={() => {
+                  setIsModalOpen(true);
+                  setPlanData({
+                    planMode: 'P1',
+                    isGen: false,
+                  });
+                }}
+              >
+                📝
+              </button>
+            </th>
+            {selectedSubject?.subject_type === 'ЭПО' && (
+              <th>
+                ГП1
+                <button
+                  className="text-base mx-1"
+                  onClick={() => {
+                    setIsModalOpen(true);
+                    setPlanData({
+                      planMode: 'GP1',
+                      isGen: true,
+                    });
+                  }}
+                >
+                  📝
+                </button>
+              </th>
+            )}
+            <th>
+              П2
+              <button
+                className="text-base mx-1"
+                onClick={() => {
+                  setIsModalOpen(true);
+                  setPlanData({
+                    planMode: 'P2',
+                    isGen: false,
+                  });
+                }}
+              >
+                📝
+              </button>
+            </th>
+            {selectedSubject?.subject_type === 'ЭПО' && (
+              <th>
+                ГП2
+                <button
+                  className="text-base mx-1"
+                  onClick={() => {
+                    setIsModalOpen(true);
+                    setPlanData({
+                      planMode: 'GP2',
+                      isGen: true,
+                    });
+                  }}
+                >
+                  📝
+                </button>
+              </th>
+            )}
+            <th>
+              П3
+              <button
+                className="text-base mx-1"
+                onClick={() => {
+                  setIsModalOpen(true);
+                  setPlanData({
+                    planMode: 'P3',
+                    isGen: false,
+                  });
+                }}
+              >
+                📝
+              </button>
+            </th>
+            {selectedSubject?.subject_type === 'ЭПО' && (
+              <th>
+                ГП3
+                <button
+                  className="text-base mx-1"
+                  onClick={() => {
+                    setIsModalOpen(true);
+                    setPlanData({
+                      planMode: 'GP3',
+                      isGen: true,
+                    });
+                  }}
+                >
+                  📝
+                </button>
+              </th>
+            )}
+            <th>
+              Ф
+              <button
+                className="text-base mx-1"
+                onClick={() => {
+                  setIsModalOpen(true);
+                  setPlanData({
+                    planMode: 'F1',
+                    isGen: false,
+                  });
+                }}
+              >
+                📝
+              </button>
+            </th>
+            {selectedSubject?.subject_type === 'ЭПО' && (
+              <th>
+                Гф
+                <button
+                  className="text-base mx-1"
+                  onClick={() => {
+                    setIsModalOpen(true);
+                    setPlanData({
+                      planMode: 'GF1',
+                      isGen: true,
+                    });
+                  }}
+                >
+                  📝
+                </button>
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -101,6 +280,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
               {selectedSubject?.subject_type === 'ЭПО' && <td className="border">{hourPlan[index]?.P3_Gen || '-'}</td>}
               <td className="border">{hourPlan[index]?.F1 || '-'}</td>
               {selectedSubject?.subject_type === 'ЭПО' && <td className="border">{hourPlan[index]?.F1_Gen || '-'}</td>}
+              {/* Repeat for other columns if necessary */}
             </tr>
           ))}
         </tbody>

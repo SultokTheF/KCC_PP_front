@@ -1,5 +1,6 @@
 // src/components/Dashboard/ObjectsTable/ObjectTable.js
 import React, { useState, useEffect } from 'react';
+import { axiosInstance, endpoints } from '../../../../../services/apiConfig';
 import useDataFetching from '../../../../../hooks/useDataFetching';
 import CreatePlanModal from '../CreatePlanModal/CreatePlanModal';
 
@@ -25,27 +26,78 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
     isGen: false,
   });
 
-  const getStatus = (object) => {
-    const day = daysList?.find(day => day.object === object.id && day.date.split('T')[0] === selectedDate.split('T')[0]);
+  // Status Display Map
+  const statusDisplayMap = {
+    "PRIMARY_PLAN": "Первичный план",
+    "KCCPP_PLAN": "План КЦПП",
+    "KEGOS_PLAN": "План КЕГОС",
+    "FACT1": "Факт 1",
+    "FACT2": "Факт 2",
+    "COMPLETED": "Завершен",
+    "Ошибка при загрузке": "Нет данных",
+    // ... add other statuses if necessary
+  };
 
-    switch (day?.status) {
-      case 'PRIMARY_PLAN':
-        return '-П1-';
-      case 'KCCPP_PLAN':
-        return '-П1-П2-';
-      case 'KEGOS_PLAN':
-        return '-П1-П2-П3-';
-      case 'FACT1':
-      case 'FACT2':
-      case 'COMPLETED':
-        return '-П1-П2-П3-Ф-';
-      default:
-        return '-';
+  // State Variables for Status Management
+  const [statusMap, setStatusMap] = useState({});
+  const [loadingStatuses, setLoadingStatuses] = useState(true);
+  const [statusError, setStatusError] = useState(null);
+
+  // Asynchronous Function to Fetch Status
+  const getPlanStatus = async (date, object) => {
+    try {
+      const response = await axiosInstance.get(endpoints.GET_STATUS, {
+        params: {
+          date,
+          object: object.id,
+        },
+      });
+      return response.data.status || "Нет данных";
+    } catch (error) {
+      console.error(`Error fetching status for object ${object.id}:`, error);
+      return "Ошибка при загрузке";
     }
   };
 
+  // Fetch All Statuses When selectedDate or objectsList Change
+  useEffect(() => {
+    const fetchAllStatuses = async () => {
+      setLoadingStatuses(true);
+      setStatusError(null);
+      const newStatusMap = {};
+
+      try {
+        const statusPromises = objectsList.map((object) =>
+          getPlanStatus(selectedDate, object).then((status) => ({
+            id: object.id,
+            status,
+          }))
+        );
+
+        const statuses = await Promise.all(statusPromises);
+
+        statuses.forEach(({ id, status }) => {
+          newStatusMap[id] = status;
+        });
+
+        setStatusMap(newStatusMap);
+      } catch (error) {
+        setStatusError("Ошибка при загрузке статусов.");
+        console.error("Error fetching statuses:", error);
+      } finally {
+        setLoadingStatuses(false);
+      }
+    };
+
+    if (selectedDate && objectsList.length > 0) {
+      fetchAllStatuses();
+    }
+  }, [selectedDate, objectsList]);
+
+  // Filter Objects Based on Selected Subject
   const objects = objectsList.filter(object => object.subject === selectedData.selectedSubject);
 
+  // Set Default Selected Object if Not Already Selected
   useEffect(() => {
     if (!selectedData.selectedObject && objects.length > 0) {
       setSelectedData(prevData => ({
@@ -53,10 +105,11 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
         selectedObject: objects[0]?.id || 0,
       }));
     }
-  }, [selectedData.selectedSubject, objects]);
+  }, [selectedData.selectedSubject, objects, setSelectedData]);
 
   return (
     <>
+      {/* Status Table */}
       <table className="w-full text-sm text-center text-gray-500 mb-3">
         <thead className="text-xs text-gray-700 uppercase bg-gray-300">
           <tr>
@@ -78,13 +131,20 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
                   selectedObject: object.id,
                 }))}
               >
-                {getStatus(object)}
+                {loadingStatuses ? (
+                  "Загрузка..."
+                ) : statusError ? (
+                  statusError
+                ) : (
+                  statusDisplayMap[statusMap[object.id]] || "Нет данных"
+                )}
               </td>
             ))}
           </tr>
         </tbody>
       </table>
 
+      {/* Plan Tables */}
       <table className="w-full text-sm text-center text-gray-500 mb-3">
         <thead className="text-xs text-gray-700 uppercase bg-gray-300">
           <tr>
@@ -128,7 +188,7 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
                 onClick={() => {
                   setIsModalOpen(true);
                   setPlanData({
-                    planMode: 'P1',
+                    planMode: 'P2',
                     isGen: false,
                   });
                 }}
@@ -237,6 +297,7 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
         </tbody>
       </table>
 
+      {/* Create Plan Modal */}
       <CreatePlanModal
         isOpen={isModalOpen}
         closeModal={() => setIsModalOpen(false)}

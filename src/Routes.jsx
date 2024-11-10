@@ -76,6 +76,7 @@ const Router = ({ userRole }) => {
           <Route path="/dashboard" element={<DispatcherDashboard />} />
           <Route path="/forms/table" element={<DispatcherTableOverview />} />
           <Route path="/forms/table/:id" element={<DispatcherFormContructor />} />
+          <Route path="/graphs" element={<AdminGraphs />} />
           <Route path="*" element={<PageNotFound />} />
         </>
       )}

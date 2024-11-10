@@ -16,8 +16,65 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
   // Initialize localHourPlan with hoursList data
   const [localHourPlan, setLocalHourPlan] = useState([]);
 
+  const getPlanStatus = async (date, subject) => {
+    const day = daysList?.find(day => day.subject === subject.id && day.date.split('T')[0] === date.split('T')[0]);
+    if (day && day.status) {
+      return statusMap[day.status] || "Нет данных";
+    }
+    try {
+      const response = await axiosInstance.get(endpoints.GET_STATUS, {
+        params: {
+          date,
+          subject: subject.id
+        }
+      });
+      return response.data.status || "Нет данных";
+    } catch (error) {
+      // console.error(`Error fetching status for subject ${subject.id}:`, error);
+      return "Нет данных";
+    }
+  };
+
+  const [statusMap, setStatusMap] = useState({});
+  const [loadingStatuses, setLoadingStatuses] = useState(true);
+  const [statusError, setStatusError] = useState(null);
+
   useEffect(() => {
-    // Map hoursList to localHourPlan, ensuring index corresponds to hour
+    const fetchAllStatuses = async () => {
+      setLoadingStatuses(true);
+      setStatusError(null);
+      const newStatusMap = {};
+
+      try {
+        const statusPromises = subjectsList.map(subject =>
+          getPlanStatus(selectedDate, subject).then(status => ({
+            id: subject.id,
+            status
+          }))
+        );
+
+        const statuses = await Promise.all(statusPromises);
+
+        statuses.forEach(({ id, status }) => {
+          newStatusMap[id] = status;
+        });
+
+        setStatusMap(newStatusMap);
+      } catch (error) {
+        setStatusError("Ошибка при загрузке статусов.");
+        console.error("Error fetching statuses:", error);
+      } finally {
+        setLoadingStatuses(false);
+      }
+    };
+
+    if (selectedDate && subjectsList.length > 0) {
+      fetchAllStatuses();
+    }
+  }, [selectedDate, subjectsList]);
+
+  // Initialize localHourPlan with hoursList data
+  useEffect(() => {
     const initialHourPlan = Array(24).fill({}).map((_, index) => {
       const hourData = hoursList.find(hour => hour.hour === index + 1); // Assuming hours are from 1 to 24
       return {
@@ -39,7 +96,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
 
   const fileInputRef = useRef(null);
 
-  const statusMap = {
+  const statusDisplayMap = {
     "PRIMARY_PLAN": "Первичный план",
     "KCCPP_PLAN": "План КЦПП",
     "KEGOS_PLAN": "План КЕГОС",
@@ -47,13 +104,14 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
     "FACT2": "Факт 2",
     "COMPLETED": "Завершен",
     // ... other statuses if any
+    "Ошибка при загрузке": "Ошибка при загрузке"
   };
 
-  const getStatus = (subject) => {
-    const day = daysList?.find(day => day.subject === subject.id && day.date.split('T')[0] === selectedDate.split('T')[0]);
-
-    return statusMap[day?.status] || "Нет данных";
-  };
+  // Remove the old getStatus function if it's no longer needed
+  // const getStatus = (subject) => {
+  //   const day = daysList?.find(day => day.subject === subject.id && day.date.split('T')[0] === selectedDate.split('T')[0]);
+  //   return statusDisplayMap[day?.status] || "Нет данных";
+  // };
 
   const handleMessagesChange = (index, value) => {
     const updatedHourPlan = [...localHourPlan];
@@ -239,7 +297,13 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
                   selectedSubject: subject.id
                 })}
               >
-                {getStatus(subject)}
+                {loadingStatuses ? (
+                  "Загрузка..."
+                ) : statusError ? (
+                  statusError
+                ) : (
+                  statusDisplayMap[statusMap[subject.id]] || "Нет данных"
+                )}
               </td>
             ))}
           </tr>
@@ -302,7 +366,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
                     type="number"
                     step="0.01"
                     min="0"
-                    value={localHourPlan[index]?.coefficient || ""}
+                    value={localHourPlan[index]?.coefficient || 0}
                     onChange={(e) => handleCoefficientChange(index, e.target.value)}
                     className="w-full text-center rounded"
                   />
@@ -310,7 +374,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
                 <td className={`border`}>
                   <input
                     type="number"
-                    value={localHourPlan[index]?.volume || ""}
+                    value={localHourPlan[index]?.volume || 0}
                     onChange={(e) => handleVolumeChange(index, e.target.value)}
                     className="w-full text-center rounded"
                   />
@@ -359,15 +423,20 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
               >
                 Утвердить
               </button>
-              <button
+              {/* <button
                 className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
                 onClick={handleDisapprove}
               >
                 Отклонить
-              </button>
+              </button> */}
             </>
           ) : (
-            <p className="text-gray-600">День уже утвержден</p>
+            <button
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+              onClick={handleApprove}
+            >
+              Утвердить
+            </button>
           )}
         </div>
       )}

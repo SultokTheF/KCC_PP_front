@@ -14,7 +14,7 @@ const endpoints = {
   SUBJECTS: `api/subjects/`,
   CALCULATE_P2: `api/subjects/calculate_p2/`,
   SUBJECTS_UPDATES: 'api/subjects/bulk_update_providers/',
-  GET_STATUS: 'api/days/get-status',
+  GET_STATUS: 'api/days/get-status/',
   
 
   // Objects 
