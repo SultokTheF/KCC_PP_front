@@ -96,15 +96,16 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
 
   const fileInputRef = useRef(null);
 
+  // Status Display Map
   const statusDisplayMap = {
-    "PRIMARY_PLAN": "Первичный план",
-    "KCCPP_PLAN": "План КЦПП",
-    "KEGOS_PLAN": "План КЕГОС",
-    "FACT1": "Факт 1",
-    "FACT2": "Факт 2",
+    "PRIMARY_PLAN": "Данные не загружены",
+    "KCCPP_PLAN": "-П1-",
+    "KEGOS_PLAN": "-П1-П2-",
+    "FACT1": "-П1-П2-П3-",
+    "FACT2": "-П1-П2-П3-Ф1-",
     "COMPLETED": "Завершен",
-    // ... other statuses if any
-    "Ошибка при загрузке": "Ошибка при загрузке"
+    "Ошибка при загрузке": "Нет данных",
+    // ... add other statuses if necessary
   };
 
   // Remove the old getStatus function if it's no longer needed

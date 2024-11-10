@@ -58,7 +58,7 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
 
         if (response.status >= 200 && response.status < 300) {
           console.log('План успешно создан:', response.data);
-          
+
           window.location.href = '/dashboard';
         }
 
@@ -117,7 +117,7 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
         const workbook = XLSXRead(data, { type: 'array' });
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         const parsedData = XLSXUtils.sheet_to_json(worksheet, { header: 1 });
-        
+
         // Assuming that the data starts from row 3 (after headers)
         const planValues = parsedData.slice(2).map(row => row[1]);
 
@@ -143,44 +143,35 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
     }));
   };
 
-  // New functions to pull plans from other modes
-  const handlePullFromP2 = async () => {
-    try {
-      // Fetch P2 plan for the same object and date
-      const response = await axiosInstance.get(endpoints.PLANS_GET(selectedObject.id, formData.date, 'P2'));
-      
-      if (response.status === 200 && response.data.plan) {
-        setFormData((prevData) => ({
-          ...prevData,
-          plan: response.data.plan, // Adjust based on your API response structure
-        }));
-        console.log('План P2 успешно загружен и применен к P3.');
-      } else {
-        console.warn('План P2 не найден или имеет неверный формат.');
-      }
-    } catch (error) {
-      console.error('Ошибка при загрузке P2 плана:', error);
+  // Inside CreatePlanModal.jsx
+
+  const handlePullFromP2 = () => {
+    if (formData.mode === 'P3') {
+      // Extract P2 plan values from the existing plans prop
+      const p2Plan = plans.map(hour => hour.P2 || 0);
+
+      // Update the formData.plan with P2 values
+      setFormData(prevData => ({
+        ...prevData,
+        plan: p2Plan
+      }));
     }
   };
 
-  const handlePullFromP3 = async () => {
-    try {
-      // Fetch P3 plan for the same object and date
-      const response = await axiosInstance.get(endpoints.PLANS_GET(selectedObject.id, formData.date, 'P3'));
-      
-      if (response.status === 200 && response.data.plan) {
-        setFormData((prevData) => ({
-          ...prevData,
-          plan: response.data.plan, // Adjust based on your API response structure
-        }));
-        console.log('План P3 успешно загружен и применен к F1.');
-      } else {
-        console.warn('План P3 не найден или имеет неверный формат.');
-      }
-    } catch (error) {
-      console.error('Ошибка при загрузке P3 плана:', error);
+  const handlePullFromP3 = () => {
+    if (formData.mode === 'F1') {
+      // Extract P3 plan values from the existing plans prop
+      const p3Plan = plans.map(hour => hour.P3 || 0);
+
+      // Update the formData.plan with P3 values
+      setFormData(prevData => ({
+        ...prevData,
+        plan: p3Plan
+      }));
     }
   };
+
+
 
   return (
     <Modal
