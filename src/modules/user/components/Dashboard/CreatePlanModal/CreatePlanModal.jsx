@@ -143,37 +143,42 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
     }));
   };
 
+  // New functions to pull plans from other modes
   const handlePullFromP2 = async () => {
     try {
-      const response = await axiosInstance.get(endpoints.PLANS_GET(formData.object, formData.date, 'P2'));
-      if (response.status === 200) {
-        const planData = response.data.plan;
-        console.log('P2 data fetched:', planData);
-
+      // Fetch P2 plan for the same object and date
+      const response = await axiosInstance.get(endpoints.PLANS_GET(selectedObject.id, formData.date, 'P2'));
+      
+      if (response.status === 200 && response.data.plan) {
         setFormData((prevData) => ({
           ...prevData,
-          plan: planData, // Assuming planData is an array of numbers
+          plan: response.data.plan, // Adjust based on your API response structure
         }));
+        console.log('План P2 успешно загружен и применен к P3.');
+      } else {
+        console.warn('План P2 не найден или имеет неверный формат.');
       }
     } catch (error) {
-      console.error('Ошибка при получении данных из P2:', error);
+      console.error('Ошибка при загрузке P2 плана:', error);
     }
   };
 
   const handlePullFromP3 = async () => {
     try {
-      const response = await axiosInstance.get(endpoints.PLANS_GET(formData.object, formData.date, 'P3'));
-      if (response.status === 200) {
-        const planData = response.data.plan;
-        console.log('P3 data fetched:', planData);
-
+      // Fetch P3 plan for the same object and date
+      const response = await axiosInstance.get(endpoints.PLANS_GET(selectedObject.id, formData.date, 'P3'));
+      
+      if (response.status === 200 && response.data.plan) {
         setFormData((prevData) => ({
           ...prevData,
-          plan: planData,
+          plan: response.data.plan, // Adjust based on your API response structure
         }));
+        console.log('План P3 успешно загружен и применен к F1.');
+      } else {
+        console.warn('План P3 не найден или имеет неверный формат.');
       }
     } catch (error) {
-      console.error('Ошибка при получении данных из P3:', error);
+      console.error('Ошибка при загрузке P3 плана:', error);
     }
   };
 

@@ -283,14 +283,14 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
           {timeIntervals.map((time, index) => (
             <tr key={time}>
               <td className="border">{time}</td>
-              <td className="border">{hourPlan[index]?.P1 || '-'}</td>
-              {selectedObject?.object_type === 'ЭПО' && <td className="border">{hourPlan[index]?.P1_Gen || '-'}</td>}
-              <td className="border">{hourPlan[index]?.P2 || '-'}</td>
-              {selectedObject?.object_type === 'ЭПО' && <td className="border">{hourPlan[index]?.P2_Gen || '-'}</td>}
-              <td className="border">{hourPlan[index]?.P3 || '-'}</td>
-              {selectedObject?.object_type === 'ЭПО' && <td className="border">{hourPlan[index]?.P3_Gen || '-'}</td>}
-              <td className="border">{hourPlan[index]?.F1 || '-'}</td>
-              {selectedObject?.object_type === 'ЭПО' && <td className="border">{hourPlan[index]?.F1_Gen || '-'}</td>}
+              <td className="border">{hourPlan[index]?.P1 || 0}</td>
+              {selectedObject?.object_type === 'ЭПО' && <td className="border">{hourPlan[index]?.P1_Gen || 0}</td>}
+              <td className="border">{hourPlan[index]?.P2 || 0}</td>
+              {selectedObject?.object_type === 'ЭПО' && <td className="border">{hourPlan[index]?.P2_Gen || 0}</td>}
+              <td className="border">{hourPlan[index]?.P3 || 0}</td>
+              {selectedObject?.object_type === 'ЭПО' && <td className="border">{hourPlan[index]?.P3_Gen || 0}</td>}
+              <td className="border">{hourPlan[index]?.F1 || 0}</td>
+              {selectedObject?.object_type === 'ЭПО' && <td className="border">{hourPlan[index]?.F1_Gen || 0}</td>}
               {/* Repeat for other columns... */}
             </tr>
           ))}

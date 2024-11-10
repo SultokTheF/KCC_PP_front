@@ -11,7 +11,8 @@ import {
   Profile as DispatcherProfile,
   Dashboard as DispatcherDashboard,
   DispatcherFormContructor,
-  DispatcherTableOverview
+  DispatcherTableOverview,
+  DispatcherGraphs
 } from "./dispatcher";
 
 import {
@@ -52,7 +53,8 @@ export {
   DispatcherProfile,
   DispatcherDashboard,
   DispatcherTableOverview,
-  DispatcherFormContructor
+  DispatcherFormContructor,
+  DispatcherGraphs
 }
 
 export {
