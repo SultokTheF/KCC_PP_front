@@ -482,27 +482,11 @@ const Disbalance = () => {
                 </div>
               ))}
             </div>
-
-            {/* Submit Button */}
-            <div className="mt-6">
-              <button
-                type="submit"
-                className="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded hover:bg-blue-700 transition-colors duration-200"
-              >
-                Отправить
-              </button>
-            </div>
           </form>
         </div>
 
         {/* Right Side: Tables and Disbalance Sum */}
         <div className="w-2/3 p-6">
-          <div className="mb-10">
-            <DisbalanceSum
-              formData={formData}
-              selectedObjects={selectedObjects}
-            />
-          </div>
 
           <div className="h-[calc(100vh-20rem)] overflow-y-auto">
             <DisbalanceTable

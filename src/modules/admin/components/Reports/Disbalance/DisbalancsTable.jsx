@@ -45,10 +45,6 @@ const DisbalanceTable = ({
           ...(subject?.subject_type === "ЭПО" && { "Plan Generation": hourData[formData.planModeGen] }),
           Fact: hourData[formData.factMode],
           ...(subject?.subject_type === "ЭПО" && { "Fact Generation": hourData[formData.factModeGen] }),
-          "BE Up": hourData.BE_Up,
-          "BE Down": hourData.BE_Down,
-          "OD Up": hourData.OD_Up,
-          "OD Down": hourData.OD_Down,
         };
         data.push(rowData);
       });
@@ -84,10 +80,6 @@ const DisbalanceTable = ({
             {subjectsList?.find((subject) => subject.id === formData.subject)?.subject_type === "ЭПО" && (
               <th className="border border-gray-300 px-4">Факт Генерации</th>
             )}
-            <th className="border border-gray-300 px-4">BE ⬆️ (20%)</th>
-            <th className="border border-gray-300 px-4">BE ⬇️ (20%)</th>
-            <th className="border border-gray-300 px-4">OD ⬆️ (20%)</th>
-            <th className="border border-gray-300 px-4">OD ⬇️ (20%)</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
@@ -114,10 +106,6 @@ const DisbalanceTable = ({
                   {subjectsList?.find((subject) => subject.id === formData.subject)?.subject_type === "ЭПО" && (
                     <td className="border border-gray-300 px-4">{hourData[formData.factModeGen]}</td>
                   )}
-                  <td className={`border border-gray-300 ${hourData.BE_Up === 0 ? "" : "bg-blue-500 text-white"} px-4`}>{hourData.BE_Up}</td>
-                  <td className={`border border-gray-300 ${hourData.BE_Down === 0 ? "" : "bg-blue-500 text-white"} px-4`}>{hourData.BE_Down}</td>
-                  <td className={`border border-gray-300 ${hourData.OD_Up === 0 ? "" : "bg-blue-500 text-white"} px-4`}>{hourData.OD_Up}</td>
-                  <td className={`border border-gray-300 ${hourData.OD_Down === 0 ? "" : "bg-blue-500 text-white"} px-4`}>{hourData.OD_Down}</td>
                 </tr>
               );
             });

@@ -83,7 +83,7 @@ export default function Sidebar() {
                   <ListItemPrefix>
                     <ChevronRightIcon strokeWidth={3} className="h-3 w-5" />
                   </ListItemPrefix>
-                  Дисбаланс
+                  Экспорт планов
                 </ListItem>
               </a>
               <a href="/reports/history">
