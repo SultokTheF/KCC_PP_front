@@ -242,8 +242,8 @@ const TableComponent = ({
 
       {/* Main Table Structure */}
       <h2 className="text-lg font-semibold mb-4">Основная таблица</h2>
-      <div className="overflow-x-auto max-w-full mb-6">
-        <table className="min-w-full bg-white border border-gray-200 shadow-md table-auto">
+      <div className="overflow-x-auto max-w-[1550px] mb-6">
+        <table className="bg-white border border-gray-200 shadow-md table-auto">
           <thead>
             <tr className="bg-gray-100">
               <th className="px-2 py-1 text-left text-gray-700 font-semibold border-b">
@@ -396,7 +396,7 @@ const TableComponent = ({
                 </div>
 
                 {isSubTableVisible(uniqueKey) && (
-                  <div className="overflow-x-auto mt-4">
+                  <div className="overflow-x-auto max-w-[1550px] mt-4">
                     {item.data[0]?.date_value?.length > 0 ? (
                       <div className="mb-4">
                         <table className="min-w-full bg-white border border-gray-200 shadow-md table-auto">
