@@ -24,6 +24,7 @@
     "react-loader-spinner": "^6.1.6",
     "react-modal": "^3.16.1",
     "react-router-dom": "^6.26.0",
+    "uuid": "^11.0.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
