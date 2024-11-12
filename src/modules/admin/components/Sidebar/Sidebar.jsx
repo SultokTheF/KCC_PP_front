@@ -83,7 +83,7 @@ export default function Sidebar() {
                   <ListItemPrefix>
                     <ChevronRightIcon strokeWidth={3} className="h-3 w-5" />
                   </ListItemPrefix>
-                  Экспорт планов
+                  Экспорт данных
                 </ListItem>
               </a>
               <a href="/reports/history">
@@ -94,14 +94,14 @@ export default function Sidebar() {
                   История
                 </ListItem>
               </a>
-              <a href="/reports/hour-report">
+              {/* <a href="/reports/hour-report">
                 <ListItem>
                   <ListItemPrefix>
                     <ChevronRightIcon strokeWidth={3} className="h-3 w-5" />
                   </ListItemPrefix>
                   Отчетные тарифы
                 </ListItem>
-              </a>
+              </a> */}
               <a href="/reports/hour-table">
                 <ListItem>
                   <ListItemPrefix>

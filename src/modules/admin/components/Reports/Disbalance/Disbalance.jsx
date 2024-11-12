@@ -428,7 +428,7 @@ const Disbalance = () => {
               </div>
 
               {/* Plan Generation and Fact Generation Selectors */}
-              {(["ЭПО", "ЭПО ВИЭ", "ГП"].includes(subjectsList.find((subj) => subj.id === formData.subject)?.subject_type) && (
+              {(["ЭПО", "ВИЭ", "ГП"].includes(subjectsList.find((subj) => subj.id === formData.subject)?.subject_type) && (
                 <div className="grid grid-cols-2 gap-6">
                   <div>
                     <label htmlFor="planModeGen" className="block text-gray-700 font-semibold mb-2">
