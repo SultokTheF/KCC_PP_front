@@ -145,12 +145,12 @@ const Dashboard = () => {
             />
           </div>
           <div className="w-1/2 m-2">
-            {/* <ObjectTable
+            <ObjectTable
               selectedData={selectedData}
               setSelectedData={setSelectedData}
               objectsList={objectsList}
               selectedDate={selectedDate}
-            /> */}
+            />
           </div>
         </div>
       </div>
