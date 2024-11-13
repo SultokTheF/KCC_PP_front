@@ -276,41 +276,43 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
           {warningMessage}
         </div>
       )}
-
       {/* Existing Status Table */}
-      <table className="w-full text-sm text-center rtl:text-right text-gray-500 dark:text-gray-40 mb-3">
-        <thead className="text-xs text-gray-700 uppercase bg-gray-300 dark:bg-gray-700 dark:text-gray-400">
-          <tr>
-            <th>{'Субъект'}</th>
-            {subjectsList.map((subject) => (
-              <th key={subject.id}>{subject.subject_name}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td className="border w-1/12" scope="row">Статус</td>
-            {subjectsList.map((subject) => (
-              <td
-                key={subject.id}
-                className={`border hover:bg-blue-100 cursor-pointer ${selectedData.selectedSubject === subject.id ? 'bg-blue-500 text-white' : ''}`}
-                onClick={() => setSelectedData({
-                  ...selectedData,
-                  selectedSubject: subject.id
-                })}
-              >
-                {loadingStatuses ? (
-                  "Загрузка..."
-                ) : statusError ? (
-                  statusError
-                ) : (
-                  statusDisplayMap[statusMap[subject.id]] || "Нет данных"
-                )}
-              </td>
-            ))}
-          </tr>
-        </tbody>
-      </table>
+      <div className="overflow-x-auto max-w-[800px]">
+        <table className="w-1/2 text-sm text-center rtl:text-right text-gray-500 dark:text-gray-40 mb-3">
+          <thead className="text-xs text-gray-700 uppercase bg-gray-300 dark:bg-gray-700 dark:text-gray-400">
+            <tr>
+              <th className="px-4 py-2">{'Субъект'}</th>
+              {subjectsList.map((subject) => (
+                <th key={subject.id} className="px-4 py-2">{subject.subject_name}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="border px-4 py-2" scope="row">Статус</td>
+              {subjectsList.map((subject) => (
+                <td
+                  key={subject.id}
+                  className={`border px-4 py-2 hover:bg-blue-100 cursor-pointer ${selectedData.selectedSubject === subject.id ? 'bg-blue-500 text-white' : ''}`}
+                  onClick={() => setSelectedData({
+                    ...selectedData,
+                    selectedSubject: subject.id
+                  })}
+                >
+                  {loadingStatuses ? (
+                    "Загрузка..."
+                  ) : statusError ? (
+                    statusError
+                  ) : (
+                    statusDisplayMap[statusMap[subject.id]] || "Нет данных"
+                  )}
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
 
       {/* Import and Export Buttons */}
       <div className="flex justify-end space-x-2 my-4">
