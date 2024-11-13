@@ -84,6 +84,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
         coefficient: hourData?.coefficient || 0,
         volume: hourData?.volume || 0,
         message: hourData?.message || '',
+        P2_message: hourData?.P2_message || '',
         // Other fields as needed
       };
     });
@@ -253,7 +254,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
   const handleExport = () => {
     const exportData = [
       ['Hour', 'Coefficient', 'Volume'],
-      ...localHourPlan.map(hourData => [hourData.hour, hourData.coefficient, hourData.volume])
+      ...localHourPlan.map(hourData => [hourData.hour, hourData.coefficient, hourData.volume, hourData.P2_message])
     ];
     const worksheet = XLSX.utils.aoa_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
@@ -346,6 +347,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
             <th className="w-[100px]">Коэффициент</th>
             <th className="w-[100px]">Объем</th>
             <th className="w-[100px]">П2</th>
+            <th className="w-[100px]">Сообщение П2</th>
             {selectedSubject?.subject_type === "ЭПО" && <th className="w-[100px]">ГП2</th>}
             {showMessageCol && <th className="w-[150px]">Сообщение</th>}
           </tr>
@@ -382,6 +384,9 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
                 </td>
                 <td className={`border ${P2 < 0 ? 'bg-red-100' : ''}`}>
                   {P2}
+                </td>
+                <td className={`border ${P2 < 0 ? 'bg-red-100' : ''}`}>
+                  {localHourPlan[index]?.P2_message || ''}
                 </td>
                 {selectedSubject?.subject_type === "ЭПО" && (
                   <td className={`border ${P2Gen < 0 ? 'bg-red-100' : ''}`}>

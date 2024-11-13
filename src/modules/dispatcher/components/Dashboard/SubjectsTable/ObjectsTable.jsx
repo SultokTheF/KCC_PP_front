@@ -162,7 +162,7 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
       <table className="w-full text-sm text-center text-gray-500 mb-3">
         <thead className="text-xs text-gray-700 uppercase bg-gray-300">
           <tr>
-            <th></th>
+            {/* <th></th> */}
             <th>
               П1
             </th>
@@ -172,7 +172,7 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
               </th>
             )}
             <th>
-              Вес Площадки
+              Объем
             </th>
             <th>
               П2
@@ -198,12 +198,13 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
                 Гф
               </th>
             )}
+            <th>Сообщение П2</th>
           </tr>
         </thead>
         <tbody>
           {timeIntervals.map((time, index) => (
             <tr key={time}>
-              <td className="border">{time}</td>
+              {/* <td className="border">{time}</td> */}
               <td className="border">{hourPlan[index]?.P1 || 0}</td>
               {selectedObject?.object_type === 'ЭПО' && <td className="border">{hourPlan[index]?.P1_Gen || 0}</td>}
               <td className='border'>0</td>
@@ -213,6 +214,7 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
               {selectedObject?.object_type === 'ЭПО' && <td className="border">{hourPlan[index]?.P3_Gen || 0}</td>}
               <td className="border">{hourPlan[index]?.F1 || 0}</td>
               {selectedObject?.object_type === 'ЭПО' && <td className="border">{hourPlan[index]?.F1_Gen || 0}</td>}
+              <td className="border">{hourPlan[index]?.P2_message || '-'}</td>
               {/* Repeat for other columns... */}
             </tr>
           ))}
