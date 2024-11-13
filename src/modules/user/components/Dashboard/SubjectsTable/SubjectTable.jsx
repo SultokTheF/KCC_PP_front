@@ -25,11 +25,11 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
 
   // Status Display Map
   const statusDisplayMap = {
-    "PRIMARY_PLAN": "Данные не загружены",
-    "KCCPP_PLAN": "-П1-",
-    "KEGOS_PLAN": "-П1-П2-",
-    "FACT1": "-П1-П2-П3-",
-    "FACT2": "-П1-П2-П3-Ф1-",
+    "PRIMARY_PLAN": "-П1-",
+    "KCCPP_PLAN": "-П1-П2",
+    "KEGOS_PLAN": "-П1-П2-П3-",
+    "FACT1": "-П1-П2-П3-Ф1",
+    "FACT2": "-П1-П2-П3-Ф1-Ф2",
     "COMPLETED": "Завершен",
     "Ошибка при загрузке": "Нет данных",
     // ... add other statuses if necessary
