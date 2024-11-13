@@ -6,7 +6,7 @@ import Sidebar from "../../../Sidebar/Sidebar";
 import { axiosInstance, endpoints } from "../../../../../../services/apiConfig";
 import TableComponent from "./TableComponent";
 import useFetchData from './useFetchData';
-import { processTableData } from './utils';
+import { processTableData, getRowName } from './utils';
 import { v4 as uuidv4 } from 'uuid';
 import * as XLSX from 'xlsx';
 import { useAuth } from "../../../../../../hooks/useAuth";
