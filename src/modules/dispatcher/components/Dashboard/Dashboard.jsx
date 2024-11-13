@@ -5,6 +5,7 @@ import { axiosInstance, endpoints } from "../../../../services/apiConfig";
 import Sidebar from "../Sidebar/Sidebar";
 import Calendar from "../Calendar/Calendar";
 import SubjectTable from "./SubjectsTable/SubjectsTable";
+import ObjectTable from "./SubjectsTable/ObjectsTable";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -24,18 +25,32 @@ const Dashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [subjectsResponse, objectsResponse, holidaysResponse] = await Promise.all([
+      const [subjectsResponse, holidaysResponse] = await Promise.all([
         axiosInstance.get(endpoints.SUBJECTS),
         axiosInstance.get(endpoints.OBJECTS),
         axiosInstance.get(endpoints.HOLIDAYS)
       ]);
 
       setSubjectsList(subjectsResponse.data);
-      const filteredObjects = objectsResponse.data.filter((object) => object.users.includes(user.id));
-      setObjectsList(filteredObjects);
       setHolidaysList(holidaysResponse.data);
     } catch (error) {
       console.error('Error fetching data:', error);
+    }
+  };
+
+  const fetchObjects = async () => {
+    if (selectedData.selectedSubject) {
+      try {
+        const objectsResponse = await axiosInstance.get(endpoints.OBJECTS, {
+          params: { sub: selectedData.selectedSubject },
+        });
+        setObjectsList(objectsResponse.data);
+      } catch (error) {
+        console.error('Error fetching objects:', error);
+        setObjectsList([]);  // Reset objects list to empty on error
+      }
+    } else {
+      setObjectsList([]);
     }
   };
 
@@ -91,6 +106,10 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
+    fetchObjects();
+  }, [selectedData.selectedSubject, selectedDate]);
+
+  useEffect(() => {
     fetchDaysAndHours();
   }, [selectedDate, selectedData.selectedSubject]);
 
@@ -114,15 +133,25 @@ const Dashboard = () => {
           holidays={holidaysList}
         />
 
-        <div className="flex-1 m-2">
-          <SubjectTable
-            selectedData={selectedData}
-            setSelectedData={setSelectedData}
-            subjectsList={subjectsList}
-            daysList={daysList}
-            hoursList={hoursList}
-            selectedDate={selectedDate}
-          />
+        <div className="flex">
+          <div className="w-1/2 m-2">
+            <SubjectTable
+              selectedData={selectedData}
+              setSelectedData={setSelectedData}
+              subjectsList={subjectsList}
+              daysList={daysList}
+              hoursList={hoursList}
+              selectedDate={selectedDate}
+            />
+          </div>
+          <div className="w-1/2 m-2">
+            <ObjectTable
+              selectedData={selectedData}
+              setSelectedData={setSelectedData}
+              objectsList={objectsList}
+              selectedDate={selectedDate}
+            />
+          </div>
         </div>
       </div>
     </div>
