@@ -134,8 +134,16 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
   };
 
   const handleImportFromText = () => {
-    const values = textareaInput.split(' ').map(Number);
-    const updatedPlan = Array(24).fill(0).map((val, index) => values[index] || 0);
+    // Split the input by spaces, commas, or newlines using a regular expression
+    const values = textareaInput
+      .split(/[\s,]+/)
+      .map(item => item.trim())
+      .filter(item => item !== '')
+      .map(Number)
+      .map(num => isNaN(num) ? 0 : num); // Replace NaN with 0
+
+    // Ensure the plan has exactly 24 elements, filling missing with 0
+    const updatedPlan = Array.from({ length: 24 }, (_, index) => values[index] || 0);
 
     setFormData((prevData) => ({
       ...prevData,
@@ -171,8 +179,6 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
     }
   };
 
-
-
   return (
     <Modal
       isOpen={isOpen}
@@ -187,13 +193,14 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
               <div className="text-right">
                 <button
                   onClick={closeModal}
+                  className="text-xl font-bold"
                 >
                   ❌
                 </button>
               </div>
               <form onSubmit={handleSubmit}>
                 <div className="mb-4 flex">
-                  <div className="w-1/2">
+                  <div className="w-1/2 pr-4">
                     <label htmlFor="object" className="block text-gray-700 font-medium mb-2">
                       Выберите объект
                     </label>
@@ -245,7 +252,7 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
 
                     {formData.mode === 'P3' && (
                       <button
-                        className="border rounded px-6 py-3 my-2 hover:bg-gray-300"
+                        className="border rounded px-6 py-3 my-2 hover:bg-gray-300 w-full"
                         type="button"
                         onClick={handlePullFromP2}
                       >
@@ -255,7 +262,7 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
 
                     {formData.mode === 'F1' && (
                       <button
-                        className="border rounded px-6 py-3 my-2 hover:bg-gray-300"
+                        className="border rounded px-6 py-3 my-2 hover:bg-gray-300 w-full"
                         type="button"
                         onClick={handlePullFromP3}
                       >
@@ -270,7 +277,7 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
                       type="date"
                       name="date"
                       id="date"
-                      className="h-10 border border-gray-300 rounded px-4 focus:outline-none focus:border-blue-500"
+                      className="h-10 border border-gray-300 rounded px-4 focus:outline-none focus:border-blue-500 w-full"
                       value={formData.date}
                       onChange={(e) =>
                         setFormData((prevData) => ({
@@ -292,7 +299,6 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
                         id="file-input"
                         className="block w-full border border-gray-200 
                           shadow-sm rounded-lg text-sm focus:z-10 focus:border-blue-500 focus:ring-blue-500 
-                          :opacity-50 :pointer-events-none 
                           dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400
                           file:me-4 file:bg-gray-50 file:border-0
                           file:py-3 file:px-4
@@ -302,13 +308,13 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
                     </div>
                     <div className="flex">
                       <button
-                        className="border rounded px-6 py-3 mr-2 hover:bg-gray-300"
+                        className="border rounded px-6 py-3 mr-2 hover:bg-gray-300 flex-1"
                         type="button"
                         onClick={handleImport}
                       >
                         Импорт
                       </button>
-                      <button className="border rounded px-6 py-3 ml-2 hover:bg-gray-300" type="button" onClick={handleExport}>
+                      <button className="border rounded px-6 py-3 ml-2 hover:bg-gray-300 flex-1" type="button" onClick={handleExport}>
                         Экспорт
                       </button>
                     </div>
@@ -318,16 +324,17 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
                         Введите значения для импорта
                       </label>
                       <textarea
-                        className="border text-center"
+                        className="border text-center w-full p-2 rounded"
                         name="importArea"
                         id="importArea"
                         cols={26}
-                        rows={3}
+                        rows={5}
                         value={textareaInput}
                         onChange={(e) => setTextareaInput(e.target.value)}
+                        placeholder="Введите значения, разделенные пробелами, запятыми или переносами строки"
                       ></textarea>
                       <button
-                        className="border p-3 w-full bg-gray-100 hover:bg-gray-300 rounded-lg"
+                        className="border p-3 w-full bg-gray-100 hover:bg-gray-300 rounded-lg mt-2"
                         type="button"
                         onClick={handleImportFromText}
                       >
@@ -336,7 +343,7 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
                     </div>
                   </div>
 
-                  <div className="w-3/4">
+                  <div className="w-1/2">
                     <PlanTable
                       date={formData.date}
                       object={formData.object}
