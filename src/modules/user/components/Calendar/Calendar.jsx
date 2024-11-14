@@ -119,16 +119,30 @@ const Calendar = ({ selectedDate, setSelectedDate, holidays }) => {
   });
 
   useEffect(() => {
-    const updatedDate = new Date(
-      `${date.year}-${date.month.toString().padStart(2, "0")}-${date.day
-        .toString()
-        .padStart(2, "0")}`
-    );
+    // Initialize selectedDate from localStorage if available
+    const storedDate = localStorage.getItem('selectedDate');
+    if (storedDate) {
+      const [year, month, day] = storedDate.split('-');
+      setDate({
+        day: day,
+        month: month,
+        year: parseInt(year),
+        selectedDate: storedDate
+      });
+      setSelectedDate(storedDate);
+    }
+  }, []);
+
+  useEffect(() => {
+    const updatedDate = new Date(`${date.year}-${date.month.toString().padStart(2, '0')}-${date.day.toString().padStart(2, '0')}`);
+    const isoDate = updatedDate.toISOString().split('T')[0];
     setDate((prevDate) => ({
       ...prevDate,
-      selectedDate: updatedDate.toISOString().split("T")[0],
+      selectedDate: updatedDate.toISOString().split('T')[0]
     }));
-    setSelectedDate(updatedDate.toISOString().split("T")[0]);
+    setSelectedDate(updatedDate.toISOString().split('T')[0])
+
+    localStorage.setItem('selectedDate', isoDate);
   }, [date.day, date.month, date.year]);
 
   const [currentTime, setCurrentTime] = React.useState("");

@@ -387,7 +387,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
                 <td className={`border ${P2 < 0 ? 'bg-red-100' : ''}`}>
                   {P2}
                 </td>
-                <td className={`border ${P2 < 0 ? 'bg-red-100' : ''}`}>
+                <td className={`border ${localHourPlan[index]?.P2_message === "Успешно!" ? 'bg-green-100' : 'bg-red-100'}`}>
                   {localHourPlan[index]?.P2_message || ''}
                 </td>
                 {selectedSubject?.subject_type === "ЭПО" && (

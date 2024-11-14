@@ -16,7 +16,10 @@ const Dashboard = () => {
   const [hoursList, setHoursList] = useState([]);
   const [holidaysList, setHolidaysList] = useState([]);
 
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    // Initialize selectedDate from localStorage or default to today
+    return localStorage.getItem('selectedDate') || new Date().toISOString().split('T')[0];
+  });
 
   const [selectedData, setSelectedData] = useState({
     selectedSubject: 0,
