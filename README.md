@@ -1,8 +1,28 @@
-# React + Vite
+# Vite + React
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Этот проект представляет собой стартовый шаблон для создания React-приложений с использованием Vite. Он обеспечивает минимальную настройку с поддержкой горячей перезагрузки модулей (HMR) и включает правила ESLint для поддержания качества кода.
 
-Currently, two official plugins are available:
+## Возможности
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Молниеносная сборка** с использованием [Vite](https://vitejs.dev/)
+- **Горячая перезагрузка модулей (HMR)** для быстрого развития
+- **React 18** с поддержкой JSX/TSX
+- **Конфигурация ESLint** для согласованности кода
+- **Поддержка SWC или Babel** для быстрого транспилятора JavaScript/TypeScript
+
+## Официальные плагины
+
+На данный момент доступны два официальных плагина:
+
+1. **[@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react)**  
+   Использует [Babel](https://babeljs.io/) для поддержки Fast Refresh. Этот вариант более гибкий и поддерживает широкий спектр конфигураций.
+
+2. **[@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc)**  
+   Использует [SWC](https://swc.rs/) для поддержки Fast Refresh. SWC работает быстрее Babel и идеально подходит для современных проектов.
+
+## Начало работы
+
+### Предварительные требования
+
+- **Node.js**: версия 14.18+ (рекомендуется 16+)
+- **npm** или **yarn**: убедитесь, что у вас установлен менеджер пакетов
