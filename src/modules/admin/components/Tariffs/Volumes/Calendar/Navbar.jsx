@@ -123,21 +123,6 @@ const Navbar = ({ date, setDate, data, setData }) => {
     <div className="flex w-full justify-between items-center px-6 py-4 bg-gray-100 border-b shadow">
       <span className="text-lg font-semibold text-gray-700">Объемные Тарифы</span>
       <div className="flex items-center ml-24 space-x-4">
-        <select
-          name="subject_type"
-          id="subject_type"
-          className="text-center border rounded-lg px-4 py-2 bg-white shadow focus:outline-none focus:ring-2 focus:ring-blue-500"
-          value={data.subject_type}
-          onChange={(e) => {
-            setData((prevData) => ({
-              ...prevData,
-              subject_type: e.target.value
-            }));
-          }}
-        >
-          <option value="ЭПО">ЭПО</option>
-          <option value="ГП">ГП</option>
-        </select>
         <Year date={date} setDate={setDate} />
         <select
           id="subject"
@@ -151,7 +136,7 @@ const Navbar = ({ date, setDate, data, setData }) => {
           className="text-center border rounded-lg px-4 py-2 bg-white shadow focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Субъект</option>
-          {data.subjects.filter(s => s.subject_type === data.subject_type).map((subject, index) => (
+          {data.subjects.map((subject, index) => (
             <option key={index} value={parseInt(subject.id)}>
               {subject.subject_name}
             </option>
