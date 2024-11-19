@@ -140,130 +140,34 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
             <th></th>
             <th>
               П1
-              <button
-                className="text-base mx-1"
-                onClick={() => {
-                  setIsModalOpen(true);
-                  setPlanData({
-                    planMode: 'P1',
-                    isGen: false,
-                  });
-                }}
-              >
-                📝
-              </button>
             </th>
             {selectedSubject?.subject_type === 'ЭПО' && (
               <th>
                 ГП1
-                <button
-                  className="text-base mx-1"
-                  onClick={() => {
-                    setIsModalOpen(true);
-                    setPlanData({
-                      planMode: 'GP1',
-                      isGen: true,
-                    });
-                  }}
-                >
-                  📝
-                </button>
               </th>
             )}
             <th>
               П2
-              <button
-                className="text-base mx-1"
-                onClick={() => {
-                  setIsModalOpen(true);
-                  setPlanData({
-                    planMode: 'P2',
-                    isGen: false,
-                  });
-                }}
-              >
-                📝
-              </button>
             </th>
             {selectedSubject?.subject_type === 'ЭПО' && (
               <th>
                 ГП2
-                <button
-                  className="text-base mx-1"
-                  onClick={() => {
-                    setIsModalOpen(true);
-                    setPlanData({
-                      planMode: 'GP2',
-                      isGen: true,
-                    });
-                  }}
-                >
-                  📝
-                </button>
               </th>
             )}
             <th>
               П3
-              <button
-                className="text-base mx-1"
-                onClick={() => {
-                  setIsModalOpen(true);
-                  setPlanData({
-                    planMode: 'P3',
-                    isGen: false,
-                  });
-                }}
-              >
-                📝
-              </button>
             </th>
             {selectedSubject?.subject_type === 'ЭПО' && (
               <th>
                 ГП3
-                <button
-                  className="text-base mx-1"
-                  onClick={() => {
-                    setIsModalOpen(true);
-                    setPlanData({
-                      planMode: 'GP3',
-                      isGen: true,
-                    });
-                  }}
-                >
-                  📝
-                </button>
               </th>
             )}
             <th>
               Ф
-              <button
-                className="text-base mx-1"
-                onClick={() => {
-                  setIsModalOpen(true);
-                  setPlanData({
-                    planMode: 'F1',
-                    isGen: false,
-                  });
-                }}
-              >
-                📝
-              </button>
             </th>
             {selectedSubject?.subject_type === 'ЭПО' && (
               <th>
                 Гф
-                <button
-                  className="text-base mx-1"
-                  onClick={() => {
-                    setIsModalOpen(true);
-                    setPlanData({
-                      planMode: 'GF1',
-                      isGen: true,
-                    });
-                  }}
-                >
-                  📝
-                </button>
               </th>
             )}
           </tr>

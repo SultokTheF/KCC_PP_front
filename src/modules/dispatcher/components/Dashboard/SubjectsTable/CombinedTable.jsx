@@ -158,7 +158,7 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
     try {
       // Fetch statuses for all subjects with both subject and object params
       const subjectStatusPromises = subjectsList.map(subject =>
-        getPlanStatus(selectedDate, { subject: subject.id, object: selectedData.selectedObject })
+        getPlanStatus(selectedDate, { subject: subject.id })
           .then(status => ({
             id: subject.id,
             status,
@@ -190,7 +190,7 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
       // Fetch statuses for all objects with both subject and object params
       const objectsForSubject = objectsList.filter(object => object.subject === selectedData.selectedSubject);
       const objectStatusPromises = objectsForSubject.map(object =>
-        getPlanStatus(selectedDate, { subject: selectedData.selectedSubject, object: object.id })
+        getPlanStatus(selectedDate, { object: object.id })
           .then(status => ({
             id: object.id,
             status,
@@ -528,10 +528,20 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
         )}
       </div>
 
+      {/* Save and Approve Buttons */}
+      <div className="flex justify-end space-x-2 m-4">
+        <button
+          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
+          onClick={handleExport}
+        >
+          Экспорт
+        </button>
+      </div>
+
       {/* Tables Side by Side */}
       <div className="flex flex-col md:flex-row">
         {/* Subject Data Table */}
-        <div className="w-full md:w-2/3 mr-0 md:mr-2 mb-4 md:mb-0">
+        <div className="w-full md:w-1/2 mr-0 md:mr-2 mb-4 md:mb-0">
           {/* Hidden File Input */}
           <input
             type="file"
@@ -616,6 +626,23 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
             </table>
           )}
 
+          {/* Save and Approve Buttons */}
+          <div className="flex justify-end space-x-2 mt-4">
+            <button
+              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
+              onClick={handleSave}
+            >
+              Сохранить
+            </button>
+
+            <button
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+              onClick={handleApprove}
+            >
+              Утвердить
+            </button>
+          </div>
+
           {/* Message Input for Disapprove */}
           {showMessageCol && (
             <div className="flex justify-end space-x-2 mt-4">
@@ -636,7 +663,7 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
         </div>
 
         {/* Object Data Table */}
-        <div className="w-full md:w-1/3 ml-0 md:ml-2">
+        <div className="w-full md:w-1/2 ml-0 md:ml-2">
           {/* Always display the Object Table if an object is selected */}
           {selectedData.selectedObject && (
             <table className="w-full text-sm text-center text-gray-500 mb-3">
@@ -685,20 +712,6 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
 
           {/* Save and Approve Buttons */}
           <div className="flex justify-end space-x-2 mt-4">
-            <button
-              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
-              onClick={handleSave}
-            >
-              Сохранить
-            </button>
-
-            <button
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
-              onClick={handleApprove}
-            >
-              Утвердить
-            </button>
-
             <button
               className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
               onClick={handleExport}
