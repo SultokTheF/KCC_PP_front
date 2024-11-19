@@ -214,7 +214,7 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
               {selectedObject?.object_type === 'ЭПО' && <td className="border">{hourPlan[index]?.P3_Gen || 0}</td>}
               <td className="border">{hourPlan[index]?.F1 || 0}</td>
               {selectedObject?.object_type === 'ЭПО' && <td className="border">{hourPlan[index]?.F1_Gen || 0}</td>}
-              <td className={`border ${hourPlan[index]?.P2_message === "Успешно!" ? 'bg-green-100' : 'bg-red-100'}`}>
+              <td className={`border ${hourPlan[index]?.P2_message === "Успешно!" ? 'bg-green-100' : hourPlan[index]?.P2_message === "Ошибка!" ? 'bg-red-100' : ''}`}>
                 {hourPlan[index]?.P2_message || '-'}
               </td>
               {/* Repeat for other columns... */}
