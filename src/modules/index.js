@@ -4,7 +4,8 @@ import {
   Graphs as UserGraphs,
   HoursTable as UserHoursTable,
   UserTableOverview, 
-  UserFormConstructor
+  UserFormConstructor,
+  UserDisbalance
 } from "./user";
 
 import {
@@ -12,7 +13,8 @@ import {
   Dashboard as DispatcherDashboard,
   DispatcherFormContructor,
   DispatcherTableOverview,
-  DispatcherGraphs
+  DispatcherGraphs,
+  DispatcherDisbalance
 } from "./dispatcher";
 
 import {
@@ -47,6 +49,7 @@ export {
   UserHoursTable,
   UserTableOverview,
   UserFormConstructor,
+  UserDisbalance
 }
 
 export {
@@ -54,7 +57,8 @@ export {
   DispatcherDashboard,
   DispatcherTableOverview,
   DispatcherFormContructor,
-  DispatcherGraphs
+  DispatcherGraphs,
+  DispatcherDisbalance
 }
 
 export {

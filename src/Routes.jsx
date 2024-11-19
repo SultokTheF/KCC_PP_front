@@ -14,6 +14,7 @@ import {
   UserHoursTable,
   UserTableOverview,
   UserFormConstructor,
+  UserDisbalance,
 
   // Dispatcher
   DispatcherProfile,
@@ -21,6 +22,7 @@ import {
   DispatcherFormContructor,
   DispatcherTableOverview,
   DispatcherGraphs,
+  DispatcherDisbalance,
 
   // Admin
   AdminProfile,
@@ -67,6 +69,7 @@ const Router = ({ userRole }) => {
           <Route path="/hours-table" element={<UserHoursTable />} />
           <Route path="/forms/table" element={<UserTableOverview />} />
           <Route path="/forms/table/:id" element={<UserFormConstructor />} />
+          <Route path="/reports/export" element={<UserDisbalance />} />
           <Route path="*" element={<PageNotFound />} />
         </>
       )}
@@ -75,6 +78,7 @@ const Router = ({ userRole }) => {
         <>
           <Route path="/" element={<DispatcherProfile />} />
           <Route path="/dashboard" element={<DispatcherDashboard />} />
+          <Route path="/reports/export" element={<DispatcherDisbalance />} />
           <Route path="/forms/table" element={<DispatcherTableOverview />} />
           <Route path="/forms/table/:id" element={<DispatcherFormContructor />} />
           <Route path="/graphs" element={<DispatcherGraphs />} />
