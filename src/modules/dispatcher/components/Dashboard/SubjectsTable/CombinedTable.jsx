@@ -292,6 +292,9 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
 
       if (response.status === 200 || response.status === 201) {
         setWarningMessage('План успешно утвержден.');
+        fetchObjectHours();
+        fetchObjectStatuses();
+        fetchSubjectStatuses();
         // Optionally refresh data here if needed
       } else {
         setWarningMessage('Ошибка при утверждении плана.');
@@ -330,6 +333,9 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
 
       if (response.status === 200 || response.status === 201) {
         setWarningMessage('Данные успешно сохранены.');
+        fetchObjectHours();
+        fetchObjectStatuses();
+        fetchObjectStatuses();
         // Optionally refresh data here if needed
       } else {
         setWarningMessage('Ошибка при сохранении данных.');
