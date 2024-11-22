@@ -1,4 +1,3 @@
-// src/components/Dashboard/ObjectsTable/ObjectTable.js
 import React, { useState, useEffect } from 'react';
 import { axiosInstance, endpoints } from '../../../../../services/apiConfig';
 import useDataFetching from '../../../../../hooks/useDataFetching';
@@ -82,43 +81,42 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
     }
   }, [selectedDate, objectsList]);
 
-  // Function to generate status display string
-  const generateStatusDisplayString = (statuses) => {
+  // Function to generate status display components
+  const generateStatusDisplayComponents = (statuses) => {
     if (!statuses || Object.keys(statuses).length === 0) {
       return "Нет данных";
     }
 
-    const statusKeys = [
-      'P1_Status', 'P1_Gen_Status', 'P2_Status', 'P2_Gen_Status', 'P3_Status', 'P3_Gen_Status',
-      'F1_Status', 'F1_Gen_Status', 'F2_Status', 'F2_Gen_Status'
-    ];
+    const planKeys = ['P1_Status', 'P2_Status', 'P3_Status', 'F1_Status'];
 
-    const statusAbbreviations = {
+    const planAbbreviations = {
       'P1_Status': 'П1',
-      'P1_Gen_Status': 'ГП1',
       'P2_Status': 'П2',
-      'P2_Gen_Status': 'ГП2',
       'P3_Status': 'П3',
-      'P3_Gen_Status': 'ГП3',
-      'F1_Status': 'Ф1',
-      'F1_Gen_Status': 'ГФ1',
-      'F2_Status': 'Ф2',
-      'F2_Gen_Status': 'ГФ2',
+      'F1_Status': 'Ф',
     };
 
-    let displayString = '';
+    const statusColors = {
+      'COMPLETED': 'text-green-500',
+      'IN_PROGRESS': 'text-orange-500',
+      'OUTDATED': 'text-red-500',
+      'NOT_STARTED': 'text-black', // default color
+    };
 
-    statusKeys.forEach(key => {
-      if (statuses[key] === 'COMPLETED') {
-        displayString += '-' + statusAbbreviations[key] + '-';
-      }
-    });
-
-    if (!displayString) {
-      displayString = 'Нет данных';
-    }
-
-    return displayString;
+    return (
+      <div>
+        {planKeys.map(key => {
+          const planStatus = statuses[key];
+          const planName = planAbbreviations[key];
+          const colorClass = statusColors[planStatus] || '';
+          return (
+            <span key={key} className={`${colorClass} mx-1`}>
+              {planName}
+            </span>
+          );
+        })}
+      </div>
+    );
   };
 
   // Filter Objects Based on Selected Subject
@@ -163,7 +161,7 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
                 ) : statusError ? (
                   statusError
                 ) : (
-                  generateStatusDisplayString(statusMap[object.id])
+                  generateStatusDisplayComponents(statusMap[object.id])
                 )}
               </td>
             ))}
@@ -220,7 +218,7 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
                   });
                 }}
               >
-                  📝
+                📝
               </button>
             </th>
             {selectedObject?.object_type === 'ЭПО' && (

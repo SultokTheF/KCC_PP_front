@@ -1,5 +1,3 @@
-// CombinedTable.js
-
 import React, { useState, useEffect, useRef } from 'react';
 import { axiosInstance, endpoints } from '../../../../../services/apiConfig';
 import * as XLSX from 'xlsx';
@@ -180,6 +178,113 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
     }
   };
 
+  const fetchObjectStatuses = async () => {
+    setLoadingObjectStatuses(true);
+    setObjectStatusError(null);
+
+    const newObjectStatusMap = {};
+
+    try {
+      const objectsForSubject = objectsList.filter(object => object.subject === selectedData.selectedSubject);
+      const objectStatusPromises = objectsForSubject.map(object =>
+        getPlanStatus(selectedDate, { object: object.id })
+          .then(statuses => ({
+            id: object.id,
+            statuses,
+          }))
+      );
+
+      const objectStatuses = await Promise.all(objectStatusPromises);
+
+      objectStatuses.forEach(({ id, statuses }) => {
+        newObjectStatusMap[id] = statuses;
+      });
+
+      setObjectStatusMap(newObjectStatusMap);
+    } catch (error) {
+      console.error("Error fetching object statuses:", error);
+    } finally {
+      setLoadingObjectStatuses(false);
+    }
+  };
+
+  const generateStatusDisplayComponents = (statuses) => {
+    if (!statuses || Object.keys(statuses).length === 0) {
+      return "Нет данных";
+    }
+
+    const planKeys = ['P1_Status', 'P2_Status', 'P3_Status', 'F1_Status'];
+
+    const planAbbreviations = {
+      'P1_Status': 'П1',
+      'P2_Status': 'П2',
+      'P3_Status': 'П3',
+      'F1_Status': 'Ф',
+    };
+
+    const statusColors = {
+      'COMPLETED': 'text-green-500',
+      'IN_PROGRESS': 'text-orange-500',
+      'OUTDATED': 'text-red-500',
+      'NOT_STARTED': 'text-black', // default color
+    };
+
+    return (
+      <div>
+        {planKeys.map(key => {
+          const planStatus = statuses[key];
+          const planName = planAbbreviations[key];
+          const colorClass = statusColors[planStatus] || '';
+          return (
+            <span key={key} className={`${colorClass} mx-1`}>
+              {planName}
+            </span>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const selectedSubject = subjectsList.find(subject => subject.id === selectedData.selectedSubject);
+  const selectedObject = objectsList.find(object => object.id === selectedData.selectedObject);
+
+  const subjectHourPlan = localHourPlan || [];
+  const objectHourPlan = objectHoursList || [];
+
+  // Functions for P2 calculations and handling changes
+  const calculateP2 = (index, P1) => {
+    const coefficient = localHourPlan[index]?.coefficient || 0;
+    const volume = localHourPlan[index]?.volume || 0;
+    const P2 = P1 * coefficient + volume;
+    return P2.toFixed(2);
+  };
+
+  const handleCoefficientChange = (index, value) => {
+    const updatedHourPlan = [...localHourPlan];
+    updatedHourPlan[index].coefficient = parseFloat(value) || 0;
+    setLocalHourPlan(updatedHourPlan);
+  };
+
+  const handleVolumeChange = (index, value) => {
+    const updatedHourPlan = [...localHourPlan];
+    updatedHourPlan[index].volume = parseInt(value, 10) || 0;
+    setLocalHourPlan(updatedHourPlan);
+  };
+
+  const handleMessagesChange = (index, value) => {
+    const updatedHourPlan = [...localHourPlan];
+    updatedHourPlan[index].message = value;
+    setLocalHourPlan(updatedHourPlan);
+  };
+
+  const handleDisapprove = () => {
+    setShowMessageCol(true);
+  };
+
+  const handleCancel = () => {
+    setShowMessageCol(false);
+  };
+
   const handleFullExport = () => {
     const subjectTableHeaders = [
       "Time",
@@ -272,114 +377,6 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
   };
 
 
-  const fetchObjectStatuses = async () => {
-    setLoadingObjectStatuses(true);
-    setObjectStatusError(null);
-
-    const newObjectStatusMap = {};
-
-    try {
-      const objectsForSubject = objectsList.filter(object => object.subject === selectedData.selectedSubject);
-      const objectStatusPromises = objectsForSubject.map(object =>
-        getPlanStatus(selectedDate, { object: object.id })
-          .then(statuses => ({
-            id: object.id,
-            statuses,
-          }))
-      );
-
-      const objectStatuses = await Promise.all(objectStatusPromises);
-
-      objectStatuses.forEach(({ id, statuses }) => {
-        newObjectStatusMap[id] = statuses;
-      });
-
-      setObjectStatusMap(newObjectStatusMap);
-    } catch (error) {
-      console.error("Error fetching object statuses:", error);
-    } finally {
-      setLoadingObjectStatuses(false);
-    }
-  };
-
-  const generateStatusDisplayString = (statuses) => {
-    if (!statuses || Object.keys(statuses).length === 0) {
-      return "Нет данных";
-    }
-
-    const statusKeys = [
-      'P1_Status', 'P1_Gen_Status', 'P2_Status', 'P2_Gen_Status', 'P3_Status', 'P3_Gen_Status',
-      'F1_Status', 'F1_Gen_Status', 'F2_Status', 'F2_Gen_Status'
-    ];
-
-    const statusAbbreviations = {
-      'P1_Status': 'П1',
-      'P1_Gen_Status': 'ГП1',
-      'P2_Status': 'П2',
-      'P2_Gen_Status': 'ГП2',
-      'P3_Status': 'П3',
-      'P3_Gen_Status': 'ГП3',
-      'F1_Status': 'Ф1',
-      'F1_Gen_Status': 'ГФ1',
-      'F2_Status': 'Ф2',
-      'F2_Gen_Status': 'ГФ2',
-    };
-
-    let displayString = '';
-
-    statusKeys.forEach(key => {
-      if (statuses[key] === 'COMPLETED') {
-        displayString += '-' + statusAbbreviations[key] + '-';
-      }
-    });
-
-    if (!displayString) {
-      displayString = 'Нет данных';
-    }
-
-    return displayString;
-  };
-
-  const selectedSubject = subjectsList.find(subject => subject.id === selectedData.selectedSubject);
-  const selectedObject = objectsList.find(object => object.id === selectedData.selectedObject);
-
-  const subjectHourPlan = localHourPlan || [];
-  const objectHourPlan = objectHoursList || [];
-
-  // Functions for P2 calculations and handling changes
-  const calculateP2 = (index, P1) => {
-    const coefficient = localHourPlan[index]?.coefficient || 0;
-    const volume = localHourPlan[index]?.volume || 0;
-    const P2 = P1 * coefficient + volume;
-    return P2.toFixed(2);
-  };
-
-  const handleCoefficientChange = (index, value) => {
-    const updatedHourPlan = [...localHourPlan];
-    updatedHourPlan[index].coefficient = parseFloat(value) || 0;
-    setLocalHourPlan(updatedHourPlan);
-  };
-
-  const handleVolumeChange = (index, value) => {
-    const updatedHourPlan = [...localHourPlan];
-    updatedHourPlan[index].volume = parseInt(value, 10) || 0;
-    setLocalHourPlan(updatedHourPlan);
-  };
-
-  const handleMessagesChange = (index, value) => {
-    const updatedHourPlan = [...localHourPlan];
-    updatedHourPlan[index].message = value;
-    setLocalHourPlan(updatedHourPlan);
-  };
-
-  const handleDisapprove = () => {
-    setShowMessageCol(true);
-  };
-
-  const handleCancel = () => {
-    setShowMessageCol(false);
-  };
-
   const handleApprove = async () => {
     // Console log as per requirement
     console.log({
@@ -405,6 +402,7 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
 
       if (response.status === 200 || response.status === 201) {
         setWarningMessage('План успешно утвержден.');
+        fetchSubjectHours(); // added
         fetchObjectHours();
         fetchObjectStatuses();
         fetchSubjectStatuses();
@@ -442,6 +440,7 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
 
       if (response.status === 200 || response.status === 201) {
         setWarningMessage('Данные успешно сохранены.');
+        fetchSubjectHours(); // added
         fetchObjectHours();
         fetchObjectStatuses();
         fetchSubjectStatuses();
@@ -586,7 +585,7 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
                     ) : subjectStatusError ? (
                       subjectStatusError
                     ) : (
-                      generateStatusDisplayString(subjectStatusMap[subject.id])
+                      generateStatusDisplayComponents(subjectStatusMap[subject.id])
                     )}
                   </td>
                 ))}
@@ -632,7 +631,7 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
                       ) : objectStatusError ? (
                         objectStatusError
                       ) : (
-                        generateStatusDisplayString(objectStatusMap[object.id])
+                        generateStatusDisplayComponents(objectStatusMap[object.id])
                       )}
                     </td>
                   ))}
@@ -651,7 +650,6 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
           Экспорт полного отчета
         </button>
       </div>
-
 
       {/* Tables Side by Side */}
       <div className="flex flex-col md:flex-row">
@@ -690,8 +688,9 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
 
                   const P1 = subjectHourData.P1 || 0;
                   const P1_Gen = subjectHourData.P1_Gen || 0;
-                  const P2 = calculateP2(index, P1);
                   const P2_message = subjectHourData.P2_message || '';
+
+                  const P2 = subjectHourData.P2 != null && subjectHourData.P2 !== 0 ? subjectHourData.P2 : calculateP2(index, P1);
 
                   return (
                     <tr key={time}>
