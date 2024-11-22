@@ -23,18 +23,6 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
   const [loadingStatuses, setLoadingStatuses] = useState(true);
   const [statusError, setStatusError] = useState(null);
 
-  // Status Display Map
-  const statusDisplayMap = {
-    "PRIMARY_PLAN": "-П1-",
-    "KCCPP_PLAN": "-П1-П2",
-    "KEGOS_PLAN": "-П1-П2-П3-",
-    "FACT1": "-П1-П2-П3-Ф1",
-    "FACT2": "-П1-П2-П3-Ф1-Ф2",
-    "COMPLETED": "Завершен",
-    "Ошибка при загрузке": "Нет данных",
-    // ... add other statuses if necessary
-  };
-
   // Asynchronous Function to Fetch Status
   const getPlanStatus = async (date, subject) => {
     try {
@@ -44,10 +32,10 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
           subject: subject.id,
         },
       });
-      return response.data.status || "Нет данных";
+      return response.data || {};
     } catch (error) {
       console.error(`Error fetching status for subject ${subject.id}:`, error);
-      return "Ошибка при загрузке";
+      return {};
     }
   };
 
@@ -60,16 +48,16 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
 
       try {
         const statusPromises = subjectsList.map((subject) =>
-          getPlanStatus(selectedDate, subject).then((status) => ({
+          getPlanStatus(selectedDate, subject).then((statuses) => ({
             id: subject.id,
-            status,
+            statuses,
           }))
         );
 
         const statuses = await Promise.all(statusPromises);
 
-        statuses.forEach(({ id, status }) => {
-          newStatusMap[id] = status;
+        statuses.forEach(({ id, statuses }) => {
+          newStatusMap[id] = statuses;
         });
 
         setStatusMap(newStatusMap);
@@ -85,6 +73,45 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
       fetchAllStatuses();
     }
   }, [selectedDate, subjectsList]);
+
+  // Function to generate status display string
+  const generateStatusDisplayString = (statuses) => {
+    if (!statuses || Object.keys(statuses).length === 0) {
+      return "Нет данных";
+    }
+
+    const statusKeys = [
+      'P1_Status', 'P1_Gen_Status', 'P2_Status', 'P2_Gen_Status', 'P3_Status', 'P3_Gen_Status',
+      'F1_Status', 'F1_Gen_Status', 'F2_Status', 'F2_Gen_Status'
+    ];
+
+    const statusAbbreviations = {
+      'P1_Status': 'П1',
+      'P1_Gen_Status': 'ГП1',
+      'P2_Status': 'П2',
+      'P2_Gen_Status': 'ГП2',
+      'P3_Status': 'П3',
+      'P3_Gen_Status': 'ГП3',
+      'F1_Status': 'Ф1',
+      'F1_Gen_Status': 'ГФ1',
+      'F2_Status': 'Ф2',
+      'F2_Gen_Status': 'ГФ2',
+    };
+
+    let displayString = '';
+
+    statusKeys.forEach(key => {
+      if (statuses[key] === 'COMPLETED') {
+        displayString += '-' + statusAbbreviations[key] + '-';
+      }
+    });
+
+    if (!displayString) {
+      displayString = 'Нет данных';
+    }
+
+    return displayString;
+  };
 
   // Set Default Selected Subject if Not Already Selected
   useEffect(() => {
@@ -125,7 +152,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
                 ) : statusError ? (
                   statusError
                 ) : (
-                  statusDisplayMap[statusMap[subject.id]] || "Нет данных"
+                  generateStatusDisplayString(statusMap[subject.id])
                 )}
               </td>
             ))}
@@ -163,11 +190,11 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
               </th>
             )}
             <th>
-              Ф
+              Ф1
             </th>
             {selectedSubject?.subject_type === 'ЭПО' && (
               <th>
-                Гф
+                ГФ1
               </th>
             )}
           </tr>
@@ -184,7 +211,6 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
               {selectedSubject?.subject_type === 'ЭПО' && <td className="border">{hourPlan[index]?.P3_Gen || 0}</td>}
               <td className="border">{hourPlan[index]?.F1 || 0}</td>
               {selectedSubject?.subject_type === 'ЭПО' && <td className="border">{hourPlan[index]?.F1_Gen || 0}</td>}
-              {/* Repeat for other columns if necessary */}
             </tr>
           ))}
         </tbody>

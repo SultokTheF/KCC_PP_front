@@ -119,7 +119,6 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
       console.error('Error fetching subject hours:', error);
       setSubjectHoursList([]);
       setLocalHourPlan(initializeDefaultHourPlan());
-      // setWarningMessage('Ошибка при загрузке часов субъектов.');
     }
   };
 
@@ -133,20 +132,23 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
     } catch (error) {
       console.error('Error fetching object hours:', error);
       setObjectHoursList([]);
-      // setWarningMessage('Ошибка при загрузке часов объектов.');
     }
   };
 
-  // Fetch statuses with both subject and object as parameters
-  const statusDisplayMap = {
-    "PRIMARY_PLAN": "-П1-",
-    "KCCPP_PLAN": "-П1-П2",
-    "KEGOS_PLAN": "-П1-П2-П3-",
-    "FACT1": "-П1-П2-П3-Ф1",
-    "FACT2": "-П1-П2-П3-Ф1-Ф2",
-    "COMPLETED": "Завершен",
-    "Ошибка при загрузке": "Нет данных",
-    // ... add other statuses if necessary
+  // Fetch statuses
+  const getPlanStatus = async (date, params) => {
+    try {
+      const response = await axiosInstance.get(endpoints.GET_STATUS, {
+        params: {
+          date,
+          ...params,
+        },
+      });
+      return response.data || {};
+    } catch (error) {
+      console.error(`Error fetching status:`, error);
+      return {};
+    }
   };
 
   const fetchSubjectStatuses = async () => {
@@ -156,24 +158,22 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
     const newSubjectStatusMap = {};
 
     try {
-      // Fetch statuses for all subjects with both subject and object params
       const subjectStatusPromises = subjectsList.map(subject =>
         getPlanStatus(selectedDate, { subject: subject.id })
-          .then(status => ({
+          .then(statuses => ({
             id: subject.id,
-            status,
+            statuses,
           }))
       );
 
       const subjectStatuses = await Promise.all(subjectStatusPromises);
 
-      subjectStatuses.forEach(({ id, status }) => {
-        newSubjectStatusMap[id] = status;
+      subjectStatuses.forEach(({ id, statuses }) => {
+        newSubjectStatusMap[id] = statuses;
       });
 
       setSubjectStatusMap(newSubjectStatusMap);
     } catch (error) {
-      // setSubjectStatusError("Ошибка при загрузке статусов субъектов.");
       console.error("Error fetching subject statuses:", error);
     } finally {
       setLoadingSubjectStatuses(false);
@@ -187,44 +187,65 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
     const newObjectStatusMap = {};
 
     try {
-      // Fetch statuses for all objects with both subject and object params
       const objectsForSubject = objectsList.filter(object => object.subject === selectedData.selectedSubject);
       const objectStatusPromises = objectsForSubject.map(object =>
         getPlanStatus(selectedDate, { object: object.id })
-          .then(status => ({
+          .then(statuses => ({
             id: object.id,
-            status,
+            statuses,
           }))
       );
 
       const objectStatuses = await Promise.all(objectStatusPromises);
 
-      objectStatuses.forEach(({ id, status }) => {
-        newObjectStatusMap[id] = status;
+      objectStatuses.forEach(({ id, statuses }) => {
+        newObjectStatusMap[id] = statuses;
       });
 
       setObjectStatusMap(newObjectStatusMap);
     } catch (error) {
-      setObjectStatusError("Ошибка при загрузке статусов объектов.");
       console.error("Error fetching object statuses:", error);
     } finally {
       setLoadingObjectStatuses(false);
     }
   };
 
-  const getPlanStatus = async (date, params) => {
-    try {
-      const response = await axiosInstance.get(endpoints.GET_STATUS, {
-        params: {
-          date,
-          ...params,
-        },
-      });
-      return response.data.status || "Нет данных";
-    } catch (error) {
-      console.error(`Error fetching status:`, error);
-      return "Ошибка при загрузке";
+  const generateStatusDisplayString = (statuses) => {
+    if (!statuses || Object.keys(statuses).length === 0) {
+      return "Нет данных";
     }
+
+    const statusKeys = [
+      'P1_Status', 'P1_Gen_Status', 'P2_Status', 'P2_Gen_Status', 'P3_Status', 'P3_Gen_Status',
+      'F1_Status', 'F1_Gen_Status', 'F2_Status', 'F2_Gen_Status'
+    ];
+
+    const statusAbbreviations = {
+      'P1_Status': 'П1',
+      'P1_Gen_Status': 'ГП1',
+      'P2_Status': 'П2',
+      'P2_Gen_Status': 'ГП2',
+      'P3_Status': 'П3',
+      'P3_Gen_Status': 'ГП3',
+      'F1_Status': 'Ф1',
+      'F1_Gen_Status': 'ГФ1',
+      'F2_Status': 'Ф2',
+      'F2_Gen_Status': 'ГФ2',
+    };
+
+    let displayString = '';
+
+    statusKeys.forEach(key => {
+      if (statuses[key] === 'COMPLETED') {
+        displayString += '-' + statusAbbreviations[key] + '-';
+      }
+    });
+
+    if (!displayString) {
+      displayString = 'Нет данных';
+    }
+
+    return displayString;
   };
 
   const selectedSubject = subjectsList.find(subject => subject.id === selectedData.selectedSubject);
@@ -295,7 +316,6 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
         fetchObjectHours();
         fetchObjectStatuses();
         fetchSubjectStatuses();
-        // Optionally refresh data here if needed
       } else {
         setWarningMessage('Ошибка при утверждении плана.');
       }
@@ -318,9 +338,6 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
     });
 
     try {
-      const coefficients = localHourPlan.map(hour => hour.coefficient);
-      const volumes = localHourPlan.map(hour => hour.volume);
-
       const response = await axiosInstance.post(endpoints.CALCULATE_P2, {
         call: "save",
         subject: selectedData.selectedSubject,
@@ -335,8 +352,7 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
         setWarningMessage('Данные успешно сохранены.');
         fetchObjectHours();
         fetchObjectStatuses();
-        fetchObjectStatuses();
-        // Optionally refresh data here if needed
+        fetchSubjectStatuses();
       } else {
         setWarningMessage('Ошибка при сохранении данных.');
       }
@@ -478,7 +494,7 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
                     ) : subjectStatusError ? (
                       subjectStatusError
                     ) : (
-                      statusDisplayMap[subjectStatusMap[subject.id]] || "Нет данных"
+                      generateStatusDisplayString(subjectStatusMap[subject.id])
                     )}
                   </td>
                 ))}
@@ -524,7 +540,7 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
                       ) : objectStatusError ? (
                         objectStatusError
                       ) : (
-                        statusDisplayMap[objectStatusMap[object.id]] || "Нет данных"
+                        generateStatusDisplayString(objectStatusMap[object.id])
                       )}
                     </td>
                   ))}
