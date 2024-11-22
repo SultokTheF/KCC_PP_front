@@ -180,6 +180,98 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
     }
   };
 
+  const handleFullExport = () => {
+    const subjectTableHeaders = [
+      "Time",
+      "P1",
+      ...(selectedSubject?.subject_type === "ЭПО" ? ["P1_Gen"] : []),
+      "Coefficient",
+      "Volume",
+      "P2",
+      "P2_Message",
+      ...(selectedSubject?.subject_type === "ЭПО" ? ["P2_Gen"] : []),
+      ...(showMessageCol ? ["Message"] : [])
+    ];
+
+    const objectTableHeaders = [
+      "P1",
+      ...(selectedObject?.object_type === "ЭПО" ? ["P1_Gen"] : []),
+      "Volume",
+      "P2",
+      ...(selectedObject?.object_type === "ЭПО" ? ["P2_Gen"] : []),
+      "P3",
+      ...(selectedObject?.object_type === "ЭПО" ? ["P3_Gen"] : []),
+      "F",
+      ...(selectedObject?.object_type === "ЭПО" ? ["F_Gen"] : []),
+      "P2_Message"
+    ];
+
+    // Prepare subject table data
+    const subjectTableData = [
+      subjectTableHeaders,
+      ...timeIntervals.map((time, index) => {
+        const subjectHourData = localHourPlan[index] || {};
+        return [
+          time,
+          subjectHourData.P1 || 0,
+          ...(selectedSubject?.subject_type === "ЭПО" ? [subjectHourData.P1_Gen || 0] : []),
+          subjectHourData.coefficient || 0,
+          subjectHourData.volume || 0,
+          calculateP2(index, subjectHourData.P1 || 0),
+          subjectHourData.P2_message || '',
+          ...(selectedSubject?.subject_type === "ЭПО" ? [subjectHourData.P2_Gen || 0] : []),
+          ...(showMessageCol ? [subjectHourData.message || ''] : [])
+        ];
+      })
+    ];
+
+    // Prepare object table data if selectedObject exists
+    const objectTableData = selectedData.selectedObject
+      ? [
+        objectTableHeaders,
+        ...timeIntervals.map((time, index) => {
+          const objectHourData = objectHourPlan.find(hour => hour.hour === index + 1) || {};
+          return [
+            objectHourData.P1 || 0,
+            ...(selectedObject?.object_type === "ЭПО" ? [objectHourData.P1_Gen || 0] : []),
+            objectHourData.volume || 0,
+            objectHourData.P2 || 0,
+            ...(selectedObject?.object_type === "ЭПО" ? [objectHourData.P2_Gen || 0] : []),
+            objectHourData.P3 || 0,
+            ...(selectedObject?.object_type === "ЭПО" ? [objectHourData.P3_Gen || 0] : []),
+            objectHourData.F1 || 0,
+            ...(selectedObject?.object_type === "ЭПО" ? [objectHourData.F1_Gen || 0] : []),
+            objectHourData.P2_message || ''
+          ];
+        })
+      ]
+      : [];
+
+    // Combine tables into one sheet
+    const combinedData = [
+      ["Subject Table"], // Header for subject table
+      ...subjectTableData,
+      [],
+      ["Object Table"], // Header for object table
+      ...objectTableData
+    ];
+
+    const worksheet = XLSX.utils.aoa_to_sheet(combinedData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Full Export");
+    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+
+    // Save file
+    const data = new Blob([excelBuffer], { type: "application/octet-stream" });
+    const url = URL.createObjectURL(data);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `full_export_${selectedDate}.xlsx`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+
   const fetchObjectStatuses = async () => {
     setLoadingObjectStatuses(true);
     setObjectStatusError(null);
@@ -551,14 +643,15 @@ const CombinedTable = ({ selectedData, setSelectedData, subjectsList, objectsLis
       </div>
 
       {/* Save and Approve Buttons */}
-      <div className="flex justify-end space-x-2 m-4">
+      <div className="flex justify-end space-x-2 mt-4">
         <button
           className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
-          onClick={handleExport}
+          onClick={handleFullExport}
         >
-          Экспорт
+          Экспорт полного отчета
         </button>
       </div>
+
 
       {/* Tables Side by Side */}
       <div className="flex flex-col md:flex-row">
