@@ -18,8 +18,10 @@ const History = () => {
     sumPlanMax: "",
     dateDayStart: currentDate,
     dateDayEnd: currentDate,
-    timeStart: "", // New filter
-    timeEnd: "",   // New filter
+    dateStart: currentDate, // New filter
+    dateEnd: currentDate,   // New filter
+    timeStart: "",
+    timeEnd: "",
     userRole: [],
     object: [],
   });
@@ -47,10 +49,10 @@ const History = () => {
   ];
 
   const userRoleMapping = {
-    "ADMIN": "Администратор",
-    "USER": "Пользователь",
-    "DISPATCHER": "Диспетчер"
-  }
+    ADMIN: "Администратор",
+    USER: "Пользователь",
+    DISPATCHER: "Диспетчер",
+  };
 
   // Fetch objects
   const fetchObjects = async () => {
@@ -96,8 +98,10 @@ const History = () => {
       if (filters.sumPlanMax) params.sum_plan_max = filters.sumPlanMax;
       if (filters.dateDayStart) params.date_day_start = filters.dateDayStart;
       if (filters.dateDayEnd) params.date_day_end = filters.dateDayEnd;
-      if (filters.timeStart) params.time_start = filters.timeStart; // New
-      if (filters.timeEnd) params.time_end = filters.timeEnd;       // New
+      if (filters.dateStart) params.date_start = filters.dateStart; // New
+      if (filters.dateEnd) params.date_end = filters.dateEnd;       // New
+      if (filters.timeStart) params.time_start = filters.timeStart;
+      if (filters.timeEnd) params.time_end = filters.timeEnd;
       if (filters.userRole.length > 0)
         params.user_role = filters.userRole.join(",");
       if (filters.object.length > 0) params.object = filters.object.join(",");
@@ -251,7 +255,7 @@ const History = () => {
             {/* Date Day Start Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Дата начала
+                Дата начала дня
               </label>
               <input
                 type="date"
@@ -265,7 +269,7 @@ const History = () => {
             {/* Date Day End Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Дата окончания
+                Дата окончания дня
               </label>
               <input
                 type="date"
@@ -274,6 +278,34 @@ const History = () => {
                 onChange={handleInputChange}
                 className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
                     focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              />
+            </div>
+            {/* Date Start Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Дата начала
+              </label>
+              <input
+                type="date"
+                name="dateStart"
+                value={filters.dateStart}
+                onChange={handleInputChange}
+                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
+                  focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              />
+            </div>
+            {/* Date End Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Дата окончания
+              </label>
+              <input
+                type="date"
+                name="dateEnd"
+                value={filters.dateEnd}
+                onChange={handleInputChange}
+                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
+                  focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
             {/* Time Start Filter */}
@@ -319,7 +351,7 @@ const History = () => {
             <thead>
               <tr className="bg-gray-100">
                 <th className="px-4 py-2 border">Пользователь</th>
-                <th className="px-4 py-2 border">Роль</th> {/* New Column */}
+                <th className="px-4 py-2 border">Роль</th>
                 <th className="px-4 py-2 border">Действие</th>
                 <th className="px-4 py-2 border">План</th>
                 <th className="px-4 py-2 border">Сумма плана</th>
@@ -342,16 +374,22 @@ const History = () => {
 
                 // Get user role based on email
                 const user = users.find((u) => u.email === historyItem.user);
-                const userRole = user ? user.role : "Неизвестно";
+                const userRole = user
+                  ? userRoleMapping[user.role] || "Неизвестно"
+                  : "Неизвестно";
 
                 return (
                   <tr key={index} className="hover:bg-gray-100">
                     <td className="border px-4 py-2">{historyItem.user}</td>
-                    <td className="border px-4 py-2">{userRoleMapping[userRole]}</td> {/* New Column */}
+                    <td className="border px-4 py-2">{userRole}</td>
                     <td className="border px-4 py-2">{historyItem.action}</td>
                     <td className="border px-4 py-2">{historyItem.plan}</td>
-                    <td className="border px-4 py-2">{historyItem.sum_plan}</td>
-                    <td className="border px-4 py-2">{historyItem.date_day}</td>
+                    <td className="border px-4 py-2">
+                      {historyItem.sum_plan}
+                    </td>
+                    <td className="border px-4 py-2">
+                      {historyItem.date_day}
+                    </td>
                     <td className="border px-4 py-2">{date}</td>
                     <td className="border px-4 py-2">{time}</td>
                     <td className="border px-4 py-2">{objectName}</td>
