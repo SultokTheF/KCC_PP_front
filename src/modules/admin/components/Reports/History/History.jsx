@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { axiosInstance } from "../../../../../services/apiConfig";
+import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 import Sidebar from "../../Sidebar/Sidebar";
 import Select from "react-select";
 
 const History = () => {
   const [history, setHistory] = useState([]);
   const [objects, setObjects] = useState([]);
+  const [users, setUsers] = useState([]);
 
   // Set initial dates to current date
   const currentDate = new Date().toISOString().split("T")[0];
@@ -17,6 +18,8 @@ const History = () => {
     sumPlanMax: "",
     dateDayStart: currentDate,
     dateDayEnd: currentDate,
+    timeStart: "", // New filter
+    timeEnd: "",   // New filter
     userRole: [],
     object: [],
   });
@@ -43,19 +46,37 @@ const History = () => {
     // Add more roles if necessary
   ];
 
-  useEffect(() => {
-    const fetchObjects = async () => {
-      try {
-        const accessToken = localStorage.getItem("accessToken");
-        const response = await axiosInstance.get("/api/objects/", {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        setObjects(response.data);
-      } catch (error) {
-        console.error("Error fetching objects:", error);
-      }
-    };
+  const userRoleMapping = {
+    "ADMIN": "Администратор",
+    "USER": "Пользователь",
+    "DISPATCHER": "Диспетчер"
+  }
 
+  // Fetch objects
+  const fetchObjects = async () => {
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      const response = await axiosInstance.get("/api/objects/", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setObjects(response.data);
+    } catch (error) {
+      console.error("Error fetching objects:", error);
+    }
+  };
+
+  // Fetch users
+  const fetchUsers = async () => {
+    try {
+      const response = await axiosInstance.get(endpoints.USERS);
+      setUsers(response.data);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
     fetchObjects();
   }, []);
 
@@ -75,6 +96,8 @@ const History = () => {
       if (filters.sumPlanMax) params.sum_plan_max = filters.sumPlanMax;
       if (filters.dateDayStart) params.date_day_start = filters.dateDayStart;
       if (filters.dateDayEnd) params.date_day_end = filters.dateDayEnd;
+      if (filters.timeStart) params.time_start = filters.timeStart; // New
+      if (filters.timeEnd) params.time_end = filters.timeEnd;       // New
       if (filters.userRole.length > 0)
         params.user_role = filters.userRole.join(",");
       if (filters.object.length > 0) params.object = filters.object.join(",");
@@ -94,7 +117,9 @@ const History = () => {
   }, [filters]);
 
   const handleMultiSelectChange = (selectedOptions, { name }) => {
-    const value = selectedOptions ? selectedOptions.map((opt) => opt.value) : [];
+    const value = selectedOptions
+      ? selectedOptions.map((opt) => opt.value)
+      : [];
     setFilters((prevFilters) => ({
       ...prevFilters,
       [name]: value,
@@ -204,7 +229,8 @@ const History = () => {
                 value={filters.sumPlanMin}
                 onChange={handleInputChange}
                 placeholder="Минимальная сумма"
-                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
+                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
             {/* Sum Plan Max Filter */}
@@ -218,7 +244,8 @@ const History = () => {
                 value={filters.sumPlanMax}
                 onChange={handleInputChange}
                 placeholder="Максимальная сумма"
-                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
+                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
             {/* Date Day Start Filter */}
@@ -231,7 +258,8 @@ const History = () => {
                 name="dateDayStart"
                 value={filters.dateDayStart}
                 onChange={handleInputChange}
-                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
+                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
             {/* Date Day End Filter */}
@@ -244,7 +272,42 @@ const History = () => {
                 name="dateDayEnd"
                 value={filters.dateDayEnd}
                 onChange={handleInputChange}
-                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
+                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              />
+            </div>
+            {/* Time Start Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Время начала
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="24"
+                name="timeStart"
+                value={filters.timeStart}
+                onChange={handleInputChange}
+                placeholder="1-24"
+                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
+                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              />
+            </div>
+            {/* Time End Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Время окончания
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="24"
+                name="timeEnd"
+                value={filters.timeEnd}
+                onChange={handleInputChange}
+                placeholder="1-24"
+                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
+                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
           </div>
@@ -256,6 +319,7 @@ const History = () => {
             <thead>
               <tr className="bg-gray-100">
                 <th className="px-4 py-2 border">Пользователь</th>
+                <th className="px-4 py-2 border">Роль</th> {/* New Column */}
                 <th className="px-4 py-2 border">Действие</th>
                 <th className="px-4 py-2 border">План</th>
                 <th className="px-4 py-2 border">Сумма плана</th>
@@ -276,17 +340,18 @@ const History = () => {
                   historyItem.time
                 );
 
+                // Get user role based on email
+                const user = users.find((u) => u.email === historyItem.user);
+                const userRole = user ? user.role : "Неизвестно";
+
                 return (
                   <tr key={index} className="hover:bg-gray-100">
                     <td className="border px-4 py-2">{historyItem.user}</td>
+                    <td className="border px-4 py-2">{userRoleMapping[userRole]}</td> {/* New Column */}
                     <td className="border px-4 py-2">{historyItem.action}</td>
                     <td className="border px-4 py-2">{historyItem.plan}</td>
-                    <td className="border px-4 py-2">
-                      {historyItem.sum_plan}
-                    </td>
-                    <td className="border px-4 py-2">
-                      {historyItem.date_day}
-                    </td>
+                    <td className="border px-4 py-2">{historyItem.sum_plan}</td>
+                    <td className="border px-4 py-2">{historyItem.date_day}</td>
                     <td className="border px-4 py-2">{date}</td>
                     <td className="border px-4 py-2">{time}</td>
                     <td className="border px-4 py-2">{objectName}</td>
