@@ -2,6 +2,14 @@ import React, { useState, useEffect } from "react";
 import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 import Sidebar from "../../Sidebar/Sidebar";
 import Select from "react-select";
+import pdfMake from "pdfmake/build/pdfmake";
+import * as pdfFonts from "pdfmake/build/vfs_fonts";
+
+import * as XLSX from "xlsx";
+
+pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts.vfs ? pdfFonts.vfs : pdfFonts;
+
+
 
 const History = () => {
   const [history, setHistory] = useState([]);
@@ -19,7 +27,7 @@ const History = () => {
     dateDayStart: currentDate,
     dateDayEnd: currentDate,
     dateStart: currentDate, // New filter
-    dateEnd: currentDate,   // New filter
+    dateEnd: currentDate, // New filter
     timeStart: "",
     timeEnd: "",
     userRole: [],
@@ -29,7 +37,7 @@ const History = () => {
   const actionOptions = [
     { value: "create", label: "Создание" },
     { value: "update", label: "Редактирование" },
-    { value: "delete", label: "Удаление" },
+    // { value: "delete", label: "Удаление" },
   ];
 
   const planOptions = [
@@ -99,7 +107,7 @@ const History = () => {
       if (filters.dateDayStart) params.date_day_start = filters.dateDayStart;
       if (filters.dateDayEnd) params.date_day_end = filters.dateDayEnd;
       if (filters.dateStart) params.date_start = filters.dateStart; // New
-      if (filters.dateEnd) params.date_end = filters.dateEnd;       // New
+      if (filters.dateEnd) params.date_end = filters.dateEnd; // New
       if (filters.timeStart) params.time_start = filters.timeStart;
       if (filters.timeEnd) params.time_end = filters.timeEnd;
       if (filters.userRole.length > 0)
@@ -121,9 +129,7 @@ const History = () => {
   }, [filters]);
 
   const handleMultiSelectChange = (selectedOptions, { name }) => {
-    const value = selectedOptions
-      ? selectedOptions.map((opt) => opt.value)
-      : [];
+    const value = selectedOptions ? selectedOptions.map((opt) => opt.value) : [];
     setFilters((prevFilters) => ({
       ...prevFilters,
       [name]: value,
@@ -144,6 +150,102 @@ const History = () => {
       date: date.toLocaleDateString(),
       time: date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
+  };
+
+  const exportPDF = () => {
+    // Prepare the data
+    const data = history.map((historyItem) => {
+      const objectName =
+        objects.find((obj) => obj.id === historyItem.object)?.object_name ||
+        "Неизвестно";
+  
+      const { date, time } = formatDateTime(historyItem.date, historyItem.time);
+  
+      // Get user role based on email
+      const user = users.find((u) => u.email === historyItem.user);
+      const userRole = user
+        ? userRoleMapping[user.role] || "Неизвестно"
+        : "Неизвестно";
+  
+      return [
+        historyItem.user,
+        userRole,
+        historyItem.action,
+        historyItem.plan,
+        historyItem.sum_plan,
+        historyItem.date_day,
+        date,
+        time,
+        objectName,
+      ];
+    });
+  
+    const docDefinition = {
+      content: [
+        {
+          table: {
+            headerRows: 1,
+            widths: ["auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto"],
+            body: [
+              [
+                "Пользователь",
+                "Роль",
+                "Действие",
+                "План",
+                "Сумма плана",
+                "Дата дня",
+                "Дата",
+                "Время",
+                "Объект",
+              ],
+              ...data,
+            ],
+          },
+        },
+      ],
+      defaultStyle: {
+        font: "Roboto",
+        fontSize: 8,
+      },
+    };
+  
+    pdfMake.createPdf(docDefinition).download("history.pdf");
+  };  
+
+  // Export to Excel function
+  const exportExcel = () => {
+    // Prepare the data
+    const data = history.map((historyItem) => {
+      const objectName =
+        objects.find((obj) => obj.id === historyItem.object)?.object_name ||
+        "Неизвестно";
+
+      const { date, time } = formatDateTime(historyItem.date, historyItem.time);
+
+      // Get user role based on email
+      const user = users.find((u) => u.email === historyItem.user);
+      const userRole = user
+        ? userRoleMapping[user.role] || "Неизвестно"
+        : "Неизвестно";
+
+      return {
+        "Пользователь": historyItem.user,
+        "Роль": userRole,
+        "Действие": historyItem.action,
+        "План": historyItem.plan,
+        "Сумма плана": historyItem.sum_plan,
+        "Дата дня": historyItem.date_day,
+        "Дата": date,
+        "Время": time,
+        "Объект": objectName,
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "History");
+
+    XLSX.writeFile(workbook, "history.xlsx");
   };
 
   return (
@@ -234,7 +336,7 @@ const History = () => {
                 onChange={handleInputChange}
                 placeholder="Минимальная сумма"
                 className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
             {/* Sum Plan Max Filter */}
@@ -249,13 +351,13 @@ const History = () => {
                 onChange={handleInputChange}
                 placeholder="Максимальная сумма"
                 className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
             {/* Date Day Start Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Дата начала дня
+                Начало операционного периода
               </label>
               <input
                 type="date"
@@ -263,13 +365,13 @@ const History = () => {
                 value={filters.dateDayStart}
                 onChange={handleInputChange}
                 className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
             {/* Date Day End Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Дата окончания дня
+                Конец операционного периода
               </label>
               <input
                 type="date"
@@ -277,13 +379,13 @@ const History = () => {
                 value={filters.dateDayEnd}
                 onChange={handleInputChange}
                 className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
             {/* Date Start Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Дата начала
+                Дата начала действия операции
               </label>
               <input
                 type="date"
@@ -291,13 +393,13 @@ const History = () => {
                 value={filters.dateStart}
                 onChange={handleInputChange}
                 className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                  focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
             {/* Date End Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Дата окончания
+                Дата завершения действия операции
               </label>
               <input
                 type="date"
@@ -305,13 +407,13 @@ const History = () => {
                 value={filters.dateEnd}
                 onChange={handleInputChange}
                 className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                  focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
             {/* Time Start Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Время начала
+                Время начала действия операции
               </label>
               <input
                 type="number"
@@ -322,13 +424,13 @@ const History = () => {
                 onChange={handleInputChange}
                 placeholder="1-24"
                 className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
             {/* Time End Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Время окончания
+                Время завершения действия операции
               </label>
               <input
                 type="number"
@@ -339,10 +441,26 @@ const History = () => {
                 onChange={handleInputChange}
                 placeholder="1-24"
                 className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
           </div>
+        </div>
+
+        {/* Export Buttons */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={exportPDF}
+            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mr-2"
+          >
+            Экспортировать в PDF
+          </button>
+          <button
+            onClick={exportExcel}
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Экспортировать в Excel
+          </button>
         </div>
 
         {/* Table Section */}
