@@ -208,34 +208,10 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
             )}
             <th>
               П2
-              <button
-                className="text-base mx-1"
-                onClick={() => {
-                  setIsModalOpen(true);
-                  setPlanData({
-                    planMode: 'P2',
-                    isGen: false,
-                  });
-                }}
-              >
-                📝
-              </button>
             </th>
             {selectedObject?.object_type === 'ЭПО' && (
               <th>
                 ГП2
-                <button
-                  className="text-base mx-1"
-                  onClick={() => {
-                    setIsModalOpen(true);
-                    setPlanData({
-                      planMode: 'GP2',
-                      isGen: true,
-                    });
-                  }}
-                >
-                  📝
-                </button>
               </th>
             )}
             <th>

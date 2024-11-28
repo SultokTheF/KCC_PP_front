@@ -242,8 +242,6 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
                     >
                       <option value="P1">Первичный план</option>
                       {selectedObject?.object_type === "ЭПО" && (<option value="GP1">Первичный план Генерации</option>)}
-                      <option value="P2">План КЦПП</option>
-                      {selectedObject?.object_type === "ЭПО" && (<option value="GP2">План Генерации КЦПП</option>)}
                       <option value="P3">План KEGOC</option>
                       {selectedObject?.object_type === "ЭПО" && (<option value="GP3">План Генерации KEGOC</option>)}
                       <option value="F1">Факт</option>
