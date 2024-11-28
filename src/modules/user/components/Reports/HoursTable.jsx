@@ -1,181 +1,292 @@
+// HoursTable.jsx
 import React, { useState, useEffect } from 'react';
+import dayjs from 'dayjs'; // Import Day.js for date manipulation
 import { axiosInstance, endpoints } from '../../../../services/apiConfig';
 import Sidebar from '../Sidebar/Sidebar';
 import { useAuth } from '../../../../hooks/useAuth';
 
+// Tailwind CSS spinner component
+const Spinner = () => (
+  <div className="flex justify-center items-center h-full">
+    <div className="w-12 h-12 border-4 border-blue-500 border-solid border-t-transparent rounded-full animate-spin"></div>
+  </div>
+);
+
 const HoursTable = () => {
+  // State for subjects list
   const [subjectsList, setSubjectsList] = useState([]);
-  const [hoursByDate, setHoursByDate] = useState({});
-  const [providersList, setProvidersList] = useState([]);
-  const [selectedProviderSubjects, setSelectedProviderSubjects] = useState([]);
-  const [providerError, setProviderError] = useState('');
 
-  const { user } = useAuth();
-
+  // State for form inputs
   const [formData, setFormData] = useState({
     object: 0,
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0],
+    startDate: dayjs().format('YYYY-MM-DD'), // YYYY-MM-DD
+    endDate: dayjs().format('YYYY-MM-DD'),   // YYYY-MM-DD
     subject: 0,
     startHour: 1,
     endHour: 24,
   });
 
-  // Fetch subjects list
-  const fetchData = async () => {
+  // Loading state
+  const [loading, setLoading] = useState(false);
+
+  // State to hold merged table data
+  const [tableData, setTableData] = useState([]);
+
+  // Fetch subjects on component mount
+  const fetchSubjects = async () => {
     try {
-      const accessToken = localStorage.getItem('accessToken');
-
-      const subjectsResponse = await axiosInstance.get(endpoints.SUBJECTS, {
-        params: {
-          user: user.id
-        },
-      });
-
+      const subjectsResponse = await axiosInstance.get(endpoints.SUBJECTS,
+        {
+          params: { user: user.id },
+        }
+      );
+      console.log('Fetched subjects:', subjectsResponse.data);
       setSubjectsList(subjectsResponse.data);
     } catch (error) {
-      console.error('Ошибка при получении данных:', error);
+      console.error('Ошибка при получении субъектов:', error);
     }
   };
 
-  // Fetch hours based on date and subject
-  const fetchHours = async (startDate, endDate, subject) => {
+  // Fetch hours data
+  const fetchHours = async () => {
     try {
-      const accessToken = localStorage.getItem('accessToken');
       const response = await axiosInstance.get(endpoints.HOURS, {
-        headers: { Authorization: `Bearer ${accessToken}` },
         params: {
-          start_date: startDate,
-          end_date: endDate,
-          sub: subject,
+          start_date: formData.startDate,
+          end_date: formData.endDate,
+          sub: formData.subject,
         },
       });
 
+      console.log('Fetched hours:', response.data);
+
       if (!response.data || response.data.error || response.data.length === 0) {
-        console.error('Ошибка при получении часов:', response.data.error || 'Часы не найдены с указанными критериями.');
-        setHoursByDate({});
+        console.error(
+          'Ошибка при получении часов:',
+          response.data?.error || 'Часы не найдены с указанными критериями.'
+        );
+        return [];
+      }
+
+      // Filter hours based on startHour and endHour
+      const filteredHours = response.data.filter(
+        (hour) => hour.hour >= formData.startHour && hour.hour <= formData.endHour
+      );
+
+      console.log('Filtered hours:', filteredHours);
+
+      return filteredHours;
+    } catch (error) {
+      console.error('Ошибка при получении часов:', error);
+      return [];
+    }
+  };
+
+  // Fetch base tariffs data
+  const fetchBaseTariffs = async () => {
+    try {
+      const response = await axiosInstance.get(endpoints.BASE_TARIFF, {
+        params: {
+          start_date: formData.startDate,
+          end_date: formData.endDate,
+          sub: formData.subject,
+        },
+      });
+
+      console.log('Fetched base tariffs:', response.data);
+
+      if (!response.data || response.data.error || response.data.length === 0) {
+        if (response.data?.error === "No BaseTariffs found with the provided criteria.") {
+          console.warn('No BaseTariffs found, filling tariffs with zeroes.');
+        } else {
+          console.error(
+            'Ошибка при получении базовых тарифов:',
+            response.data?.error || 'Базовые тарифы не найдены с указанными критериями.'
+          );
+        }
+        return [];
+      }
+
+      // Filter tariffs where 'subjects' includes the selected subject
+      const filteredTariffs = response.data.filter((tariff) =>
+        tariff.subjects.includes(formData.subject)
+      );
+
+      console.log('Filtered base tariffs:', filteredTariffs);
+
+      return filteredTariffs;
+    } catch (error) {
+      if (
+        error.response &&
+        error.response.data.error === "No BaseTariffs found with the provided criteria."
+      ) {
+        console.warn('No BaseTariffs found, filling tariffs with zeroes.');
+      } else {
+        console.error('Ошибка при получении базовых тарифов:', error);
+      }
+      return [];
+    }
+  };
+
+  // Fetch providers data with corrected date format
+  const fetchProviders = async (subject) => {
+    try {
+      const response = await axiosInstance.get(endpoints.PROVIDERS, {
+        params: {
+          sub: subject,
+          // Format dates to 'YYYY-MM' as required by the API
+          start_date: dayjs(formData.startDate).format('YYYY-MM'),
+          end_date: dayjs(formData.endDate).format('YYYY-MM'),
+        },
+      });
+
+      console.log('Fetched providers:', response.data);
+
+      if (!response.data || response.data.error || response.data.length === 0) {
+        console.warn('No providers found for the given criteria.');
+        return {};
+      }
+
+      // Assuming the response includes a 'month' field for each provider entry
+      const providersMap = {};
+      response.data.forEach((provider) => {
+        const month = provider.month; // e.g., '2024-10'
+        if (!providersMap[month]) {
+          providersMap[month] = [];
+        }
+        providersMap[month].push(provider.name);
+      });
+
+      console.log('Providers Map:', providersMap);
+
+      return providersMap;
+    } catch (error) {
+      console.error('Ошибка при получении провайдеров:', error);
+      return {};
+    }
+  };
+
+  // Merge hours, tariffs, and providers data
+  const mergeData = (hours, tariffs, providersMap) => {
+    console.log('Merging data...');
+    console.log('Hours:', hours);
+    console.log('Tariffs:', tariffs);
+    console.log('Providers Map:', providersMap);
+
+    // Create a map for tariffs based on date and hour for quick lookup
+    const tariffMap = {};
+    tariffs.forEach((tariff) => {
+      const date = tariff.date.split('T')[0]; // Extract date in YYYY-MM-DD
+      const key = `${date}_${tariff.hour}`;
+      tariffMap[key] = tariff;
+    });
+
+    console.log('Tariff Map:', tariffMap);
+
+    // Assign date to each hour
+    const startDate = dayjs(formData.startDate);
+    const mergedData = hours.map((hour, index) => {
+      // Calculate the date based on the hour index
+      const dayOffset = Math.floor(index / 24);
+      const date = startDate.add(dayOffset, 'day').format('YYYY-MM-DD');
+
+      // Fetch base tariff for this date and hour
+      const key = `${date}_${hour.hour}`;
+      const baseTariff = tariffMap[key];
+
+      // Extract month from the date to fetch providers
+      const month = dayjs(date).format('YYYY-MM');
+      const providers = providersMap[month] ? providersMap[month].join(', ') : 'Нет Провайдеров';
+
+      const subjectInfo = subjectsList.find((subj) => subj.id === formData.subject);
+      const subjectName = subjectInfo ? subjectInfo.subject_name : 'Неизвестный субъект';
+      const subjectType = subjectInfo
+        ? subjectInfo.subject_type === 'CONSUMER'
+          ? 'Потребитель'
+          : subjectInfo.subject_type
+        : 'Неизвестный тип';
+
+      return {
+        id: hour.id,
+        date: date, // New Date Column
+        hour: hour.hour,
+        coefficient: hour.coefficient,
+        volume: hour.volume,
+        P1: hour.P1,
+        P2: hour.P2,
+        P3: hour.P3,
+        F1: hour.F1,
+        F2: hour.F2,
+        P1_Gen: hour.P1_Gen,
+        P2_Gen: hour.P2_Gen,
+        P3_Gen: hour.P3_Gen,
+        F1_Gen: hour.F1_Gen,
+        F2_Gen: hour.F2_Gen,
+        Pred_T: hour.Pred_T,
+        plan_t: hour.plan_t,
+        Wo_Prov_T: hour.Wo_Prov_T,
+        W_Prov_T: hour.W_Prov_T,
+        EZ_T: baseTariff ? baseTariff.EZ_T : 0.0,
+        EZ_Base_T: baseTariff ? baseTariff.EZ_Base_T : 0.0,
+        BE_T: baseTariff ? baseTariff.BE_T : 0.0,
+        OD_T: baseTariff ? baseTariff.OD_T : 0.0,
+        EZ_T_ВИЭ: baseTariff ? baseTariff.EZ_T_ВИЭ : 0.0,
+        EZ_T_РЭК: baseTariff ? baseTariff.EZ_T_РЭК : 0.0,
+        T_Coef: hour.T_Coef,
+        // W_Prov_P1_Gen: hour.W_Prov_P1_Gen,
+        W_Prov_P3: hour.W_Prov_P3,
+        W_Prov_P3_Gen: hour.W_Prov_P3_Gen,
+        W_Prov_F1: hour.W_Prov_F1,
+        W_Prov_F1_Gen: hour.W_Prov_F1_Gen,
+        W_Prov_F2: hour.W_Prov_F2,
+        W_Prov_F2_Gen: hour.W_Prov_F2_Gen,
+        direction: baseTariff ? baseTariff.direction : '-',
+        message: hour.message,
+        subject: subjectName,
+        type: subjectType,
+        providers: providers, // Assigned Providers
+      };
+    });
+
+    console.log('Merged Data:', mergedData);
+
+    return mergedData;
+  };
+
+  // Fetch and merge data
+  const fetchAndMergeData = async () => {
+    setLoading(true);
+    try {
+      // Step 1: Fetch hours
+      const hours = await fetchHours();
+
+      if (hours.length === 0) {
+        setTableData([]);
         return;
       }
 
-      const groupedHours = {};
-      let currentDay = new Date(startDate);
-      let currentDayString = currentDay.toISOString().split('T')[0];
-      let hourCounter = 0;
+      // Step 2: Fetch base tariffs
+      const baseTariffs = await fetchBaseTariffs();
 
-      response.data.forEach((hour) => {
-        if (hourCounter === 24) {
-          currentDay.setDate(currentDay.getDate() + 1);
-          currentDayString = currentDay.toISOString().split('T')[0];
-          hourCounter = 0;
-        }
-
-        // Compute hour in day
-        const hourInDay = (hourCounter % 24) + 1;
-
-        // Determine if the hour should be included
-        let includeHour = true;
-        if (startDate === endDate) {
-          // Single day selection
-          includeHour = hourInDay >= formData.startHour && hourInDay <= formData.endHour;
-        } else {
-          if (currentDayString === startDate) {
-            // First day
-            includeHour = hourInDay >= formData.startHour;
-          } else if (currentDayString === endDate) {
-            // Last day
-            includeHour = hourInDay <= formData.endHour;
-          } else {
-            // Intermediate days
-            includeHour = true;
-          }
-        }
-
-        if (includeHour) {
-          if (!groupedHours[currentDayString]) {
-            groupedHours[currentDayString] = [];
-          }
-          // Adjust the hour.hour to be hourInDay
-          groupedHours[currentDayString].push({ ...hour, hour: hourInDay });
-        }
-
-        hourCounter++;
-      });
-
-      setHoursByDate(groupedHours);
-    } catch (error) {
-      console.error('Ошибка при получении часов:', error);
-      setHoursByDate({});
-    }
-  };
-
-  // Fetch providers with error handling
-  const fetchProviders = async (startDate, endDate) => {
-    try {
-      const accessToken = localStorage.getItem('accessToken');
-      const response = await axiosInstance.get(endpoints.PROVIDERS, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        params: {
-          sub: 1, // Adjust as necessary
-          start_date: startDate.slice(0, 7), // format yyyy-mm
-          end_date: endDate.slice(0, 7),
-        },
-      });
-
-      if (response.data.error) {
-        setProviderError(response.data.error);
-        setProvidersList([]);
-      } else if (response.data.length === 0) {
-        setProviderError('No providers found with the provided criteria.');
-        setProvidersList([]);
-      } else {
-        setProvidersList(response.data);
-        setProviderError('');
+      if (baseTariffs.length === 0) {
+        console.warn('No base tariffs found, proceeding with hours data only.');
       }
+
+      // Step 3: Fetch providers with corrected date format
+      const providersMap = await fetchProviders(formData.subject);
+
+      // Step 4: Merge data
+      const mergedData = mergeData(hours, baseTariffs, providersMap);
+      setTableData(mergedData);
     } catch (error) {
-      console.error('Ошибка при получении провайдеров:', error);
-      setProviderError('Ошибка при получении провайдеров. Попробуйте позже.');
+      console.error('Ошибка при обработке данных:', error);
+      setTableData([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Fetch subjects belonging to a provider using provider_id
-  const fetchProviderSubjects = async (providerId) => {
-    try {
-      const accessToken = localStorage.getItem('accessToken');
-      const response = await axiosInstance.get(endpoints.SUBJECTS, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        params: {
-          provider_id: providerId,
-        },
-      });
-      if (response.data && response.data.length > 0) {
-        setSelectedProviderSubjects(response.data);
-      } else {
-        setSelectedProviderSubjects([]);
-        console.error('No subjects found for the selected provider.');
-      }
-    } catch (error) {
-      console.error('Ошибка при получении субъектов для провайдера:', error);
-      setSelectedProviderSubjects([]);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  useEffect(() => {
-    if (formData.startDate && formData.endDate && formData.subject) {
-      fetchHours(formData.startDate, formData.endDate, formData.subject);
-      fetchProviders(formData.startDate, formData.endDate);
-    }
-  }, [
-    formData.startDate,
-    formData.endDate,
-    formData.subject,
-    formData.startHour,
-    formData.endHour,
-  ]);
-
+  // Handle form input changes
   const handleChange = (name, value) => {
     setFormData((prevData) => ({
       ...prevData,
@@ -183,9 +294,23 @@ const HoursTable = () => {
     }));
   };
 
-  const handleProviderClick = (providerId) => {
-    fetchProviderSubjects(providerId);
-  };
+  // Fetch subjects on component mount
+  useEffect(() => {
+    fetchSubjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fetch and merge data when formData changes
+  useEffect(() => {
+    if (formData.subject !== 0 && formData.startDate && formData.endDate) {
+      fetchAndMergeData();
+    } else {
+      setTableData([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData]);
+
+  const { user } = useAuth();
 
   return (
     <div className="flex flex-col lg:flex-row">
@@ -196,12 +321,9 @@ const HoursTable = () => {
         </h1>
         <div className="bg-white p-6 rounded-lg shadow-md mb-8">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            {/* Selectors */}
+            {/* Subject Selection */}
             <div className="w-full">
-              <label
-                htmlFor="subject"
-                className="block text-gray-700 font-semibold mb-2"
-              >
+              <label htmlFor="subject" className="block text-gray-700 font-semibold mb-2">
                 Выберите субъект
               </label>
               <select
@@ -209,7 +331,7 @@ const HoursTable = () => {
                 id="subject"
                 className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={formData.subject}
-                onChange={(e) => handleChange('subject', e.target.value)}
+                onChange={(e) => handleChange('subject', parseInt(e.target.value))}
                 required
               >
                 <option value={0}>Субъект</option>
@@ -220,11 +342,9 @@ const HoursTable = () => {
                 ))}
               </select>
             </div>
+            {/* Start Date */}
             <div className="w-full">
-              <label
-                htmlFor="startDate"
-                className="block text-gray-700 font-semibold mb-2"
-              >
+              <label htmlFor="startDate" className="block text-gray-700 font-semibold mb-2">
                 Дата начала
               </label>
               <input
@@ -237,11 +357,9 @@ const HoursTable = () => {
                 required
               />
             </div>
+            {/* End Date */}
             <div className="w-full">
-              <label
-                htmlFor="endDate"
-                className="block text-gray-700 font-semibold mb-2"
-              >
+              <label htmlFor="endDate" className="block text-gray-700 font-semibold mb-2">
                 Дата окончания
               </label>
               <input
@@ -254,11 +372,9 @@ const HoursTable = () => {
                 required
               />
             </div>
+            {/* Start Hour */}
             <div className="w-full">
-              <label
-                htmlFor="startHour"
-                className="block text-gray-700 font-semibold mb-2"
-              >
+              <label htmlFor="startHour" className="block text-gray-700 font-semibold mb-2">
                 Час начала
               </label>
               <select
@@ -276,11 +392,9 @@ const HoursTable = () => {
                 ))}
               </select>
             </div>
+            {/* End Hour */}
             <div className="w-full">
-              <label
-                htmlFor="endHour"
-                className="block text-gray-700 font-semibold mb-2"
-              >
+              <label htmlFor="endHour" className="block text-gray-700 font-semibold mb-2">
                 Час окончания
               </label>
               <select
@@ -301,25 +415,22 @@ const HoursTable = () => {
           </div>
         </div>
 
-        {/* Providers Section */}
-        {/* ... existing code for providers ... */}
-
-        {/* Selected Provider Subjects */}
-        {/* ... existing code for selected provider subjects ... */}
-
-        {/* Table displaying hours by date */}
-        {Object.keys(hoursByDate).map((dayDate) => (
-          <div key={dayDate} className="mt-8">
-            <h2 className="text-xl font-semibold text-center text-gray-700 mb-4">
-              Дата: {dayDate.split('-').reverse().join('.')}
-            </h2>
-            {/* Scrollable table container */}
-            <div className="overflow-x-auto max-w-full bg-white shadow-md rounded-lg">
+        {/* Loading Spinner */}
+        {loading ? (
+          <Spinner />
+        ) : (
+          // Table Rendering
+          tableData.length > 0 ? (
+            <div className="overflow-x-auto max-w-[1550px] bg-white shadow-md rounded-lg">
               <table className="table-fixed min-w-full text-sm bg-white border border-gray-200">
                 <thead className="bg-gray-100 text-center">
                   <tr>
                     {[
+                      'Дата',          // New Date Column
                       'Час',
+                      'Субъект',
+                      'Провайдеры',
+                      'Тип',
                       'coefficient',
                       'volume',
                       'P1',
@@ -343,12 +454,21 @@ const HoursTable = () => {
                       'BE_T',
                       'OD_T',
                       'T_Coef',
+                      // 'W_Prov_P1_Gen',
+                      'W_Prov_P3',
+                      'W_Prov_P3_Gen',
+                      'W_Prov_F1',
+                      'W_Prov_F1_Gen',
+                      'W_Prov_F2',
+                      'W_Prov_F2_Gen',
                       'direction',
                       'message',
                     ].map((header) => (
                       <th
                         key={header}
-                        className="px-2 py-1 border-b border-gray-200 font-medium text-gray-700"
+                        className={`px-2 py-1 border-b border-gray-200 font-medium text-gray-700 ${
+                          header === 'Дата' ? 'w-48' : ''
+                        }`}
                       >
                         {header}
                       </th>
@@ -356,105 +476,149 @@ const HoursTable = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {hoursByDate[dayDate].map((hour) => (
-                    <tr key={hour.id} className="even:bg-gray-50 text-center">
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.hour}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.coefficient}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.volume}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.P1}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.P2}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.P3}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.F1}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.F2}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.P1_Gen}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.P2_Gen}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.P3_Gen}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.F1_Gen}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.F2_Gen}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.EZ_T}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.EZ_Base_T}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.EZ_T_ВИЭ}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.EZ_T_РЭК}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.Pred_T}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.plan_t}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.Wo_Prov_T}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.W_Prov_T}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.BE_T}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.OD_T}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.T_Coef}
-                      </td>
-                      <td
-                        className={`px-2 py-1 border-b border-gray-200 ${
-                          hour.direction === 'DOWN'
-                            ? 'bg-green-100'
-                            : hour.direction === 'UP'
-                            ? 'bg-red-100'
-                            : ''
+                  {tableData.map((row, index) => {
+                    const isNewDate = index === 0 || row.date !== tableData[index - 1].date;
+                    return (
+                      <tr
+                        key={row.id}
+                        className={`text-center ${
+                          isNewDate ? 'bg-gray-100' : 'bg-white'
                         }`}
                       >
-                        {hour.direction === 'UP'
-                          ? '↑'
-                          : hour.direction === 'DOWN'
-                          ? '↓'
-                          : '-'}
-                      </td>
-                      <td className="px-2 py-1 border-b border-gray-200">
-                        {hour.message}
-                      </td>
-                    </tr>
-                  ))}
+                        {/* Date Column */}
+                        <td className="px-2 py-1 border-b w-48 border-gray-200">
+                          {row.date}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.hour}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.subject}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.providers}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.type}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.coefficient}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.volume}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.P1}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.P2}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.P3}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.F1}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.F2}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.P1_Gen}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.P2_Gen}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.P3_Gen}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.F1_Gen}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.F2_Gen}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.EZ_T}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.EZ_Base_T}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.EZ_T_ВИЭ}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.EZ_T_РЭК}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.Pred_T}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.plan_t}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.Wo_Prov_T}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.W_Prov_T}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.BE_T}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.OD_T}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.T_Coef}
+                        </td>
+                        {/* <td className="px-2 py-1 border-b border-gray-200">
+                          {row.W_Prov_P1_Gen}
+                        </td> */}
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.W_Prov_P3}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.W_Prov_P3_Gen}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.W_Prov_F1}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.W_Prov_F1_Gen}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.W_Prov_F2}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.W_Prov_F2_Gen}
+                        </td>
+                        <td
+                          className={`px-2 py-1 border-b border-gray-200 ${
+                            row.direction === 'DOWN'
+                              ? 'bg-green-100'
+                              : row.direction === 'UP'
+                              ? 'bg-red-100'
+                              : ''
+                          }`}
+                        >
+                          {row.direction === 'UP'
+                            ? '↑'
+                            : row.direction === 'DOWN'
+                            ? '↓'
+                            : '-'}
+                        </td>
+                        <td className="px-2 py-1 border-b border-gray-200">
+                          {row.message}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-          </div>
-        ))}
+          ) : (
+            <div className="text-center text-gray-500">Нет данных для отображения.</div>
+          )
+        )}
       </div>
     </div>
   );
