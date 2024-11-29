@@ -15,6 +15,7 @@ import {
   UserTableOverview,
   UserFormConstructor,
   UserDisbalance,
+  UserHistory,
 
   // Dispatcher
   DispatcherProfile,
@@ -64,6 +65,7 @@ const Router = ({ userRole }) => {
         <>
           <Route path="/" element={<UserProfile />} />
           <Route path="/dashboard" element={<UserDashboard />} />
+          <Route path="/reports/history" element={<UserHistory />} />
 
           <Route path="/graphs" element={<UserGraphs />} />
           <Route path="/hours-table" element={<UserHoursTable />} />

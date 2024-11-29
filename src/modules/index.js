@@ -5,7 +5,8 @@ import {
   HoursTable as UserHoursTable,
   UserTableOverview, 
   UserFormConstructor,
-  UserDisbalance
+  UserDisbalance,
+  UserHistory
 } from "./user";
 
 import {
@@ -49,7 +50,8 @@ export {
   UserHoursTable,
   UserTableOverview,
   UserFormConstructor,
-  UserDisbalance
+  UserDisbalance,
+  UserHistory
 }
 
 export {

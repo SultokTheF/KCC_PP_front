@@ -1,5 +1,3 @@
-// PlanModal.js
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@material-tailwind/react";
 import Modal from 'react-modal';
@@ -13,7 +11,6 @@ import PlanTable from './PlanTable';
 Modal.setAppElement('#root');
 
 const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectList, plans, planMode, isGen }) => {
-
   const [importedData, setImportedData] = useState(null);
   const [textareaInput, setTextareaInput] = useState('');
 
@@ -24,7 +21,6 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
     mode: planMode
   });
 
-  // Handle table changes
   const handleTableChange = (object, date, plans, mode) => {
     setFormData({
       object: object,
@@ -58,7 +54,6 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
 
         if (response.status >= 200 && response.status < 300) {
           console.log('План успешно создан:', response.data);
-
           window.location.href = '/dashboard';
         }
 
@@ -79,16 +74,21 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
       }
     } catch (error) {
       console.error('Произошла ошибка при запросе к API:', error);
+
+      // Check for the specific error message and show alert
+      if (error.response?.data?.error) {
+        alert(error.response?.data?.error);
+      } else {
+        alert('Произошла ошибка при обработке запроса.');
+      }
     }
   };
 
   const handleExport = () => {
     const { object, date, plan, mode } = formData;
 
-    // Slice the plan array to get only the first 24 elements
     const slicedPlan = plan.slice(0, 24);
 
-    // Create a new workbook and worksheet
     const workbook = XLSXUtils.book_new();
     const worksheetData = [
       [`Объект: ${selectedObject?.object_name}`, `Дата: ${date}`, mode],
@@ -97,10 +97,7 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
     ];
     const worksheet = XLSXUtils.aoa_to_sheet(worksheetData);
 
-    // Add the worksheet to the workbook
     XLSXUtils.book_append_sheet(workbook, worksheet, 'PlanData');
-
-    // Generate the Excel file
     XLSXWriteFile(workbook, `${selectedObject?.object_name}_${date}_${mode}.xlsx`);
   };
 
@@ -118,7 +115,6 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         const parsedData = XLSXUtils.sheet_to_json(worksheet, { header: 1 });
 
-        // Assuming that the data starts from row 3 (after headers)
         const planValues = parsedData.slice(2).map(row => row[1]);
 
         setFormData((prevData) => ({
@@ -134,15 +130,13 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
   };
 
   const handleImportFromText = () => {
-    // Split the input by spaces, commas, or newlines using a regular expression
     const values = textareaInput
       .split(/[\s,]+/)
       .map(item => item.trim())
       .filter(item => item !== '')
       .map(Number)
-      .map(num => isNaN(num) ? 0 : num); // Replace NaN with 0
+      .map(num => isNaN(num) ? 0 : num);
 
-    // Ensure the plan has exactly 24 elements, filling missing with 0
     const updatedPlan = Array.from({ length: 24 }, (_, index) => values[index] || 0);
 
     setFormData((prevData) => ({
@@ -151,14 +145,10 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
     }));
   };
 
-  // Inside CreatePlanModal.jsx
-
   const handlePullFromP2 = () => {
     if (formData.mode === 'P3') {
-      // Extract P2 plan values from the existing plans prop
       const p2Plan = plans.map(hour => hour.P2 || 0);
 
-      // Update the formData.plan with P2 values
       setFormData(prevData => ({
         ...prevData,
         plan: p2Plan
@@ -168,10 +158,8 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
 
   const handlePullFromP3 = () => {
     if (formData.mode === 'F1') {
-      // Extract P3 plan values from the existing plans prop
       const p3Plan = plans.map(hour => hour.P3 || 0);
 
-      // Update the formData.plan with P3 values
       setFormData(prevData => ({
         ...prevData,
         plan: p3Plan
@@ -212,7 +200,7 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
                       onChange={(e) =>
                         setFormData((prevData) => ({
                           ...prevData,
-                          object: parseInt(e.target.value, 10), // Ensure the value is a number
+                          object: parseInt(e.target.value, 10),
                         }))
                       }
                       required
@@ -364,6 +352,6 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
       </div>
     </Modal>
   );
-}
+};
 
 export default PlanModal;

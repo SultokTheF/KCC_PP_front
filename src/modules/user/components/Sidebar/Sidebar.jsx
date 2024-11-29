@@ -92,6 +92,15 @@ export default function Sidebar() {
                 </ListItem>
               </a>
 
+              <a href="/reports/history">
+                <ListItem>
+                  <ListItemPrefix>
+                    <ChevronRightIcon strokeWidth={3} className="h-3 w-5" />
+                  </ListItemPrefix>
+                  История
+                </ListItem>
+              </a>
+
               <a href="/hours-table">
                 <ListItem>
                   <ListItemPrefix>

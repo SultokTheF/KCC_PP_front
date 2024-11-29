@@ -374,15 +374,25 @@ const CombinedTable = ({
         return [
           time,
           hourData.P1 || 0,
-          ...(selectedSubject?.subject_type === "ЭПО" ? [hourData.P1_Gen || 0] : []),
+          ...(selectedSubject?.subject_type === "ЭПО"
+            ? [hourData.P1_Gen || 0]
+            : []),
           hourData.P2 || 0,
-          ...(selectedSubject?.subject_type === "ЭПО" ? [hourData.P2_Gen || 0] : []),
+          ...(selectedSubject?.subject_type === "ЭПО"
+            ? [hourData.P2_Gen || 0]
+            : []),
           hourData.P3 || 0,
-          ...(selectedSubject?.subject_type === "ЭПО" ? [hourData.P3_Gen || 0] : []),
+          ...(selectedSubject?.subject_type === "ЭПО"
+            ? [hourData.P3_Gen || 0]
+            : []),
           hourData.F1 || 0,
-          ...(selectedSubject?.subject_type === "ЭПО" ? [hourData.F1_Gen || 0] : []),
+          ...(selectedSubject?.subject_type === "ЭПО"
+            ? [hourData.F1_Gen || 0]
+            : []),
           hourData.F2 || 0,
-          ...(selectedSubject?.subject_type === "ЭПО" ? [hourData.F2_Gen || 0] : []),
+          ...(selectedSubject?.subject_type === "ЭПО"
+            ? [hourData.F2_Gen || 0]
+            : []),
           hourData.coefficient || 0,
           hourData.volume || 0,
           hourData.P2_message || "",
@@ -539,6 +549,11 @@ const CombinedTable = ({
         fetchObjectStatuses();
         fetchSubjectStatuses();
       } else {
+        if (error.response?.data?.error) {
+          alert(error.response?.data?.error);
+        } else {
+          alert("Произошла ошибка при обработке запроса.");
+        }
         setWarningMessage("Ошибка при сохранении данных.");
       }
     } catch (error) {
@@ -878,7 +893,9 @@ const CombinedTable = ({
                         {P2_message || ""}
                       </td>
                       {selectedSubject?.subject_type === "ЭПО" && (
-                        <td className="border">{subjectHourData.P2_Gen || 0}</td>
+                        <td className="border">
+                          {subjectHourData.P2_Gen || 0}
+                        </td>
                       )}
                       {showMessageCol && (
                         <td className="border">

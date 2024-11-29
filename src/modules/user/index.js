@@ -9,6 +9,7 @@ import TableOverview from "./components/Reports/Forms/TableOverview/TableOvervie
 import FormConstructor from "./components/Reports/Forms/FormConstructor/FormContructor";
 
 import Disbalance from "./components/Reports/Disbalance/Disbalance";
+import History from "./components/Reports/History";
 
 export {
   Dashboard,
@@ -18,4 +19,5 @@ export {
   TableOverview as UserTableOverview,
   FormConstructor as UserFormConstructor,
   Disbalance as UserDisbalance,
+  History as UserHistory
 }
