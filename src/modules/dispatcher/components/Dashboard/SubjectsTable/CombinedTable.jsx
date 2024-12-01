@@ -144,7 +144,7 @@ const CombinedTable = ({
             F1_Gen: hourData?.F1_Gen || 0,
             F2: hourData?.F2 || 0,
             F2_Gen: hourData?.F2_Gen || 0,
-            coefficient: hourData?.coefficient || 0,
+            coefficient: hourData?.coefficient || 1,
             volume: hourData?.volume || 0,
             P2_message: hourData?.P2_message || "",
             message: hourData?.message || "",
@@ -393,7 +393,7 @@ const CombinedTable = ({
           ...(selectedSubject?.subject_type === "ЭПО"
             ? [hourData.F2_Gen || 0]
             : []),
-          hourData.coefficient || 0,
+          hourData.coefficient || 1,
           hourData.volume || 0,
           hourData.P2_message || "",
           ...(showMessageCol ? [hourData.message || ""] : []),
@@ -863,7 +863,7 @@ const CombinedTable = ({
                           type="number"
                           step="0.01"
                           min="0"
-                          value={localHourPlan[index]?.coefficient || 0}
+                          value={localHourPlan[index]?.coefficient || 1}
                           onChange={(e) =>
                             handleCoefficientChange(index, e.target.value)
                           }

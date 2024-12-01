@@ -106,7 +106,7 @@ const Dashboard = () => {
               ...(subject?.subject_type === 'ЭПО' ? [hourData.F1_Gen || 0] : []),
               hourData.F2 || 0,
               ...(subject?.subject_type === 'ЭПО' ? [hourData.F2_Gen || 0] : []),
-              hourData.coefficient || 0,
+              hourData.coefficient || 1,
               hourData.volume || 0,
               hourData.P2_message || '',
             ];
