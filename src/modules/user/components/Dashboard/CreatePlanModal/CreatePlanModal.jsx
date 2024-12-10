@@ -1,27 +1,39 @@
 // PlanModal.js
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import { Button } from "@material-tailwind/react";
-import Modal from 'react-modal';
+import Modal from "react-modal";
 
-import { axiosInstance, endpoints } from '../../../../../services/apiConfig';
+import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 
-import { utils as XLSXUtils, writeFile as XLSXWriteFile, read as XLSXRead } from 'xlsx';
+import {
+  utils as XLSXUtils,
+  writeFile as XLSXWriteFile,
+  read as XLSXRead,
+} from "xlsx";
 
-import PlanTable from './PlanTable';
+import PlanTable from "./PlanTable";
 
-Modal.setAppElement('#root');
+Modal.setAppElement("#root");
 
-const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectList, plans, planMode, isGen }) => {
-
+const PlanModal = ({
+  isOpen,
+  closeModal,
+  selectedDate,
+  selectedObject,
+  objectList,
+  plans,
+  planMode,
+  isGen,
+}) => {
   const [importedData, setImportedData] = useState(null);
-  const [textareaInput, setTextareaInput] = useState('');
+  const [textareaInput, setTextareaInput] = useState("");
 
   const [formData, setFormData] = useState({
     object: selectedObject?.id || 0,
-    date: selectedDate.split('T')[0] || new Date().toISOString().split('T')[0],
+    date: selectedDate.split("T")[0] || new Date().toISOString().split("T")[0],
     plan: [],
-    mode: planMode
+    mode: planMode,
   });
 
   // Handle table changes
@@ -30,7 +42,7 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
       object: object,
       date: date,
       plan: plans,
-      mode: mode
+      mode: mode,
     });
   };
 
@@ -38,18 +50,19 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
     setFormData((prevData) => ({
       ...prevData,
       object: selectedObject?.id || 0,
-      date: selectedDate.split('T')[0] || new Date().toISOString().split('T')[0],
+      date:
+        selectedDate.split("T")[0] || new Date().toISOString().split("T")[0],
       plan: plans,
-      mode: planMode
+      mode: planMode,
     }));
   }, [selectedDate, selectedObject, planMode, plans]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
+    console.log("Form submitted:", formData);
 
     try {
-      if (formData.mode === 'P1' && plans.length === 0) {
+      if (formData.mode === "P1" && plans.length === 0) {
         const response = await axiosInstance.post(endpoints.DAYS, {
           object: formData.object,
           date: formData.date,
@@ -57,35 +70,37 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
         });
 
         if (response.status >= 200 && response.status < 300) {
-          console.log('План успешно создан:', response.data);
+          console.log("План успешно создан:", response.data);
 
-          window.location.href = '/dashboard';
+          window.location.href = "/dashboard";
         }
 
-        console.log('Ответ API:', response.data);
+        console.log("Ответ API:", response.data);
       } else {
-        const response = await axiosInstance.post(endpoints.PLANS_CREATE(plans[0].day), {
-          plan: {
-            [formData.mode]: formData.plan
-          },
-        });
+        const response = await axiosInstance.post(
+          endpoints.PLANS_CREATE(plans[0].day),
+          {
+            plan: {
+              [formData.mode]: formData.plan,
+            },
+          }
+        );
 
         if (response.status === 201) {
-          console.log('План успешно создан:', response.data);
-          window.location.href = '/dashboard';
+          console.log("План успешно создан:", response.data);
+          window.location.href = "/dashboard";
         }
 
-        console.log('Ответ API:', response.data);
+        console.log("Ответ API:", response.data);
       }
     } catch (error) {
-      console.error('Произошла ошибка при запросе к API:', error);
+      console.error("Произошла ошибка при запросе к API:", error);
       if (error.response?.data?.error) {
         alert(error.response?.data?.error);
-      } else if(error.response?.status === 500) {
-        alert('Измените данные, вы отправляете такие же данные')
-      } 
-      else {
-        alert('Произошла ошибка при обработке запроса.');
+      } else if (error.response?.status === 500) {
+        alert("Измените данные, вы отправляете такие же данные");
+      } else {
+        alert("Произошла ошибка при обработке запроса.");
       }
     }
   };
@@ -100,21 +115,24 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
     const workbook = XLSXUtils.book_new();
     const worksheetData = [
       [`Объект: ${selectedObject?.object_name}`, `Дата: ${date}`, mode],
-      ['Час', 'Значение'],
-      ...slicedPlan.map((value, index) => [index + 1, value])
+      ["Час", "Значение"],
+      ...slicedPlan.map((value, index) => [index + 1, value]),
     ];
     const worksheet = XLSXUtils.aoa_to_sheet(worksheetData);
 
     // Add the worksheet to the workbook
-    XLSXUtils.book_append_sheet(workbook, worksheet, 'PlanData');
+    XLSXUtils.book_append_sheet(workbook, worksheet, "PlanData");
 
     // Generate the Excel file
-    XLSXWriteFile(workbook, `${selectedObject?.object_name}_${date}_${mode}.xlsx`);
+    XLSXWriteFile(
+      workbook,
+      `${selectedObject?.object_name}_${date}_${mode}.xlsx`
+    );
   };
 
   const handleImport = async () => {
     if (!importedData) {
-      console.error('Файл для импорта не выбран.');
+      console.error("Файл для импорта не выбран.");
       return;
     }
 
@@ -122,12 +140,12 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
       const fileReader = new FileReader();
       fileReader.onload = async (e) => {
         const data = new Uint8Array(e.target.result);
-        const workbook = XLSXRead(data, { type: 'array' });
+        const workbook = XLSXRead(data, { type: "array" });
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         const parsedData = XLSXUtils.sheet_to_json(worksheet, { header: 1 });
 
         // Assuming that the data starts from row 3 (after headers)
-        const planValues = parsedData.slice(2).map(row => row[1]);
+        const planValues = parsedData.slice(2).map((row) => row[1]);
 
         setFormData((prevData) => ({
           ...prevData,
@@ -137,7 +155,7 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
 
       fileReader.readAsArrayBuffer(importedData);
     } catch (error) {
-      console.error('Ошибка при импорте данных:', error);
+      console.error("Ошибка при импорте данных:", error);
     }
   };
 
@@ -145,13 +163,16 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
     // Split the input by spaces, commas, or newlines using a regular expression
     const values = textareaInput
       .split(/[\s,]+/)
-      .map(item => item.trim())
-      .filter(item => item !== '')
+      .map((item) => item.trim())
+      .filter((item) => item !== "")
       .map(Number)
-      .map(num => isNaN(num) ? 0 : num); // Replace NaN with 0
+      .map((num) => (isNaN(num) ? 0 : num)); // Replace NaN with 0
 
     // Ensure the plan has exactly 24 elements, filling missing with 0
-    const updatedPlan = Array.from({ length: 24 }, (_, index) => values[index] || 0);
+    const updatedPlan = Array.from(
+      { length: 24 },
+      (_, index) => values[index] || 0
+    );
 
     setFormData((prevData) => ({
       ...prevData,
@@ -162,27 +183,27 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
   // Inside CreatePlanModal.jsx
 
   const handlePullFromP2 = () => {
-    if (formData.mode === 'P3') {
+    if (formData.mode === "P3") {
       // Extract P2 plan values from the existing plans prop
-      const p2Plan = plans.map(hour => hour.P2 || 0);
+      const p2Plan = plans.map((hour) => hour.P2 || 0);
 
       // Update the formData.plan with P2 values
-      setFormData(prevData => ({
+      setFormData((prevData) => ({
         ...prevData,
-        plan: p2Plan
+        plan: p2Plan,
       }));
     }
   };
 
   const handlePullFromP3 = () => {
-    if (formData.mode === 'F1') {
+    if (formData.mode === "F1") {
       // Extract P3 plan values from the existing plans prop
-      const p3Plan = plans.map(hour => hour.P3 || 0);
+      const p3Plan = plans.map((hour) => hour.P3 || 0);
 
       // Update the formData.plan with P3 values
-      setFormData(prevData => ({
+      setFormData((prevData) => ({
         ...prevData,
-        plan: p3Plan
+        plan: p3Plan,
       }));
     }
   };
@@ -199,17 +220,17 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
           <div className="container w-screen-lg mx-auto">
             <div className="bg-white rounded shadow-lg p-6">
               <div className="text-right">
-                <button
-                  onClick={closeModal}
-                  className="text-xl font-bold"
-                >
+                <button onClick={closeModal} className="text-xl font-bold">
                   ❌
                 </button>
               </div>
               <form onSubmit={handleSubmit}>
                 <div className="mb-4 flex">
                   <div className="w-1/2 pr-4">
-                    <label htmlFor="object" className="block text-gray-700 font-medium mb-2">
+                    <label
+                      htmlFor="object"
+                      className="block text-gray-700 font-medium mb-2"
+                    >
                       Выберите объект
                     </label>
                     <select
@@ -232,7 +253,10 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
                         </option>
                       ))}
                     </select>
-                    <label htmlFor="mode" className="block text-gray-700 font-medium my-2">
+                    <label
+                      htmlFor="mode"
+                      className="block text-gray-700 font-medium my-2"
+                    >
                       План
                     </label>
                     <select
@@ -249,14 +273,20 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
                       required
                     >
                       <option value="P1">Первичный план</option>
-                      {selectedObject?.object_type === "ЭПО" && (<option value="GP1">Первичный план Генерации</option>)}
+                      {selectedObject?.object_type === "ЭПО" && (
+                        <option value="P1_Gen">Первичный план Генерации</option>
+                      )}
                       <option value="P3">План KEGOC</option>
-                      {selectedObject?.object_type === "ЭПО" && (<option value="GP3">План Генерации KEGOC</option>)}
+                      {selectedObject?.object_type === "ЭПО" && (
+                        <option value="P3_Gen">План Генерации KEGOC</option>
+                      )}
                       <option value="F1">Факт</option>
-                      {selectedObject?.object_type === "ЭПО" && (<option value="GF1">Генерация Факт</option>)}
+                      {selectedObject?.object_type === "ЭПО" && (
+                        <option value="F1_Gen">Генерация Факт</option>
+                      )}
                     </select>
 
-                    {formData.mode === 'P3' && (
+                    {formData.mode === "P3" && (
                       <button
                         className="border rounded px-6 py-3 my-2 hover:bg-gray-300 w-full"
                         type="button"
@@ -266,7 +296,17 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
                       </button>
                     )}
 
-                    {formData.mode === 'F1' && (
+                    {formData.mode === "P3_Gen" && (
+                      <button
+                        className="border rounded px-6 py-3 my-2 hover:bg-gray-300 w-full"
+                        type="button"
+                        onClick={handlePullFromP2}
+                      >
+                        Загрузить данные из P2
+                      </button>
+                    )}
+
+                    {formData.mode === "F1" && (
                       <button
                         className="border rounded px-6 py-3 my-2 hover:bg-gray-300 w-full"
                         type="button"
@@ -276,7 +316,20 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
                       </button>
                     )}
 
-                    <label htmlFor="date" className="block text-gray-700 font-medium my-2">
+                    {formData.mode === "F1_Gen" && (
+                      <button
+                        className="border rounded px-6 py-3 my-2 hover:bg-gray-300 w-full"
+                        type="button"
+                        onClick={handlePullFromP3}
+                      >
+                        Загрузить данные из P3
+                      </button>
+                    )}
+
+                    <label
+                      htmlFor="date"
+                      className="block text-gray-700 font-medium my-2"
+                    >
                       Выберите дату
                     </label>
                     <input
@@ -295,7 +348,10 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
                     />
 
                     <div className="w-full mr-5 my-4">
-                      <label htmlFor="file-input" className="block text-gray-700 font-medium my-2">
+                      <label
+                        htmlFor="file-input"
+                        className="block text-gray-700 font-medium my-2"
+                      >
                         Выберите файл для импорта
                       </label>
 
@@ -320,13 +376,20 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
                       >
                         Импорт
                       </button>
-                      <button className="border rounded px-6 py-3 ml-2 hover:bg-gray-300 flex-1" type="button" onClick={handleExport}>
+                      <button
+                        className="border rounded px-6 py-3 ml-2 hover:bg-gray-300 flex-1"
+                        type="button"
+                        onClick={handleExport}
+                      >
                         Экспорт
                       </button>
                     </div>
 
                     <div className="my-3">
-                      <label htmlFor="importArea" className="block text-gray-700 font-medium my-2">
+                      <label
+                        htmlFor="importArea"
+                        className="block text-gray-700 font-medium my-2"
+                      >
                         Введите значения для импорта
                       </label>
                       <textarea
@@ -361,7 +424,13 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
                 </div>
 
                 <div className="lg:flex mt-5">
-                  <Button fullWidth variant="gradient" type="submit" size="sm" className="lg:w-full">
+                  <Button
+                    fullWidth
+                    variant="gradient"
+                    type="submit"
+                    size="sm"
+                    className="lg:w-full"
+                  >
                     <span>Отправить</span>
                   </Button>
                 </div>
@@ -372,6 +441,6 @@ const PlanModal = ({ isOpen, closeModal, selectedDate, selectedObject, objectLis
       </div>
     </Modal>
   );
-}
+};
 
 export default PlanModal;

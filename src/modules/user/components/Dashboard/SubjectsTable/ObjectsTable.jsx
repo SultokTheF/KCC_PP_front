@@ -197,7 +197,7 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
                   onClick={() => {
                     setIsModalOpen(true);
                     setPlanData({
-                      planMode: 'GP1',
+                      planMode: 'P1_Gen',
                       isGen: true,
                     });
                   }}
@@ -221,7 +221,7 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
                 onClick={() => {
                   setIsModalOpen(true);
                   setPlanData({
-                    planMode: 'P3',
+                    planMode: 'P2_Gen',
                     isGen: false,
                   });
                 }}
@@ -237,7 +237,7 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
                   onClick={() => {
                     setIsModalOpen(true);
                     setPlanData({
-                      planMode: 'GP3',
+                      planMode: 'P3_Gen',
                       isGen: true,
                     });
                   }}
@@ -269,7 +269,7 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
                   onClick={() => {
                     setIsModalOpen(true);
                     setPlanData({
-                      planMode: 'GF1',
+                      planMode: 'F1_Gen',
                       isGen: true,
                     });
                   }}

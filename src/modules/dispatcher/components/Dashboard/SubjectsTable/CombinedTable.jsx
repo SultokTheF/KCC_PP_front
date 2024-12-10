@@ -74,9 +74,12 @@ const CombinedTable = ({
         F1_Gen: 0,
         F2: 0,
         F2_Gen: 0,
-        coefficient: 0,
+        coefficient: 1,
         volume: 0,
+        coefficient_Gen: 1,
+        volume_Gen: 0,
         P2_message: "",
+        P2_message_Gen: "",
         message: "",
       }));
   }
@@ -146,7 +149,10 @@ const CombinedTable = ({
             F2_Gen: hourData?.F2_Gen || 0,
             coefficient: hourData?.coefficient || 1,
             volume: hourData?.volume || 0,
+            coefficient_Gen: hourData?.coefficient_Gen || 1,
+            volume_Gen: hourData?.volume_Gen || 0,
             P2_message: hourData?.P2_message || "",
+            P2_message_Gen: hourData?.P2_message_Gen || "",
             message: hourData?.message || "",
           };
         }
@@ -326,9 +332,21 @@ const CombinedTable = ({
     setLocalHourPlan(updatedHourPlan);
   };
 
+  const handleCoefficientGenChange = (index, value) => {
+    const updatedHourPlan = [...localHourPlan];
+    updatedHourPlan[index].coefficient_Gen = parseFloat(value) || 0;
+    setLocalHourPlan(updatedHourPlan);
+  };
+
   const handleVolumeChange = (index, value) => {
     const updatedHourPlan = [...localHourPlan];
     updatedHourPlan[index].volume = parseInt(value, 10) || 0;
+    setLocalHourPlan(updatedHourPlan);
+  };
+
+  const handleVolumeGenChange = (index, value) => {
+    const updatedHourPlan = [...localHourPlan];
+    updatedHourPlan[index].volume_Gen = parseInt(value, 10) || 0;
     setLocalHourPlan(updatedHourPlan);
   };
 
@@ -361,8 +379,11 @@ const CombinedTable = ({
       "F2",
       ...(selectedSubject?.subject_type === "ЭПО" ? ["F2_Gen"] : []),
       "Coefficient",
+      "Coefficient_Gen",
       "Volume",
+      "Volume_Gen",
       "P2_Message",
+      "P2_Message_Gen",
       ...(showMessageCol ? ["Message"] : []),
     ];
 
@@ -394,7 +415,9 @@ const CombinedTable = ({
             ? [hourData.F2_Gen || 0]
             : []),
           hourData.coefficient || 1,
+          hourData.coefficient_Gen || 1,
           hourData.volume || 0,
+          hourData.volume_Gen || 0,
           hourData.P2_message || "",
           ...(showMessageCol ? [hourData.message || ""] : []),
         ];
@@ -501,6 +524,8 @@ const CombinedTable = ({
         plan: {
           volume: localHourPlan.map((hour) => hour.volume),
           coefficient: localHourPlan.map((hour) => hour.coefficient),
+          coefficient_Gen: localHourPlan.map((hour) => hour.coefficient_Gen),
+          volume_Gen: localHourPlan.map((hour) => hour.volume_Gen),
         },
       });
 
@@ -528,6 +553,8 @@ const CombinedTable = ({
       plan: {
         volume: localHourPlan.map((hour) => hour.volume),
         coefficient: localHourPlan.map((hour) => hour.coefficient),
+        coefficient_Gen: localHourPlan.map((hour) => hour.coefficient_Gen),
+        volume_Gen: localHourPlan.map((hour) => hour.volume_Gen),
       },
     });
 
@@ -805,7 +832,7 @@ const CombinedTable = ({
       {/* Tables Side by Side */}
       <div className="flex flex-col md:flex-row">
         {/* Subject Data Table */}
-        <div className="w-full md:w-1/2 mr-0 md:mr-2 mb-4 md:mb-0">
+        <div className="w-full md:w-2/3 mr-0 md:mr-2 mb-4 md:mb-0">
           {/* Hidden File Input */}
           <input
             type="file"
@@ -827,11 +854,20 @@ const CombinedTable = ({
                     <th className="w-[100px]">ГП1</th>
                   )}
                   <th className="w-[100px]">Коэффициент</th>
+                  {selectedSubject?.subject_type === "ЭПО" && (
+                    <th className="w-[100px]">Коэффициен Генерации</th>
+                  )}
                   <th className="w-[100px]">Объем</th>
+                  {selectedSubject?.subject_type === "ЭПО" && (
+                    <th className="w-[100px]">Объем Генерации</th>
+                  )}
                   <th className="w-[100px]">П2</th>
-                  <th className="w-[150px]">Сообщение П2</th>
                   {selectedSubject?.subject_type === "ЭПО" && (
                     <th className="w-[100px]">ГП2</th>
+                  )}
+                  <th className="w-[150px]">Сообщение П2</th>
+                  {selectedSubject?.subject_type === "ЭПО" && (
+                    <th className="w-[150px]">Сообщение П2 Генерации</th>
                   )}
                   {showMessageCol && <th className="w-[150px]">Сообщение</th>}
                 </tr>
@@ -844,6 +880,7 @@ const CombinedTable = ({
                   const P1 = subjectHourData.P1 || 0;
                   const P1_Gen = subjectHourData.P1_Gen || 0;
                   const P2_message = subjectHourData.P2_message || "";
+                  const P2_message_Gen = subjectHourData.P2_message_Gen || "";
 
                   const P2 =
                     subjectHourData.P2 != null && subjectHourData.P2 !== 0
@@ -870,6 +907,20 @@ const CombinedTable = ({
                           className="w-full text-center rounded"
                         />
                       </td>
+                      {selectedSubject?.subject_type === "ЭПО" && (
+                        <td className="border">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={localHourPlan[index]?.coefficient_Gen || 1}
+                            onChange={(e) =>
+                              handleCoefficientGenChange(index, e.target.value)
+                            }
+                            className="w-full text-center rounded"
+                          />
+                        </td>
+                      )}
                       <td className="border">
                         <input
                           type="number"
@@ -880,7 +931,24 @@ const CombinedTable = ({
                           className="w-full text-center rounded"
                         />
                       </td>
+                      {selectedSubject?.subject_type === "ЭПО" && (
+                        <td className="border">
+                          <input
+                            type="number"
+                            value={localHourPlan[index]?.volume_Gen || 0}
+                            onChange={(e) =>
+                              handleVolumeGenChange(index, e.target.value)
+                            }
+                            className="w-full text-center rounded"
+                          />
+                        </td>
+                      )}
                       <td className="border">{P2}</td>
+                      {selectedSubject?.subject_type === "ЭПО" && (
+                        <td className="border">
+                          {subjectHourData.P2_Gen || 0}
+                        </td>
+                      )}
                       <td
                         className={`border ${
                           P2_message
@@ -893,8 +961,16 @@ const CombinedTable = ({
                         {P2_message || ""}
                       </td>
                       {selectedSubject?.subject_type === "ЭПО" && (
-                        <td className="border">
-                          {subjectHourData.P2_Gen || 0}
+                        <td
+                          className={`border ${
+                            P2_message_Gen
+                              ? P2_message_Gen === "Успешно!"
+                                ? "bg-green-100"
+                                : "bg-red-100"
+                              : ""
+                          }`}
+                        >
+                          {P2_message_Gen || ""}
                         </td>
                       )}
                       {showMessageCol && (
@@ -966,7 +1042,7 @@ const CombinedTable = ({
         </div>
 
         {/* Object Data Table */}
-        <div className="w-full md:w-1/2 ml-0 md:ml-2">
+        <div className="w-full md:w-1/3 ml-0 md:ml-2">
           {/* Always display the Object Table if an object is selected */}
           {selectedData.selectedObject && (
             <table className="w-full text-sm text-center text-gray-500 mb-3">
@@ -984,6 +1060,7 @@ const CombinedTable = ({
                   <th>Ф</th>
                   {selectedObject?.object_type === "ЭПО" && <th>Гф</th>}
                   <th>Сообщение П2</th>
+                  {selectedObject?.object_type === "ЭПО" && <th>Сообщение П2 Генерации</th>}
                 </tr>
               </thead>
               {/* Table Body */}
@@ -1025,6 +1102,19 @@ const CombinedTable = ({
                       >
                         {objectHourData.P2_message || ""}
                       </td>
+                      {selectedObject?.object_type === "ЭПО" && (
+                        <td
+                          className={`border ${
+                            objectHourData.P2_message_Gen
+                              ? objectHourData.P2_message_Gen === "Успешно!"
+                                ? "bg-green-100"
+                                : "bg-red-100"
+                              : ""
+                          }`}
+                        >
+                          {objectHourData.P2_message_Gen || ""}
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
