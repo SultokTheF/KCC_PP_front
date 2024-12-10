@@ -513,6 +513,8 @@ const CombinedTable = ({
       plan: {
         volume: localHourPlan.map((hour) => hour.volume),
         coefficient: localHourPlan.map((hour) => hour.coefficient),
+        coefficient_Gen: localHourPlan.map((hour) => hour.coefficient_Gen),
+        volume_Gen: localHourPlan.map((hour) => hour.volume_Gen),
       },
     });
 
@@ -566,6 +568,8 @@ const CombinedTable = ({
         plan: {
           volume: localHourPlan.map((hour) => hour.volume),
           coefficient: localHourPlan.map((hour) => hour.coefficient),
+          coefficient_Gen: localHourPlan.map((hour) => hour.coefficient_Gen),
+          volume_Gen: localHourPlan.map((hour) => hour.volume_Gen),
         },
       });
 
@@ -1060,7 +1064,9 @@ const CombinedTable = ({
                   <th>Ф</th>
                   {selectedObject?.object_type === "ЭПО" && <th>Гф</th>}
                   <th>Сообщение П2</th>
-                  {selectedObject?.object_type === "ЭПО" && <th>Сообщение П2 Генерации</th>}
+                  {selectedObject?.object_type === "ЭПО" && (
+                    <th>Сообщение П2 Генерации</th>
+                  )}
                 </tr>
               </thead>
               {/* Table Body */}
