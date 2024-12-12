@@ -443,26 +443,26 @@ const HoursTable = () => {
                       'P3_Gen',
                       'F1_Gen',
                       'F2_Gen',
-                      'EZ_T',
-                      'EZ_Base_T',
-                      'EZ_T_ВИЭ',
-                      'EZ_T_РЭК',
-                      'Pred_T',
-                      'plan_T',
-                      'Wo_Prov_T',
-                      'W_Prov_T',
-                      'BE_T',
-                      'OD_T',
-                      'T_Coef',
+                      // 'EZ_T',
+                      // 'EZ_Base_T',
+                      // 'EZ_T_ВИЭ',
+                      // 'EZ_T_РЭК',
+                      // 'Pred_T',
+                      // 'plan_T',
+                      // 'Wo_Prov_T',
+                      // 'W_Prov_T',
+                      // 'BE_T',
+                      // 'OD_T',
+                      // 'T_Coef',
                       // 'W_Prov_P1_Gen',
-                      'W_Prov_P3',
-                      'W_Prov_P3_Gen',
-                      'W_Prov_F1',
-                      'W_Prov_F1_Gen',
-                      'W_Prov_F2',
-                      'W_Prov_F2_Gen',
-                      'direction',
-                      'message',
+                      // 'W_Prov_P3',
+                      // 'W_Prov_P3_Gen',
+                      // 'W_Prov_F1',
+                      // 'W_Prov_F1_Gen',
+                      // 'W_Prov_F2',
+                      // 'W_Prov_F2_Gen',
+                      // 'direction',
+                      // 'message',
                     ].map((header) => (
                       <th
                         key={header}
@@ -537,7 +537,7 @@ const HoursTable = () => {
                         <td className="px-2 py-1 border-b border-gray-200">
                           {row.F2_Gen}
                         </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
+                        {/* <td className="px-2 py-1 border-b border-gray-200">
                           {row.EZ_T}
                         </td>
                         <td className="px-2 py-1 border-b border-gray-200">
@@ -569,11 +569,11 @@ const HoursTable = () => {
                         </td>
                         <td className="px-2 py-1 border-b border-gray-200">
                           {row.T_Coef}
-                        </td>
+                        </td> */}
                         {/* <td className="px-2 py-1 border-b border-gray-200">
                           {row.W_Prov_P1_Gen}
                         </td> */}
-                        <td className="px-2 py-1 border-b border-gray-200">
+                        {/* <td className="px-2 py-1 border-b border-gray-200">
                           {row.W_Prov_P3}
                         </td>
                         <td className="px-2 py-1 border-b border-gray-200">
@@ -608,7 +608,7 @@ const HoursTable = () => {
                         </td>
                         <td className="px-2 py-1 border-b border-gray-200">
                           {row.message}
-                        </td>
+                        </td> */}
                       </tr>
                     );
                   })}

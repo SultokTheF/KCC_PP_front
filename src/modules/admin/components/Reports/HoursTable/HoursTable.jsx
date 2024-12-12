@@ -27,6 +27,7 @@ const HoursTable = () => {
 
   // Loading state
   const [loading, setLoading] = useState(false);
+  const [isConsumer, setIsConsumer] = useState(true);
 
   // State to hold merged table data
   const [tableData, setTableData] = useState([]);
@@ -283,10 +284,11 @@ const HoursTable = () => {
 
   // Handle form input changes
   const handleChange = (name, value) => {
-    setFormData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
+    setFormData((prevData) => ({ ...prevData, [name]: value }));
+    if (name === 'subject') {
+      const selectedSubject = subjectsList.find((subj) => subj.id === value);
+      setIsConsumer(selectedSubject?.subject_type === 'CONSUMER');
+    }
   };
 
   // Fetch subjects on component mount
@@ -411,206 +413,80 @@ const HoursTable = () => {
         {/* Loading Spinner */}
         {loading ? (
           <Spinner />
-        ) : (
-          // Table Rendering
-          tableData.length > 0 ? (
-            <div className="overflow-x-auto max-w-[1550px] bg-white shadow-md rounded-lg">
-              <table className="table-fixed min-w-full text-sm bg-white border border-gray-200">
-                <thead className="bg-gray-100 text-center">
-                  <tr>
-                    {[
-                      'Дата',          // New Date Column
-                      'Час',
-                      'Субъект',
-                      'Провайдеры',
-                      'Тип',
-                      'coefficient',
-                      'volume',
-                      'P1',
-                      'P2',
-                      'P3',
-                      'F1',
-                      'F2',
-                      'P1_Gen',
-                      'P2_Gen',
-                      'P3_Gen',
-                      'F1_Gen',
-                      'F2_Gen',
-                      'EZ_T',
-                      'EZ_Base_T',
-                      'EZ_T_ВИЭ',
-                      'EZ_T_РЭК',
-                      'Pred_T',
-                      'plan_T',
-                      'Wo_Prov_T',
-                      'W_Prov_T',
-                      'BE_T',
-                      'OD_T',
-                      'T_Coef',
-                      // 'W_Prov_P1_Gen',
-                      'W_Prov_P3',
-                      'W_Prov_P3_Gen',
-                      'W_Prov_F1',
-                      'W_Prov_F1_Gen',
-                      'W_Prov_F2',
-                      'W_Prov_F2_Gen',
-                      'direction',
-                      'message',
-                    ].map((header) => (
-                      <th
-                        key={header}
-                        className={`px-2 py-1 border-b border-gray-200 font-medium text-gray-700 ${
-                          header === 'Дата' ? 'w-48' : ''
-                        }`}
-                      >
-                        {header}
-                      </th>
-                    ))}
+        ) : tableData.length > 0 ? (
+          <div className="overflow-x-auto max-w-[1550px] bg-white shadow-md rounded-lg">
+            <table className="table-fixed min-w-full text-sm bg-white border border-gray-200">
+              <thead className="bg-gray-100 text-center">
+                <tr>
+                  {[
+                    'Дата',
+                    'Час',
+                    'Субъект',
+                    'Тип',
+                    'Провайдеры',
+                    'coefficient',
+                    'volume',
+                    'P1',
+                    'P2',
+                    'P3',
+                    'F1',
+                    'F2',
+                    ...(!isConsumer
+                      ? ['P1_Gen', 'P2_Gen', 'P3_Gen', 'F1_Gen', 'F2_Gen']
+                      : []),
+                    'EZ_T',
+                    'EZ_Base_T',
+                    'BE_T',
+                    'OD_T',
+                    'EZ_T_ВИЭ',
+                    'EZ_T_РЭК',
+                  ].map((header) => (
+                    <th
+                      key={header}
+                      className="px-2 py-1 border-b border-gray-200 font-medium text-gray-700"
+                    >
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {tableData.map((row) => (
+                  <tr key={row.id} className="text-center">
+                    <td className="px-2 py-1 border-b border-gray-200">{row.date}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.hour}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.subject}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.type}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.providers}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.coefficient}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.volume}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.P1}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.P2}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.P3}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.F1}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.F2}</td>
+                    {!isConsumer && (
+                      <>
+                        <td className="px-2 py-1 border-b border-gray-200">{row.P1_Gen}</td>
+                        <td className="px-2 py-1 border-b border-gray-200">{row.P2_Gen}</td>
+                        <td className="px-2 py-1 border-b border-gray-200">{row.P3_Gen}</td>
+                        <td className="px-2 py-1 border-b border-gray-200">{row.F1_Gen}</td>
+                        <td className="px-2 py-1 border-b border-gray-200">{row.F2_Gen}</td>
+                      </>
+                    )}
+                    <td className="px-2 py-1 border-b border-gray-200">{row.EZ_T}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.EZ_Base_T}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.BE_T}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.OD_T}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.EZ_T_ВИЭ}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.EZ_T_РЭК}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {tableData.map((row, index) => {
-                    const isNewDate = index === 0 || row.date !== tableData[index - 1].date;
-                    return (
-                      <tr
-                        key={row.id}
-                        className={`text-center ${
-                          isNewDate ? 'bg-gray-100' : 'bg-white'
-                        }`}
-                      >
-                        {/* Date Column */}
-                        <td className="px-2 py-1 border-b w-48 border-gray-200">
-                          {row.date}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.hour}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.subject}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.providers}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.type}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.coefficient}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.volume}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.P1}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.P2}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.P3}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.F1}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.F2}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.P1_Gen}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.P2_Gen}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.P3_Gen}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.F1_Gen}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.F2_Gen}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.EZ_T}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.EZ_Base_T}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.EZ_T_ВИЭ}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.EZ_T_РЭК}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.Pred_T}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.plan_t}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.Wo_Prov_T}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.W_Prov_T}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.BE_T}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.OD_T}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.T_Coef}
-                        </td>
-                        {/* <td className="px-2 py-1 border-b border-gray-200">
-                          {row.W_Prov_P1_Gen}
-                        </td> */}
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.W_Prov_P3}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.W_Prov_P3_Gen}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.W_Prov_F1}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.W_Prov_F1_Gen}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.W_Prov_F2}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.W_Prov_F2_Gen}
-                        </td>
-                        <td
-                          className={`px-2 py-1 border-b border-gray-200 ${
-                            row.direction === 'DOWN'
-                              ? 'bg-green-100'
-                              : row.direction === 'UP'
-                              ? 'bg-red-100'
-                              : ''
-                          }`}
-                        >
-                          {row.direction === 'UP'
-                            ? '↑'
-                            : row.direction === 'DOWN'
-                            ? '↓'
-                            : '-'}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.message}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center text-gray-500">Нет данных для отображения.</div>
-          )
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center text-gray-500">Нет данных для отображения.</div>
         )}
       </div>
     </div>
