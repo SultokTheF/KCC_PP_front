@@ -559,6 +559,40 @@ const CombinedTable = ({
     }
   };
 
+  const handleCreate = async () => {
+    // Console log as per requirement
+    console.log({
+      // call: "calculate",
+      subject: selectedData.selectedSubject,
+      date: selectedDate,
+      coefficient: localHourPlan.map((hour) => hour.coefficient),
+      coefficient_Gen: localHourPlan.map((hour) => hour.coefficient_Gen),
+    });
+
+    try {
+      const response = await axiosInstance.post(endpoints.DAYS, {
+        // call: "calculate",
+        subject: selectedData.selectedSubject,
+        date: selectedDate,
+        coefficient: localHourPlan.map((hour) => hour.coefficient),
+        coefficient_Gen: localHourPlan.map((hour) => hour.coefficient_Gen),
+      });
+
+      if (response.status === 200 || response.status === 201) {
+        setWarningMessage("План успешно утвержден.");
+        fetchSubjectHours(); // added
+        fetchAllObjectHours();
+        fetchObjectStatuses();
+        fetchSubjectStatuses();
+      } else {
+        setWarningMessage("Ошибка при утверждении плана.");
+      }
+    } catch (error) {
+      console.error("Error approving plan:", error);
+      setWarningMessage("Ошибка при утверждении плана.");
+    }
+  };
+
   const handleSave = async () => {
     // Console log as per requirement
     console.log({
@@ -1026,6 +1060,12 @@ const CombinedTable = ({
               onClick={handleApprove}
             >
               Утвердить
+            </button>
+            <button
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+              onClick={handleCreate}
+            >
+              Создать
             </button>
             <button
               className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
