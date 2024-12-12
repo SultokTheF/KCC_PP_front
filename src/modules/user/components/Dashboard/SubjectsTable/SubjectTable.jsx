@@ -79,13 +79,17 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
       return "Нет данных";
     }
 
-    const planKeys = ['P1_Status', 'P2_Status', 'P3_Status', 'F1_Status'];
+    const planKeys = ['P1_Status', 'P1_Gen_Status', 'P2_Status', 'P2_Gen_Status', 'P3_Status', 'P3_Gen_Status', 'F1_Status', 'F1_Gen_Status'];
 
     const planAbbreviations = {
       'P1_Status': 'П1',
+      'P1__GenStatus': 'ГП1',
       'P2_Status': 'П2',
+      'P2__GenStatus': 'ГП2',
       'P3_Status': 'П3',
+      'P3__GenStatus': 'ГП3',
       'F1_Status': 'Ф',
+      'F1__GenStatus': 'ГФ1',
     };
 
     const statusColors = {
