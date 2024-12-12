@@ -4,6 +4,7 @@ import FormConstructor from './components/Forms/FormConstructor/FormContructor';
 import TableOverview from './components/Forms/TableOverview/TableOverview';
 import Graphs from './components/Reports/Graphs/Graphs';
 import Disbalance from './components/Reports/Disbalance/Disbalance';
+import History from './components/Reports/History';
 
 export {
   Profile,
@@ -11,5 +12,6 @@ export {
   FormConstructor as DispatcherFormContructor,
   TableOverview as DispatcherTableOverview,
   Graphs as DispatcherGraphs,
-  Disbalance as DispatcherDisbalance
+  Disbalance as DispatcherDisbalance,
+  History as DispatcherHistory
 }

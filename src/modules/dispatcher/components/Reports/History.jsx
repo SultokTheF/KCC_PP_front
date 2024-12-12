@@ -64,7 +64,11 @@ const History = () => {
   // Fetch objects assigned to the user
   const fetchObjects = async () => {
     try {
-      const response = await axiosInstance.get("/api/objects/");
+      const response = await axiosInstance.get("/api/objects/", {
+        params: {
+          user: user.id,
+        },
+      });
       setObjects(response.data);
     } catch (error) {
       console.error("Error fetching objects:", error);
