@@ -273,15 +273,15 @@ const PlanModal = ({
                       required
                     >
                       <option value="P1">Первичный план</option>
-                      {selectedObject?.object_type === "ЭПО" && (
+                      {selectedObject?.object_type !== "CONSUMER" && (
                         <option value="P1_Gen">Первичный план Генерации</option>
                       )}
                       <option value="P3">План KEGOC</option>
-                      {selectedObject?.object_type === "ЭПО" && (
+                      {selectedObject?.object_type !== "CONSUMER" && (
                         <option value="P3_Gen">План Генерации KEGOC</option>
                       )}
                       <option value="F1">Факт</option>
-                      {selectedObject?.object_type === "ЭПО" && (
+                      {selectedObject?.object_type !== "CONSUMER" && (
                         <option value="F1_Gen">Генерация Факт</option>
                       )}
                     </select>

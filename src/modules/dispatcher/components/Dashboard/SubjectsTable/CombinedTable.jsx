@@ -79,7 +79,7 @@ const CombinedTable = ({
         coefficient_Gen: 1,
         volume_Gen: 0,
         P2_message: "",
-        P2_message_Gen: "",
+        P2_Gen_message: "",
         message: "",
       }));
   }
@@ -147,12 +147,12 @@ const CombinedTable = ({
             F1_Gen: hourData?.F1_Gen || 0,
             F2: hourData?.F2 || 0,
             F2_Gen: hourData?.F2_Gen || 0,
-            coefficient: hourData?.coefficient || 1,
+            coefficient: hourData?.coefficient ?? 1,
             volume: hourData?.volume || 0,
-            coefficient_Gen: hourData?.coefficient_Gen || 1,
+            coefficient_Gen: hourData?.coefficient_Gen ?? 1,
             volume_Gen: hourData?.volume_Gen || 0,
             P2_message: hourData?.P2_message || "",
-            P2_message_Gen: hourData?.P2_message_Gen || "",
+            P2_Gen_message: hourData?.P2_Gen_message || "",
             message: hourData?.message || "",
           };
         }
@@ -170,16 +170,22 @@ const CombinedTable = ({
       const objectsForSubject = objectsList.filter(
         (object) => object.subject === selectedData.selectedSubject
       );
-      const objectHoursPromises = objectsForSubject.map((object) =>
-        axiosInstance
-          .get(endpoints.HOURS, {
+
+      const objectHoursPromises = objectsForSubject.map(async (object) => {
+        try {
+          const response = await axiosInstance.get(endpoints.HOURS, {
             params: { day: selectedDate, obj: object.id },
-          })
-          .then((response) => ({
-            id: object.id,
-            hours: response.data || [],
-          }))
-      );
+          });
+          return { id: object.id, hours: response.data || [] };
+        } catch (error) {
+          console.error(
+            `Error fetching object hours for object ${object.id}:`,
+            error
+          );
+          // Return empty array if there's an error, so other objects can still load.
+          return { id: object.id, hours: [] };
+        }
+      });
 
       const objectHoursArray = await Promise.all(objectHoursPromises);
 
@@ -190,7 +196,7 @@ const CombinedTable = ({
 
       setObjectHoursMap(newObjectHoursMap);
     } catch (error) {
-      console.error("Error fetching object hours:", error);
+      console.error("Error fetching all object hours:", error);
       setObjectHoursMap({});
     }
   };
@@ -270,6 +276,13 @@ const CombinedTable = ({
     } finally {
       setLoadingObjectStatuses(false);
     }
+  };
+
+  const calculateP2Gen = (index, P1_Gen) => {
+    const coefficient_Gen = localHourPlan[index]?.coefficient_Gen || 0;
+    const volume_Gen = localHourPlan[index]?.volume_Gen || 0;
+    const P2_Gen = P1_Gen * coefficient_Gen + volume_Gen;
+    return P2_Gen.toFixed(2);
   };
 
   const generateStatusDisplayComponents = (statuses) => {
@@ -383,7 +396,7 @@ const CombinedTable = ({
       "Volume",
       "Volume_Gen",
       "P2_Message",
-      "P2_Message_Gen",
+      "P2_Gen_message",
       ...(showMessageCol ? ["Message"] : []),
     ];
 
@@ -884,7 +897,7 @@ const CombinedTable = ({
                   const P1 = subjectHourData.P1 || 0;
                   const P1_Gen = subjectHourData.P1_Gen || 0;
                   const P2_message = subjectHourData.P2_message || "";
-                  const P2_message_Gen = subjectHourData.P2_message_Gen || "";
+                  const P2_Gen_message = subjectHourData.P2_Gen_message || "";
 
                   const P2 =
                     subjectHourData.P2 != null && subjectHourData.P2 !== 0
@@ -948,9 +961,12 @@ const CombinedTable = ({
                         </td>
                       )}
                       <td className="border">{P2}</td>
-                      {selectedSubject?.subject_type === "ЭПО" && (
+                      {selectedSubject?.subject_type !== "CONSUMER" && (
                         <td className="border">
-                          {subjectHourData.P2_Gen || 0}
+                          {subjectHourData.P2_Gen != null &&
+                          subjectHourData.P2_Gen !== 0
+                            ? subjectHourData.P2_Gen
+                            : calculateP2Gen(index, P1_Gen)}
                         </td>
                       )}
                       <td
@@ -967,14 +983,14 @@ const CombinedTable = ({
                       {selectedSubject?.subject_type === "ЭПО" && (
                         <td
                           className={`border ${
-                            P2_message_Gen
-                              ? P2_message_Gen === "Успешно!"
+                            P2_Gen_message
+                              ? P2_Gen_message === "Успешно!"
                                 ? "bg-green-100"
                                 : "bg-red-100"
                               : ""
                           }`}
                         >
-                          {P2_message_Gen || ""}
+                          {P2_Gen_message || ""}
                         </td>
                       )}
                       {showMessageCol && (
@@ -1111,14 +1127,14 @@ const CombinedTable = ({
                       {selectedObject?.object_type === "ЭПО" && (
                         <td
                           className={`border ${
-                            objectHourData.P2_message_Gen
-                              ? objectHourData.P2_message_Gen === "Успешно!"
+                            objectHourData.P2_Gen_message
+                              ? objectHourData.P2_Gen_message === "Успешно!"
                                 ? "bg-green-100"
                                 : "bg-red-100"
                               : ""
                           }`}
                         >
-                          {objectHourData.P2_message_Gen || ""}
+                          {objectHourData.P2_Gen_message || ""}
                         </td>
                       )}
                     </tr>

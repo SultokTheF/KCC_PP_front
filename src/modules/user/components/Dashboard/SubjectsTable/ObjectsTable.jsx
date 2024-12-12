@@ -189,7 +189,7 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
                 📝
               </button>
             </th>
-            {selectedObject?.object_type === 'ЭПО' && (
+            {selectedObject?.object_type !== 'CONSUMER' && (
               <th>
                 ГП1
                 <button
@@ -209,7 +209,7 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
             <th>
               П2
             </th>
-            {selectedObject?.object_type === 'ЭПО' && (
+            {selectedObject?.object_type !== 'CONSUMER' && (
               <th>
                 ГП2
               </th>
@@ -229,7 +229,7 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
                 📝
               </button>
             </th>
-            {selectedObject?.object_type === 'ЭПО' && (
+            {selectedObject?.object_type !== 'CONSUMER' && (
               <th>
                 ГП3
                 <button
@@ -261,7 +261,7 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
                 📝
               </button>
             </th>
-            {selectedObject?.object_type === 'ЭПО' && (
+            {selectedObject?.object_type !== 'CONSUMER' && (
               <th>
                 ГФ1
                 <button
@@ -285,13 +285,13 @@ const ObjectTable = ({ selectedData, setSelectedData, objectsList, selectedDate 
             <tr key={time}>
               <td className="border">{time}</td>
               <td className="border">{hourPlan?.[index]?.P1 || 0}</td>
-              {selectedObject?.object_type === 'ЭПО' && <td className="border">{hourPlan?.[index]?.P1_Gen || 0}</td>}
+              {selectedObject?.object_type !== 'CONSUMER' && <td className="border">{hourPlan?.[index]?.P1_Gen || 0}</td>}
               <td className="border">{hourPlan?.[index]?.P2 || 0}</td>
-              {selectedObject?.object_type === 'ЭПО' && <td className="border">{hourPlan?.[index]?.P2_Gen || 0}</td>}
+              {selectedObject?.object_type !== 'CONSUMER' && <td className="border">{hourPlan?.[index]?.P2_Gen || 0}</td>}
               <td className="border">{hourPlan?.[index]?.P3 || 0}</td>
-              {selectedObject?.object_type === 'ЭПО' && <td className="border">{hourPlan?.[index]?.P3_Gen || 0}</td>}
+              {selectedObject?.object_type !== 'CONSUMER' && <td className="border">{hourPlan?.[index]?.P3_Gen || 0}</td>}
               <td className="border">{hourPlan?.[index]?.F1 || 0}</td>
-              {selectedObject?.object_type === 'ЭПО' && <td className="border">{hourPlan?.[index]?.F1_Gen || 0}</td>}
+              {selectedObject?.object_type !== 'CONSUMER' && <td className="border">{hourPlan?.[index]?.F1_Gen || 0}</td>}
             </tr>
           ))}
         </tbody>
