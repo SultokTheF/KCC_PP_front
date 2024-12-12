@@ -57,6 +57,7 @@ const UsersList = () => {
                       <li>{user.email}</li>
                       <li>{user.subject_bin}</li>
                       <li>{user.role}</li>
+                      <li>{new Date(user.last_login).toLocaleDateString('en-GB').split('/').join('-')}</li>
                     </ul>
                   </div>
                 </a>
