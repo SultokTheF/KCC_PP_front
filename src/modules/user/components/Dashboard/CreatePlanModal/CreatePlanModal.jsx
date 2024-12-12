@@ -36,29 +36,30 @@ const PlanModal = ({
     mode: planMode,
   });
 
-  // Handle table changes
   const handleTableChange = (object, date, updatedPlans, mode) => {
-    // Ensure updatedPlans is an array of numbers.
-    // If updatedPlans are objects, map them to numbers.
-    // Example: const numericPlan = updatedPlans.map((item) => item.value || 0);
-    // For now, assuming updatedPlans is already an array of numbers.
-    const numericPlan = updatedPlans.map((item) => (typeof item === 'number' ? item : 0));
-
+    // Directly trust updatedPlans. They should already be numeric values.
     setFormData({
       object: object,
       date: date,
-      plan: numericPlan,
+      plan: updatedPlans,
       mode: mode,
     });
   };
 
   useEffect(() => {
+    // Map the existing plan data for the chosen mode if `plans` is provided.
+    // If `plans` is an array of objects like [{P1:10, P2:20, ...}, {P1:15, ...}], 
+    // we extract the relevant plan based on `planMode`.
+    const mappedPlan = Array.isArray(plans) && plans.length > 0
+      ? plans.map((hour) => hour[planMode] ?? 0)
+      : [];
+
     setFormData((prevData) => ({
       ...prevData,
       object: selectedObject?.id || 0,
       date:
         selectedDate.split("T")[0] || new Date().toISOString().split("T")[0],
-      plan: plans,
+      plan: mappedPlan,
       mode: planMode,
     }));
   }, [selectedDate, selectedObject, planMode, plans]);
@@ -67,12 +68,8 @@ const PlanModal = ({
     e.preventDefault();
     console.log("Form submitted:", formData);
 
-    // Ensure formData.plan is always an array of numeric values
-    const finalPlan = Array.isArray(formData.plan)
-      ? formData.plan.map((item) =>
-          typeof item === "object" ? 0 : Number(item) || 0
-        )
-      : [];
+    // Use formData.plan directly as the final plan
+    const finalPlan = formData.plan;
 
     try {
       if (formData.mode === "P1" && plans.length === 0) {
