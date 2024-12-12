@@ -166,7 +166,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
             <th>
               П1
             </th>
-            {selectedSubject?.subject_type === 'ЭПО' && (
+            {selectedSubject?.subject_type !== 'CONSUMER' && (
               <th>
                 ГП1
               </th>
@@ -174,7 +174,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
             <th>
               П2
             </th>
-            {selectedSubject?.subject_type === 'ЭПО' && (
+            {selectedSubject?.subject_type !== 'CONSUMER' && (
               <th>
                 ГП2
               </th>
@@ -182,7 +182,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
             <th>
               П3
             </th>
-            {selectedSubject?.subject_type === 'ЭПО' && (
+            {selectedSubject?.subject_type !== 'CONSUMER' && (
               <th>
                 ГП3
               </th>
@@ -190,7 +190,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
             <th>
               Ф1
             </th>
-            {selectedSubject?.subject_type === 'ЭПО' && (
+            {selectedSubject?.subject_type !== 'CONSUMER' && (
               <th>
                 ГФ1
               </th>
@@ -202,13 +202,13 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
             <tr key={time}>
               <td className="border">{time}</td>
               <td className="border">{hourPlan[index]?.P1 || 0}</td>
-              {selectedSubject?.subject_type === 'ЭПО' && <td className="border">{hourPlan[index]?.P1_Gen || 0}</td>}
+              {selectedSubject?.subject_type !== 'CONSUMER' && <td className="border">{hourPlan[index]?.P1_Gen || 0}</td>}
               <td className="border">{hourPlan[index]?.P2 || 0}</td>
-              {selectedSubject?.subject_type === 'ЭПО' && <td className="border">{hourPlan[index]?.P2_Gen || 0}</td>}
+              {selectedSubject?.subject_type !== 'CONSUMER' && <td className="border">{hourPlan[index]?.P2_Gen || 0}</td>}
               <td className="border">{hourPlan[index]?.P3 || 0}</td>
-              {selectedSubject?.subject_type === 'ЭПО' && <td className="border">{hourPlan[index]?.P3_Gen || 0}</td>}
+              {selectedSubject?.subject_type !== 'CONSUMER' && <td className="border">{hourPlan[index]?.P3_Gen || 0}</td>}
               <td className="border">{hourPlan[index]?.F1 || 0}</td>
-              {selectedSubject?.subject_type === 'ЭПО' && <td className="border">{hourPlan[index]?.F1_Gen || 0}</td>}
+              {selectedSubject?.subject_type !== 'CONSUMER' && <td className="border">{hourPlan[index]?.F1_Gen || 0}</td>}
             </tr>
           ))}
         </tbody>

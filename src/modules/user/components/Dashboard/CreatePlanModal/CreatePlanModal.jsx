@@ -37,11 +37,17 @@ const PlanModal = ({
   });
 
   // Handle table changes
-  const handleTableChange = (object, date, plans, mode) => {
+  const handleTableChange = (object, date, updatedPlans, mode) => {
+    // Ensure updatedPlans is an array of numbers.
+    // If updatedPlans are objects, map them to numbers.
+    // Example: const numericPlan = updatedPlans.map((item) => item.value || 0);
+    // For now, assuming updatedPlans is already an array of numbers.
+    const numericPlan = updatedPlans.map((item) => (typeof item === 'number' ? item : 0));
+
     setFormData({
       object: object,
       date: date,
-      plan: plans,
+      plan: numericPlan,
       mode: mode,
     });
   };
@@ -61,30 +67,37 @@ const PlanModal = ({
     e.preventDefault();
     console.log("Form submitted:", formData);
 
+    // Ensure formData.plan is always an array of numeric values
+    const finalPlan = Array.isArray(formData.plan)
+      ? formData.plan.map((item) =>
+          typeof item === "object" ? 0 : Number(item) || 0
+        )
+      : [];
+
     try {
       if (formData.mode === "P1" && plans.length === 0) {
+        // Sending P1 when no plans exist yet
         const response = await axiosInstance.post(endpoints.DAYS, {
           object: formData.object,
           date: formData.date,
-          P1: formData.plan,
+          P1: finalPlan,
         });
 
         if (response.status >= 200 && response.status < 300) {
           console.log("План успешно создан:", response.data);
-
           window.location.href = "/dashboard";
         }
 
         console.log("Ответ API:", response.data);
       } else {
-        const response = await axiosInstance.post(
-          endpoints.PLANS_CREATE(plans[0].day),
-          {
-            plan: {
-              [formData.mode]: formData.plan,
-            },
-          }
-        );
+        // Sending other plans
+        // We assume plans[0].day is available. If not, handle accordingly.
+        const day = plans[0]?.day;
+        const response = await axiosInstance.post(endpoints.PLANS_CREATE(day), {
+          plan: {
+            [formData.mode]: finalPlan,
+          },
+        });
 
         if (response.status === 201) {
           console.log("План успешно создан:", response.data);
@@ -145,7 +158,7 @@ const PlanModal = ({
         const parsedData = XLSXUtils.sheet_to_json(worksheet, { header: 1 });
 
         // Assuming that the data starts from row 3 (after headers)
-        const planValues = parsedData.slice(2).map((row) => row[1]);
+        const planValues = parsedData.slice(2).map((row) => Number(row[1]) || 0);
 
         setFormData((prevData) => ({
           ...prevData,
@@ -160,19 +173,16 @@ const PlanModal = ({
   };
 
   const handleImportFromText = () => {
-    // Split the input by spaces, commas, or newlines using a regular expression
+    // Split the input by spaces, commas, or newlines
     const values = textareaInput
       .split(/[\s,]+/)
       .map((item) => item.trim())
       .filter((item) => item !== "")
       .map(Number)
-      .map((num) => (isNaN(num) ? 0 : num)); // Replace NaN with 0
+      .map((num) => (isNaN(num) ? 0 : num));
 
     // Ensure the plan has exactly 24 elements, filling missing with 0
-    const updatedPlan = Array.from(
-      { length: 24 },
-      (_, index) => values[index] || 0
-    );
+    const updatedPlan = Array.from({ length: 24 }, (_, index) => values[index] || 0);
 
     setFormData((prevData) => ({
       ...prevData,
@@ -180,30 +190,37 @@ const PlanModal = ({
     }));
   };
 
-  // Inside CreatePlanModal.jsx
-
   const handlePullFromP2 = () => {
+    // When mode = P3 or P3_Gen, load data from P2 or P2_Gen respectively
     if (formData.mode === "P3") {
-      // Extract P2 plan values from the existing plans prop
       const p2Plan = plans.map((hour) => hour.P2 || 0);
-
-      // Update the formData.plan with P2 values
       setFormData((prevData) => ({
         ...prevData,
         plan: p2Plan,
+      }));
+    } else if (formData.mode === "P3_Gen") {
+      // Load data from P2_Gen
+      const p2GenPlan = plans.map((hour) => hour.P2_Gen || 0);
+      setFormData((prevData) => ({
+        ...prevData,
+        plan: p2GenPlan,
       }));
     }
   };
 
   const handlePullFromP3 = () => {
+    // When mode = F1 or F1_Gen, load data from P3 or P3_Gen respectively
     if (formData.mode === "F1") {
-      // Extract P3 plan values from the existing plans prop
       const p3Plan = plans.map((hour) => hour.P3 || 0);
-
-      // Update the formData.plan with P3 values
       setFormData((prevData) => ({
         ...prevData,
         plan: p3Plan,
+      }));
+    } else if (formData.mode === "F1_Gen") {
+      const p3GenPlan = plans.map((hour) => hour.P3_Gen || 0);
+      setFormData((prevData) => ({
+        ...prevData,
+        plan: p3GenPlan,
       }));
     }
   };
@@ -241,7 +258,7 @@ const PlanModal = ({
                       onChange={(e) =>
                         setFormData((prevData) => ({
                           ...prevData,
-                          object: parseInt(e.target.value, 10), // Ensure the value is a number
+                          object: parseInt(e.target.value, 10),
                         }))
                       }
                       required
@@ -302,7 +319,7 @@ const PlanModal = ({
                         type="button"
                         onClick={handlePullFromP2}
                       >
-                        Загрузить данные из P2
+                        Загрузить данные из P2_Gen
                       </button>
                     )}
 
@@ -322,7 +339,7 @@ const PlanModal = ({
                         type="button"
                         onClick={handlePullFromP3}
                       >
-                        Загрузить данные из P3
+                        Загрузить данные из P3_Gen
                       </button>
                     )}
 
