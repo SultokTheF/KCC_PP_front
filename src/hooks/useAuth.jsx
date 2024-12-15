@@ -25,7 +25,7 @@ export const AuthProvider = ({ children }) => {
         window.location.replace('/');
       }
     } catch (error) {
-      alert('Неверный логин или пароль');
+      alert(error.response.data.detail);
       console.error('Login failed:', error);
     }
   };

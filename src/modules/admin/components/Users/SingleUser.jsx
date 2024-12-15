@@ -15,22 +15,22 @@ const SingleUser = () => {
     role: "USER", // Default role
   });
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const response = await axiosInstance.get(`user/users/${id}/`);
-        setUserData(response.data);
-        setFormData({
-          subject_name: response.data.subject_name,
-          subject_bin: response.data.subject_bin,
-          email: response.data.email,
-          role: response.data.role,
-        });
-      } catch (error) {
-        console.error("Failed to fetch user data:", error);
-      }
-    };
+  const fetchUserData = async () => {
+    try {
+      const response = await axiosInstance.get(`user/users/${id}/`);
+      setUserData(response.data);
+      setFormData({
+        subject_name: response.data.subject_name,
+        subject_bin: response.data.subject_bin,
+        email: response.data.email,
+        role: response.data.role,
+      });
+    } catch (error) {
+      console.error("Failed to fetch user data:", error);
+    }
+  };
 
+  useEffect(() => {
     fetchUserData();
   }, [id]);
 
@@ -41,6 +41,18 @@ const SingleUser = () => {
       [name]: value,
     });
   };
+
+  const handleReset = async () => {
+    try {
+      const response = await axiosInstance.post(`user/users/${id}/recover/`);
+      if (response.status === 200) {
+        alert("Пользователь успешно восстановлен");
+        fetchUserData();
+      }
+    } catch (error) {
+      console.error("Failed to fetch user data:", error);
+    }
+  }
 
   const handleSubmit = async () => {
     try {
@@ -69,7 +81,9 @@ const SingleUser = () => {
     <div className="bg-gray-100 flex min-h-screen">
       <Sidebar />
       <div className="flex-1 p-8">
-        <h1 className="text-3xl font-bold mb-6">Профиль {formData.subject_name}</h1>
+        <h1 className="text-3xl font-bold mb-6">
+          Профиль {formData.subject_name}
+        </h1>
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="mb-4">
             <div className="flex items-center mb-2">
@@ -132,9 +146,17 @@ const SingleUser = () => {
                 <div>{userData.role}</div>
               )}
             </div>
+            {userData.last_login && (
+              <div className="flex items-center mb-2">
+                <div className="w-1/4 font-medium">Последний вход:</div>
+                <div>
+                  {new Date(userData.last_login).toISOString().split("T")[0]}
+                </div>
+              </div>
+            )}
           </div>
-          {userData?.role !== "ADMIN" && (
-            isEditing ? (
+          {userData?.role !== "ADMIN" &&
+            (isEditing ? (
               <>
                 <button
                   className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition duration-300 mr-2"
@@ -164,7 +186,14 @@ const SingleUser = () => {
                   Удалить Профиль
                 </button>
               </>
-            )
+            ))}
+          {userData?.account_locked && (
+            <button
+              className="bg-green-500 text-white px-4 py-2 mx-2 rounded-md hover:bg-green-600 transition duration-300"
+              onClick={handleReset}
+            >
+              Восстановить Профиль
+            </button>
           )}
         </div>
       </div>
