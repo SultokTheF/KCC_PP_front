@@ -10,7 +10,7 @@ const Login = () => {
   const { login } = useAuth();
 
   const [formData, setFormData] = useState({
-    subject_bin: '',
+    email: '',
     password: '',
   });
 
@@ -39,15 +39,15 @@ const Login = () => {
           <h2 className="text-2xl font-semibold text-gray-800 mb-6">Авторизация</h2>
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
-              <label htmlFor="subject_bin" className="block text-gray-700 font-medium mb-2">
-                БИН субъекта
+              <label htmlFor="email" className="block text-gray-700 font-medium mb-2">
+                Почта Субъекта
               </label>
               <input
-                type="text"
-                name="subject_bin"
-                id="subject_bin"
+                type="email"
+                name="email"
+                id="email"
                 className="h-10 border border-gray-300 rounded px-4 w-full focus:outline-none focus:border-blue-500"
-                value={formData.subject_bin}
+                value={formData.email}
                 onChange={handleChange}
                 required
               />
@@ -69,7 +69,7 @@ const Login = () => {
 
             <div className="mb-6">
               <label htmlFor="password" className="block text-blue-700 font-medium mb-2 mt-2">
-                Забыли пароль?
+                {/* Забыли пароль? */}
               </label>
             </div>
             <div className="lg:flex">
