@@ -9,6 +9,7 @@ const endpoints = {
   USERS: `user/users/`,
   GET_USER: `user/token/get`,
   CHANGE_PASSWORD: (id) => `user/token/change-password/${id}/`,
+  ADMIN_CHANGE_PASSWORD: (id) => `user/users/${id}/admin-change-password/`,
 
   // Subjects   
   SUBJECTS: `api/subjects/`,
