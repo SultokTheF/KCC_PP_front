@@ -17,18 +17,29 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (formData) => {
     try {
-      const response = await axiosInstance.post(endpoints.LOGIN, formData);
+      // Fetch the user's IP address
+      const ipResponse = await fetch('https://api.ipify.org?format=json');
+      const ipData = await ipResponse.json();
+  
+      // Add the IP address to the form data
+      const formDataWithIP = {
+        ...formData,
+        ip: ipData.ip, // Assuming the backend expects a field named "ip"
+      };
+  
+      const response = await axiosInstance.post(endpoints.LOGIN, formDataWithIP);
       localStorage.setItem('accessToken', response.data.access);
       getUserData(response.data.access);
-
+  
       if (response.status === 200) {
         window.location.replace('/');
       }
     } catch (error) {
-      alert(error.response.data.detail);
+      alert(error.response?.data?.detail || 'Login failed');
       console.error('Login failed:', error);
     }
   };
+  
 
   const logout = () => {
     localStorage.removeItem('accessToken');
