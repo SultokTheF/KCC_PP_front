@@ -4,17 +4,26 @@ import Sidebar from "../../Sidebar/Sidebar";
 import Select from "react-select";
 import pdfMake from "pdfmake/build/pdfmake";
 import * as pdfFonts from "pdfmake/build/vfs_fonts";
-
 import * as XLSX from "xlsx";
 
-pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts.vfs ? pdfFonts.vfs : pdfFonts;
-
-
+pdfMake.vfs = pdfFonts.pdfMake
+  ? pdfFonts.pdfMake.vfs
+  : pdfFonts.vfs
+  ? pdfFonts.vfs
+  : pdfFonts;
 
 const History = () => {
   const [history, setHistory] = useState([]);
   const [objects, setObjects] = useState([]);
   const [users, setUsers] = useState([]);
+
+  // New state variables for logs modal
+  const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
+  const [logs, setLogs] = useState([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+  const [logsStartDate, setLogsStartDate] = useState("");
+  const [logsEndDate, setLogsEndDate] = useState("");
+  const [logsCount, setLogsCount] = useState(0); // State to hold count of logs
 
   // Set initial dates to current date
   const currentDate = new Date().toISOString().split("T")[0];
@@ -158,15 +167,15 @@ const History = () => {
       const objectName =
         objects.find((obj) => obj.id === historyItem.object)?.object_name ||
         "Неизвестно";
-  
+
       const { date, time } = formatDateTime(historyItem.date, historyItem.time);
-  
+
       // Get user role based on email
       const user = users.find((u) => u.email === historyItem.user);
       const userRole = user
         ? userRoleMapping[user.role] || "Неизвестно"
         : "Неизвестно";
-  
+
       return [
         historyItem.user,
         userRole,
@@ -179,13 +188,23 @@ const History = () => {
         objectName,
       ];
     });
-  
+
     const docDefinition = {
       content: [
         {
           table: {
             headerRows: 1,
-            widths: ["auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto"],
+            widths: [
+              "auto",
+              "auto",
+              "auto",
+              "auto",
+              "auto",
+              "auto",
+              "auto",
+              "auto",
+              "auto",
+            ],
             body: [
               [
                 "Пользователь",
@@ -208,9 +227,9 @@ const History = () => {
         fontSize: 8,
       },
     };
-  
+
     pdfMake.createPdf(docDefinition).download("history.pdf");
-  };  
+  };
 
   // Export to Excel function
   const exportExcel = () => {
@@ -229,15 +248,15 @@ const History = () => {
         : "Неизвестно";
 
       return {
-        "Пользователь": historyItem.user,
-        "Роль": userRole,
-        "Действие": historyItem.action,
-        "План": historyItem.plan,
+        Пользователь: historyItem.user,
+        Роль: userRole,
+        Действие: historyItem.action,
+        План: historyItem.plan,
         "Сумма плана": historyItem.sum_plan,
         "Дата дня": historyItem.date_day,
-        "Дата": date,
-        "Время": time,
-        "Объект": objectName,
+        Дата: date,
+        Время: time,
+        Объект: objectName,
       };
     });
 
@@ -246,6 +265,100 @@ const History = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, "History");
 
     XLSX.writeFile(workbook, "history.xlsx");
+  };
+
+  // Fetch logs function with start_date and end_date
+  const fetchLogs = async (start_date, end_date) => {
+    setIsLoadingLogs(true);
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      const params = {
+        start_date: start_date,
+        end_date: end_date,
+      };
+      const response = await axiosInstance.get(endpoints.GET_LOGS, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        params: params,
+      });
+      setLogs(response.data);
+      setLogsCount(response.data.length); // Set the count of logs
+    } catch (error) {
+      console.error("Error fetching logs:", error);
+      setLogsCount(0); // Reset count on error
+    } finally {
+      setIsLoadingLogs(false);
+    }
+  };
+
+  // Open logs modal
+  const openLogsModal = () => {
+    // Initialize modal dates with current filter dates
+    setLogsStartDate(filters.dateDayStart);
+    setLogsEndDate(filters.dateDayEnd);
+    setIsLogsModalOpen(true);
+    fetchLogs(filters.dateDayStart, filters.dateDayEnd);
+  };
+
+  // Close logs modal
+  const closeLogsModal = () => {
+    setIsLogsModalOpen(false);
+    setLogs([]);
+    setLogsCount(0);
+  };
+
+  // Handle date changes in the modal
+  const handleLogsDateChange = (e) => {
+    const { name, value } = e.target;
+    if (name === "logsStartDate") {
+      setLogsStartDate(value);
+    } else if (name === "logsEndDate") {
+      setLogsEndDate(value);
+    }
+  };
+
+  // Handle fetching logs with updated dates
+  const handleFetchLogs = () => {
+    // Validate dates
+    if (logsStartDate > logsEndDate) {
+      alert("Начальная дата не может быть позже конечной даты.");
+      return;
+    }
+    fetchLogs(logsStartDate, logsEndDate);
+  };
+
+  // Function to download logs as TXT
+  const downloadLogsAsTxt = () => {
+    if (logs.length === 0) {
+      alert("Нет логов для скачивания.");
+      return;
+    }
+
+    // Convert logs to a readable string format
+    const logsText = logs.map((log, index) => {
+      return `Log ${index + 1}:
+funcName: ${log.funcName}
+log_message: ${log.log_message}
+ip_address: ${log.ip_address}
+level: ${log.level}
+lineno: ${log.lineno}
+logger: ${log.logger}
+message: ${log.message}
+pathname: ${log.pathname}
+timestamp: ${log.timestamp}
+user: ${log.user}
+----------------------------------------`;
+    }).join("\n");
+
+    // Create a Blob from the logs text
+    const blob = new Blob([logsText], { type: "text/plain;charset=utf-8" });
+
+    // Create a link to download the Blob as a file
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `logs_${logsStartDate}_to_${logsEndDate}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -447,11 +560,11 @@ const History = () => {
           </div>
         </div>
 
-        {/* Export Buttons */}
-        <div className="flex justify-end mb-4">
+        {/* Export and Show Logs Buttons */}
+        <div className="flex justify-end mb-4 space-x-2">
           <button
             onClick={exportPDF}
-            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mr-2"
+            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
           >
             Экспортировать в PDF
           </button>
@@ -460,6 +573,12 @@ const History = () => {
             className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
           >
             Экспортировать в Excel
+          </button>
+          <button
+            onClick={openLogsModal}
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Показать логи
           </button>
         </div>
 
@@ -517,6 +636,117 @@ const History = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Logs Modal */}
+        {isLogsModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white w-11/12 md:w-3/4 lg:w-2/3 xl:w-1/2 rounded-lg shadow-lg overflow-y-auto max-h-full p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Логи</h2>
+                <button
+                  onClick={closeLogsModal}
+                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                >
+                  &times;
+                </button>
+              </div>
+
+              {/* Date Filters within Modal */}
+              <div className="mb-4 p-4 bg-gray-50 rounded-md">
+                <h3 className="text-lg font-medium mb-2">Фильтр по датам</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Start Date */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Начало периода
+                    </label>
+                    <input
+                      type="date"
+                      name="logsStartDate"
+                      value={logsStartDate}
+                      onChange={handleLogsDateChange}
+                      className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
+                            focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    />
+                  </div>
+                  {/* End Date */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Конец периода
+                    </label>
+                    <input
+                      type="date"
+                      name="logsEndDate"
+                      value={logsEndDate}
+                      onChange={handleLogsDateChange}
+                      className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
+                            focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end mt-4">
+                  <button
+                    onClick={handleFetchLogs}
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                  >
+                    Применить
+                  </button>
+                </div>
+              </div>
+
+              {/* Logs Count Display */}
+              <div className="mb-4">
+                {isLoadingLogs ? (
+                  <div className="flex justify-center items-center">
+                    <svg
+                      className="animate-spin h-8 w-8 text-blue-500"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v8H4z"
+                      ></path>
+                    </svg>
+                  </div>
+                ) : (
+                  <div className="text-center text-lg font-medium">
+                    Всего логов за выбранный период: {logsCount}
+                  </div>
+                )}
+              </div>
+
+              {/* Download Logs Button */}
+              <div className="flex justify-center mb-4">
+                <button
+                  onClick={downloadLogsAsTxt}
+                  className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  Скачать Логи
+                </button>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={closeLogsModal}
+                  className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  Закрыть
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
