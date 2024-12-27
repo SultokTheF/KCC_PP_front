@@ -22,7 +22,7 @@ const SingleSubject = () => {
     name: "",
     field_of_work: "",
     specified_capacity: "",
-    is_AMSOCA: "",
+    is_AMSOCA: false,
     repair_schedules: null,
     existing_electrical_power_supply_scheme: null,
     users: []
@@ -37,27 +37,27 @@ const SingleSubject = () => {
           axiosInstance.get('api/objects/')
         ]);
 
-        const subjectData = subjectResponse.data;
+        const subject = subjectResponse.data;
         const usersData = usersResponse.data;
-        const objectsData = objectsResponse.data.filter(obj => obj.subject === subjectData.id);
+        const objectsData = objectsResponse.data.filter(obj => obj.subject === subject.id);
 
-        setSubjectData(subjectData);
+        setSubjectData(subject);
         setUsers(usersData);
         setObjects(objectsData);
         setFormData({
-          subject_bin: subjectData.subject_bin,
-          subject_name: subjectData.subject_name,
-          subject_type: subjectData.subject_type,
-          email: subjectData.email,
-          legal_entity: subjectData.legal_entity,
-          legal_address: subjectData.legal_address,
-          name: subjectData.name,
-          field_of_work: subjectData.field_of_work,
-          specified_capacity: subjectData.specified_capacity,
-          is_AMSOCA: subjectData.is_AMSOCA,
-          repair_schedules: subjectData.repair_schedules,
-          existing_electrical_power_supply_scheme: subjectData.existing_electrical_power_supply_scheme,
-          users: subjectData.users
+          subject_bin: subject.subject_bin || "",
+          subject_name: subject.subject_name || "",
+          subject_type: subject.subject_type || "",
+          email: subject.email || "",
+          legal_entity: subject.legal_entity || "",
+          legal_address: subject.legal_address || "",
+          name: subject.name || "",
+          field_of_work: subject.field_of_work || "",
+          specified_capacity: subject.specified_capacity || "",
+          is_AMSOCA: subject.is_AMSOCA || false,
+          repair_schedules: null, // Reset file inputs
+          existing_electrical_power_supply_scheme: null,
+          users: subject.users ? subject.users.map(userId => parseInt(userId, 10)) : []
         });
       } catch (error) {
         console.error("Failed to fetch data:", error);
@@ -68,19 +68,42 @@ const SingleSubject = () => {
   }, [id]);
 
   const formatType = (type) => {
-    if (type === 'ЭПО') {
-      return 'ЭПО';
-    } else if (type === 'CONSUMER') {
-      return 'Потребитель';
-    } 
-    return type;
+    switch (type) {
+      case 'ЭПО':
+        return 'ЭПО';
+      case 'CONSUMER':
+        return 'Потребитель';
+      case 'РЭК':
+        return 'РЭК';
+      case 'ВИЭ':
+        return 'ВИЭ';
+      case 'ГП':
+        return 'ГП';
+      default:
+        return type;
+    }
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
+    if (type === 'checkbox') {
+      setFormData({
+        ...formData,
+        [name]: checked,
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+    }
+  };
+
+  const handleUsersChange = (e) => {
+    const selectedUsers = Array.from(e.target.selectedOptions, option => parseInt(option.value, 10));
     setFormData({
       ...formData,
-      [name]: value,
+      users: selectedUsers,
     });
   };
 
@@ -94,22 +117,31 @@ const SingleSubject = () => {
 
   const handleSubmit = async () => {
     const data = new FormData();
+    
     for (const key in formData) {
-      data.append(key, formData[key]);
+      if (formData[key] !== null && formData[key] !== undefined) {
+        if (key === 'users') {
+          // Append each user ID as a separate field
+          formData[key].forEach(userId => data.append('users', userId));
+        } else if (typeof formData[key] === 'boolean') {
+          data.append(key, formData[key] ? 'true' : 'false');
+        } else {
+          data.append(key, formData[key]);
+        }
+      }
     }
 
     try {
-      const response = await axiosInstance.put(`api/subjects/${id}/`, {
-        subject_bin: formData.subject_bin,
-        subject_name: formData.subject_name,
-        subject_type: formData.subject_type,
-        email: formData.email,
-        users: formData.users,
+      const response = await axiosInstance.put(`api/subjects/${id}/`, data, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
       setSubjectData(response.data);
       setIsEditing(false);
     } catch (error) {
       console.error("Failed to update user data:", error);
+      // Optionally, handle error feedback to the user here
     }
   };
 
@@ -119,6 +151,7 @@ const SingleSubject = () => {
       navigate("/subjects");
     } catch (error) {
       console.error("Failed to delete user:", error);
+      // Optionally, handle error feedback to the user here
     }
   };
 
@@ -140,6 +173,7 @@ const SingleSubject = () => {
 
           <div className="bg-white p-6 rounded-lg shadow-md">
             <div className="mb-4">
+              {/* Subject Name */}
               <div className="flex items-center mb-2">
                 <div className="w-1/4 font-medium">Название Субъекта:</div>
                 {isEditing ? (
@@ -155,6 +189,7 @@ const SingleSubject = () => {
                 )}
               </div>
 
+              {/* Subject BIN */}
               <div className="flex items-center mb-2">
                 <div className="w-1/4 font-medium">БИН Субъекта:</div>
                 {isEditing ? (
@@ -170,6 +205,7 @@ const SingleSubject = () => {
                 )}
               </div>
 
+              {/* Subject Type */}
               <div className="flex items-center mb-2">
                 <div className="w-1/4 font-medium">Тип Субъекта:</div>
                 {isEditing ? (
@@ -181,7 +217,7 @@ const SingleSubject = () => {
                   >
                     <option value="">Выберите тип</option>
                     <option value="ЭПО">ЭПО</option>
-                    <option value="РЭК" >РЭК</option>
+                    <option value="РЭК">РЭК</option>
                     <option value="CONSUMER">ПОТРЕБИТЕЛЬ</option>
                     <option value="ВИЭ">ВИЭ</option>
                     <option value="ГП">ГП</option>
@@ -191,6 +227,7 @@ const SingleSubject = () => {
                 )}
               </div>
 
+              {/* Email */}
               <div className="flex items-center mb-2">
                 <div className="w-1/4 font-medium">Электронная почта:</div>
                 {isEditing ? (
@@ -206,6 +243,7 @@ const SingleSubject = () => {
                 )}
               </div>
 
+              {/* Users */}
               <div className="flex items-center mb-2">
                 <div className="w-1/4 font-medium">Пользователи:</div>
                 {isEditing ? (
@@ -213,12 +251,7 @@ const SingleSubject = () => {
                     multiple
                     name="users"
                     value={formData.users}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        users: Array.from(e.target.selectedOptions, option => option.value)
-                      })
-                    }
+                    onChange={handleUsersChange}
                     className="w-full p-2 border border-gray-300 rounded-md"
                   >
                     {users.map(user => (
@@ -229,21 +262,26 @@ const SingleSubject = () => {
                   </select>
                 ) : (
                   <div>
-                    {formData.users.map(userId => {
+                    {formData.users.map((userId, index) => {
                       const user = users.find(user => user.id === userId);
                       return user ? (
-                        <Link key={user.id} to={`/users/${user.id}`} className="text-blue-500 underline">
-                          {user.subject_name}
-                        </Link>
-                      ) : '';
-                    }).reduce((prev, curr) => [prev, ', ', curr])}
+                        <span key={user.id}>
+                          <Link to={`/users/${user.id}`} className="text-blue-500 underline">
+                            {user.email}
+                          </Link>
+                          {index < formData.users.length - 1 && ", "}
+                        </span>
+                      ) : null;
+                    })}
                   </div>
                 )}
               </div>
             </div>
 
+            {/* Additional Data */}
             {showMore && (
               <div className="mb-4">
+                {/* Repair Schedules */}
                 <div className="flex items-center mb-2">
                   <div className="w-1/4 font-medium">Графики ремонта:</div>
                   {isEditing ? (
@@ -262,6 +300,7 @@ const SingleSubject = () => {
                   )}
                 </div>
 
+                {/* Existing Electrical Power Supply Scheme */}
                 <div className="flex items-center mb-2">
                   <div className="w-1/4 font-medium">Схема существующего электроснабжения:</div>
                   {isEditing ? (
@@ -279,6 +318,8 @@ const SingleSubject = () => {
                     )
                   )}
                 </div>
+
+                {/* Legal Entity */}
                 <div className="flex items-center mb-2">
                   <div className="w-1/4 font-medium">Юридическое лицо:</div>
                   {isEditing ? (
@@ -294,6 +335,7 @@ const SingleSubject = () => {
                   )}
                 </div>
 
+                {/* Legal Address */}
                 <div className="flex items-center mb-2">
                   <div className="w-1/4 font-medium">Юридический адрес:</div>
                   {isEditing ? (
@@ -309,6 +351,7 @@ const SingleSubject = () => {
                   )}
                 </div>
 
+                {/* Name */}
                 <div className="flex items-center mb-2">
                   <div className="w-1/4 font-medium">Имя:</div>
                   {isEditing ? (
@@ -324,6 +367,7 @@ const SingleSubject = () => {
                   )}
                 </div>
 
+                {/* Field of Work */}
                 <div className="flex items-center mb-2">
                   <div className="w-1/4 font-medium">Сфера деятельности:</div>
                   {isEditing ? (
@@ -339,6 +383,7 @@ const SingleSubject = () => {
                   )}
                 </div>
 
+                {/* Specified Capacity */}
                 <div className="flex items-center mb-2">
                   <div className="w-1/4 font-medium">Заданная мощность:</div>
                   {isEditing ? (
@@ -354,6 +399,7 @@ const SingleSubject = () => {
                   )}
                 </div>
 
+                {/* is_AMSOCA */}
                 <div className="flex items-center mb-2">
                   <div className="w-1/4 font-medium">Является AMSOCA:</div>
                   {isEditing ? (
@@ -361,13 +407,8 @@ const SingleSubject = () => {
                       type="checkbox"
                       name="is_AMSOCA"
                       checked={formData.is_AMSOCA}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          is_AMSOCA: e.target.checked,
-                        })
-                      }
-                      className="w-full p-2 border border-gray-300 rounded-md"
+                      onChange={handleChange}
+                      className="w-5 h-5"
                     />
                   ) : (
                     <div>{subjectData?.is_AMSOCA ? "Да" : "Нет"}</div>
@@ -376,6 +417,7 @@ const SingleSubject = () => {
               </div>
             )}
 
+            {/* Toggle Show More */}
             <button
               onClick={toggleShowMore}
               className="text-blue-500 underline mt-4"
@@ -383,20 +425,22 @@ const SingleSubject = () => {
               {showMore ? "Скрыть дополнительные данные" : "Показать дополнительные данные"}
             </button>
               
+            {/* Related Objects */}
             <h2 className="text-2xl font-bold mb-4">Связанные объекты</h2>
             <div className="flex flex-wrap justify-left">
-              {objects.map((object, index) => (
-                <div key={index} className="w-full sm:w-1/2 md:w-1/3 px-2">
-                  <a href={`/objects/${object.id}`}>
+              {objects.map((object) => (
+                <div key={object.id} className="w-full sm:w-1/2 md:w-1/3 px-2">
+                  <Link to={`/objects/${object.id}`}>
                     <div className="p-5 w-11/12 border border-gray-200 rounded-lg ml-5 mt-5 hover:shadow-md">
                       <h3 className="text-lg font-semibold">{object.object_name}</h3>
                       <p className="text-sm text-gray-500">{formatType(object.object_type)}</p>
                     </div>
-                  </a>
+                  </Link>
                 </div>
               ))}
             </div>
 
+            {/* Action Buttons */}
             <div className="flex justify-end mt-6">
               {isEditing ? (
                 <>
@@ -415,12 +459,12 @@ const SingleSubject = () => {
                 </>
               ) : (
                 <>
-                  <a 
-                    href={`/subjects/plan/${id}`}
+                  <Link 
+                    to={`/subjects/plan/${id}`}
                     className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition duration-300 mr-2"
                   >
                     Планы
-                  </a>
+                  </Link>
                   <button
                     className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition duration-300 mr-2"
                     onClick={() => setIsEditing(true)}
