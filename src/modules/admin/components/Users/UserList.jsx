@@ -60,6 +60,9 @@ const UsersList = () => {
                       {user.last_login  && (
                         <li>{new Date(user.last_login).toISOString().split('T')[0]}</li>
                       )}
+                      {user.last_ip  && (
+                        <li>{user.last_ip}</li>
+                      )}
                     </ul>
                   </div>
                 </a>

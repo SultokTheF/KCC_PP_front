@@ -223,6 +223,10 @@ const Profile = () => {
                 <label className="w-1/4 font-medium">Роль:</label>
                 <div>{userRoleMapping[userData.role] || userData.role}</div>
               </div>
+              <div className="flex items-center mb-4">
+                <label className="w-1/4 font-medium">ip последнего устройства:</label>
+                <div>{userData.last_ip}</div>
+              </div>
             </div>
             {/* Кнопки редактирования */}
             <div className="flex items-center space-x-2">
