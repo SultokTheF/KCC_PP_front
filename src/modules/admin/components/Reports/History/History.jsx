@@ -596,6 +596,7 @@ user: ${log.user}
                 <th className="px-4 py-2 border">Дата</th>
                 <th className="px-4 py-2 border">Время</th>
                 <th className="px-4 py-2 border">Объект</th>
+                <th className="px-4 py-2 border">IP</th>
               </tr>
             </thead>
             <tbody>
@@ -630,6 +631,7 @@ user: ${log.user}
                     <td className="border px-4 py-2">{date}</td>
                     <td className="border px-4 py-2">{time}</td>
                     <td className="border px-4 py-2">{objectName}</td>
+                    <td className="border px-4 py-2">{historyItem.ip}</td>
                   </tr>
                 );
               })}
