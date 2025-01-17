@@ -345,6 +345,90 @@ const CombinedTable = ({
     setLocalHourPlan(updatedHourPlan);
   };
 
+  const handleExportGP1 = () => {
+    const exportDataGP1 = [
+      ["Hour", "Coefficient_Gen", "Volume_Gen"],
+      ...localHourPlan.map((hourData) => [
+        hourData.hour,
+        hourData.coefficient_Gen,
+        hourData.volume_Gen,
+      ]),
+    ];
+    const worksheetGP1 = XLSX.utils.aoa_to_sheet(exportDataGP1);
+    const workbookGP1 = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbookGP1, worksheetGP1, "GP1_Data");
+    const excelBufferGP1 = XLSX.write(workbookGP1, {
+      bookType: "xlsx",
+      type: "array",
+    });
+    const dataGP1 = new Blob([excelBufferGP1], {
+      type: "application/octet-stream",
+    });
+    const urlGP1 = URL.createObjectURL(dataGP1);
+    const linkGP1 = document.createElement("a");
+    linkGP1.href = urlGP1;
+    linkGP1.download = `gp1_data_${selectedDate}.xlsx`;
+    linkGP1.click();
+    URL.revokeObjectURL(urlGP1);
+  };
+
+  const handleImportFromFileGP1 = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChangeGP1 = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        try {
+          const data = new Uint8Array(event.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+          // Validate headers
+          const headers = jsonData[0];
+          if (
+            !headers ||
+            headers.length < 3 ||
+            headers[1] !== "Coefficient_Gen" ||
+            headers[2] !== "Volume_Gen"
+          ) {
+            setWarningMessage(
+              "Неверный формат файла. Ожидаются заголовки: Hour, Coefficient_Gen, Volume_Gen."
+            );
+            return;
+          }
+
+          parseGP1ExcelData(jsonData);
+        } catch (error) {
+          console.error("Error reading Excel file:", error);
+          setWarningMessage("Ошибка при чтении файла.");
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+  };
+
+  const parseGP1ExcelData = (rows) => {
+    const updatedHourPlan = [...localHourPlan];
+    rows.forEach((row, index) => {
+      if (index === 0) return; // Skip header
+      const [hour, coefficient_Gen, volume_Gen] = row;
+      const idx = parseInt(hour, 10) - 1;
+      if (idx >= 0 && idx < 24) {
+        updatedHourPlan[idx].coefficient_Gen = parseFloat(coefficient_Gen) || 0;
+        updatedHourPlan[idx].volume_Gen = parseInt(volume_Gen, 10) || 0;
+      }
+    });
+    setLocalHourPlan(updatedHourPlan);
+    setWarningMessage("Данные ГП1 успешно импортированы.");
+  };
+
   const handleCoefficientGenChange = (index, value) => {
     const updatedHourPlan = [...localHourPlan];
     updatedHourPlan[index].coefficient_Gen = parseFloat(value) || 0;
@@ -464,15 +548,25 @@ const CombinedTable = ({
             return [
               time,
               hourData.P1 || 0,
-              ...(object?.object_type !== "CONSUMER" ? [hourData.P1_Gen || 0] : []),
+              ...(object?.object_type !== "CONSUMER"
+                ? [hourData.P1_Gen || 0]
+                : []),
               hourData.P2 || 0,
-              ...(object?.object_type !== "CONSUMER" ? [hourData.P2_Gen || 0] : []),
+              ...(object?.object_type !== "CONSUMER"
+                ? [hourData.P2_Gen || 0]
+                : []),
               hourData.P3 || 0,
-              ...(object?.object_type !== "CONSUMER" ? [hourData.P3_Gen || 0] : []),
+              ...(object?.object_type !== "CONSUMER"
+                ? [hourData.P3_Gen || 0]
+                : []),
               hourData.F1 || 0,
-              ...(object?.object_type !== "CONSUMER" ? [hourData.F1_Gen || 0] : []),
+              ...(object?.object_type !== "CONSUMER"
+                ? [hourData.F1_Gen || 0]
+                : []),
               hourData.F2 || 0,
-              ...(object?.object_type !== "CONSUMER" ? [hourData.F2_Gen || 0] : []),
+              ...(object?.object_type !== "CONSUMER"
+                ? [hourData.F2_Gen || 0]
+                : []),
               hourData.P2_message || "",
             ];
           }),
@@ -1054,7 +1148,6 @@ const CombinedTable = ({
             >
               Сохранить
             </button>
-
             <button
               className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
               onClick={handleApprove}
@@ -1062,18 +1155,11 @@ const CombinedTable = ({
               Утвердить
             </button>
             <button
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
-              onClick={handleCreate}
-            >
-              Создать
-            </button>
-            <button
               className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
               onClick={handleExport}
             >
               Экспорт
             </button>
-
             <button
               className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
               onClick={handleImportFromFile}
@@ -1183,6 +1269,21 @@ const CombinedTable = ({
               </tbody>
             </table>
           )}
+
+          <div className="flex justify-start space-x-2">
+            <button
+              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
+              onClick={handleExportGP1}
+            >
+              Экспорт ГП1
+            </button>
+            <button
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+              onClick={handleImportFromFileGP1}
+            >
+              Импорт ГП1
+            </button>
+          </div>
 
           {/* Save and Approve Buttons */}
           <div className="flex justify-end space-x-2 mt-4"></div>
