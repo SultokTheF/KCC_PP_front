@@ -382,15 +382,15 @@ const CombinedTable = ({
     const subjectTableHeaders = [
       "Time",
       "P1",
-      ...(selectedSubject?.subject_type === "ЭПО" ? ["P1_Gen"] : []),
+      ...(selectedSubject?.subject_type !== "CONSUMER" ? ["P1_Gen"] : []),
       "P2",
-      ...(selectedSubject?.subject_type === "ЭПО" ? ["P2_Gen"] : []),
+      ...(selectedSubject?.subject_type !== "CONSUMER" ? ["P2_Gen"] : []),
       "P3",
-      ...(selectedSubject?.subject_type === "ЭПО" ? ["P3_Gen"] : []),
+      ...(selectedSubject?.subject_type !== "CONSUMER" ? ["P3_Gen"] : []),
       "F1",
-      ...(selectedSubject?.subject_type === "ЭПО" ? ["F1_Gen"] : []),
+      ...(selectedSubject?.subject_type !== "CONSUMER" ? ["F1_Gen"] : []),
       "F2",
-      ...(selectedSubject?.subject_type === "ЭПО" ? ["F2_Gen"] : []),
+      ...(selectedSubject?.subject_type !== "CONSUMER" ? ["F2_Gen"] : []),
       "Coefficient",
       "Coefficient_Gen",
       "Volume",
@@ -408,23 +408,23 @@ const CombinedTable = ({
         return [
           time,
           hourData.P1 || 0,
-          ...(selectedSubject?.subject_type === "ЭПО"
+          ...(selectedSubject?.subject_type !== "CONSUMER"
             ? [hourData.P1_Gen || 0]
             : []),
           hourData.P2 || 0,
-          ...(selectedSubject?.subject_type === "ЭПО"
+          ...(selectedSubject?.subject_type !== "CONSUMER"
             ? [hourData.P2_Gen || 0]
             : []),
           hourData.P3 || 0,
-          ...(selectedSubject?.subject_type === "ЭПО"
+          ...(selectedSubject?.subject_type !== "CONSUMER"
             ? [hourData.P3_Gen || 0]
             : []),
           hourData.F1 || 0,
-          ...(selectedSubject?.subject_type === "ЭПО"
+          ...(selectedSubject?.subject_type !== "CONSUMER"
             ? [hourData.F1_Gen || 0]
             : []),
           hourData.F2 || 0,
-          ...(selectedSubject?.subject_type === "ЭПО"
+          ...(selectedSubject?.subject_type !== "CONSUMER"
             ? [hourData.F2_Gen || 0]
             : []),
           hourData.coefficient || 1,
@@ -445,15 +445,15 @@ const CombinedTable = ({
         const objectTableHeaders = [
           "Time",
           "P1",
-          ...(object?.object_type === "ЭПО" ? ["P1_Gen"] : []),
+          ...(object?.object_type !== "CONSUMER" ? ["P1_Gen"] : []),
           "P2",
-          ...(object?.object_type === "ЭПО" ? ["P2_Gen"] : []),
+          ...(object?.object_type !== "CONSUMER" ? ["P2_Gen"] : []),
           "P3",
-          ...(object?.object_type === "ЭПО" ? ["P3_Gen"] : []),
+          ...(object?.object_type !== "CONSUMER" ? ["P3_Gen"] : []),
           "F1",
-          ...(object?.object_type === "ЭПО" ? ["F1_Gen"] : []),
+          ...(object?.object_type !== "CONSUMER" ? ["F1_Gen"] : []),
           "F2",
-          ...(object?.object_type === "ЭПО" ? ["F2_Gen"] : []),
+          ...(object?.object_type !== "CONSUMER" ? ["F2_Gen"] : []),
           "P2_Message",
         ];
         const objectTableData = [
@@ -464,15 +464,15 @@ const CombinedTable = ({
             return [
               time,
               hourData.P1 || 0,
-              ...(object?.object_type === "ЭПО" ? [hourData.P1_Gen || 0] : []),
+              ...(object?.object_type !== "CONSUMER" ? [hourData.P1_Gen || 0] : []),
               hourData.P2 || 0,
-              ...(object?.object_type === "ЭПО" ? [hourData.P2_Gen || 0] : []),
+              ...(object?.object_type !== "CONSUMER" ? [hourData.P2_Gen || 0] : []),
               hourData.P3 || 0,
-              ...(object?.object_type === "ЭПО" ? [hourData.P3_Gen || 0] : []),
+              ...(object?.object_type !== "CONSUMER" ? [hourData.P3_Gen || 0] : []),
               hourData.F1 || 0,
-              ...(object?.object_type === "ЭПО" ? [hourData.F1_Gen || 0] : []),
+              ...(object?.object_type !== "CONSUMER" ? [hourData.F1_Gen || 0] : []),
               hourData.F2 || 0,
-              ...(object?.object_type === "ЭПО" ? [hourData.F2_Gen || 0] : []),
+              ...(object?.object_type !== "CONSUMER" ? [hourData.F2_Gen || 0] : []),
               hourData.P2_message || "",
             ];
           }),
@@ -901,23 +901,23 @@ const CombinedTable = ({
                 <tr>
                   <th className="w-[50px]">Время</th>
                   <th className="w-[100px]">П1</th>
-                  {selectedSubject?.subject_type === "ЭПО" && (
+                  {selectedSubject?.subject_type !== "CONSUMER" && (
                     <th className="w-[100px]">ГП1</th>
                   )}
                   <th className="w-[100px]">Коэффициент</th>
-                  {selectedSubject?.subject_type === "ЭПО" && (
+                  {selectedSubject?.subject_type !== "CONSUMER" && (
                     <th className="w-[100px]">Коэффициен Генерации</th>
                   )}
                   <th className="w-[100px]">Объем</th>
-                  {selectedSubject?.subject_type === "ЭПО" && (
+                  {selectedSubject?.subject_type !== "CONSUMER" && (
                     <th className="w-[100px]">Объем Генерации</th>
                   )}
                   <th className="w-[100px]">П2</th>
-                  {selectedSubject?.subject_type === "ЭПО" && (
+                  {selectedSubject?.subject_type !== "CONSUMER" && (
                     <th className="w-[100px]">ГП2</th>
                   )}
                   <th className="w-[150px]">Сообщение П2</th>
-                  {selectedSubject?.subject_type === "ЭПО" && (
+                  {selectedSubject?.subject_type !== "CONSUMER" && (
                     <th className="w-[150px]">Сообщение П2 Генерации</th>
                   )}
                   {showMessageCol && <th className="w-[150px]">Сообщение</th>}
@@ -943,7 +943,7 @@ const CombinedTable = ({
                       <td className="border">{time}</td>
                       {/* Subject Data */}
                       <td className="border">{P1}</td>
-                      {selectedSubject?.subject_type === "ЭПО" && (
+                      {selectedSubject?.subject_type !== "CONSUMER" && (
                         <td className="border">{P1_Gen}</td>
                       )}
                       <td className="border">
@@ -958,7 +958,7 @@ const CombinedTable = ({
                           className="w-full text-center rounded"
                         />
                       </td>
-                      {selectedSubject?.subject_type === "ЭПО" && (
+                      {selectedSubject?.subject_type !== "CONSUMER" && (
                         <td className="border">
                           <input
                             type="number"
@@ -982,7 +982,7 @@ const CombinedTable = ({
                           className="w-full text-center rounded"
                         />
                       </td>
-                      {selectedSubject?.subject_type === "ЭПО" && (
+                      {selectedSubject?.subject_type !== "CONSUMER" && (
                         <td className="border">
                           <input
                             type="number"
@@ -1014,7 +1014,7 @@ const CombinedTable = ({
                       >
                         {P2_message || ""}
                       </td>
-                      {selectedSubject?.subject_type === "ЭПО" && (
+                      {selectedSubject?.subject_type !== "CONSUMER" && (
                         <td
                           className={`border ${
                             P2_Gen_message
@@ -1111,16 +1111,16 @@ const CombinedTable = ({
                 <tr>
                   {/* <th className="w-[50px]">Время</th> */}
                   <th>П1</th>
-                  {selectedObject?.object_type === "ЭПО" && <th>ГП1</th>}
+                  {selectedObject?.object_type !== "CONSUMER" && <th>ГП1</th>}
                   <th>Объем</th>
                   <th>П2</th>
-                  {selectedObject?.object_type === "ЭПО" && <th>ГП2</th>}
+                  {selectedObject?.object_type !== "CONSUMER" && <th>ГП2</th>}
                   <th>П3</th>
-                  {selectedObject?.object_type === "ЭПО" && <th>ГП3</th>}
+                  {selectedObject?.object_type !== "CONSUMER" && <th>ГП3</th>}
                   <th>Ф</th>
-                  {selectedObject?.object_type === "ЭПО" && <th>Гф</th>}
+                  {selectedObject?.object_type !== "CONSUMER" && <th>Гф</th>}
                   <th>Сообщение П2</th>
-                  {selectedObject?.object_type === "ЭПО" && (
+                  {selectedObject?.object_type !== "CONSUMER" && (
                     <th>Сообщение П2 Генерации</th>
                   )}
                 </tr>
@@ -1137,20 +1137,20 @@ const CombinedTable = ({
                     <tr key={time}>
                       {/* <td className="border">{time}</td> */}
                       <td className="border">{objectHourData.P1 || 0}</td>
-                      {selectedObject?.object_type === "ЭПО" && (
+                      {selectedObject?.object_type !== "CONSUMER" && (
                         <td className="border">{objectHourData.P1_Gen || 0}</td>
                       )}
                       <td className="border">{objectHourData.volume || 0}</td>
                       <td className="border">{objectHourData.P2 || 0}</td>
-                      {selectedObject?.object_type === "ЭПО" && (
+                      {selectedObject?.object_type !== "CONSUMER" && (
                         <td className="border">{objectHourData.P2_Gen || 0}</td>
                       )}
                       <td className="border">{objectHourData.P3 || 0}</td>
-                      {selectedObject?.object_type === "ЭПО" && (
+                      {selectedObject?.object_type !== "CONSUMER" && (
                         <td className="border">{objectHourData.P3_Gen || 0}</td>
                       )}
                       <td className="border">{objectHourData.F1 || 0}</td>
-                      {selectedObject?.object_type === "ЭПО" && (
+                      {selectedObject?.object_type !== "CONSUMER" && (
                         <td className="border">{objectHourData.F1_Gen || 0}</td>
                       )}
                       <td
@@ -1164,7 +1164,7 @@ const CombinedTable = ({
                       >
                         {objectHourData.P2_message || ""}
                       </td>
-                      {selectedObject?.object_type === "ЭПО" && (
+                      {selectedObject?.object_type !== "CONSUMER" && (
                         <td
                           className={`border ${
                             objectHourData.P2_Gen_message

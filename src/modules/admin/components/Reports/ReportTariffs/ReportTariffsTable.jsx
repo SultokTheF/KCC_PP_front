@@ -9,7 +9,7 @@ const ReportTariffsTable = ({ data, selectedHour }) => {
   const formatSubjectType = (sub_id) => {
     const subjects = data.subjects.find((subject) => subject.id === sub_id);
 
-    if (subjects.subject_type === "ЭПО") return "Станция"
+    if (subjects.subject_type !== "CONSUMER") return "Станция"
     if (subjects.subject_type === "CONSUMER") return "Потребитель"
 
     return subjects ? subjects.subject_type : "";

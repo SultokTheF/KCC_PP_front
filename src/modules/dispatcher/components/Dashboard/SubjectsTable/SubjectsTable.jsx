@@ -345,12 +345,12 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
           <tr>
             <th className="w-[50px]"></th>
             <th className="w-[100px]">П1</th>
-            {selectedSubject?.subject_type === "ЭПО" && <th className="w-[100px]">ГП1</th>}
+            {selectedSubject?.subject_type !== "CONSUMER" && <th className="w-[100px]">ГП1</th>}
             <th className="w-[100px]">Коэффициент</th>
             <th className="w-[100px]">Объем</th>
             <th className="w-[100px]">П2</th>
             <th className="w-[100px]">Сообщение П2</th>
-            {selectedSubject?.subject_type === "ЭПО" && <th className="w-[100px]">ГП2</th>}
+            {selectedSubject?.subject_type !== "CONSUMER" && <th className="w-[100px]">ГП2</th>}
             {showMessageCol && <th className="w-[150px]">Сообщение</th>}
           </tr>
         </thead>
@@ -359,13 +359,13 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
             const P1 = localHourPlan[index]?.P1 || 0;
             const P1_Gen = localHourPlan[index]?.P1_Gen || 0;
             const P2 = calculateP2(index, P1);
-            const P2Gen = selectedSubject?.subject_type === "ЭПО" ? calculateP2Gen(index, P1_Gen) : null;
+            const P2Gen = selectedSubject?.subject_type !== "CONSUMER" ? calculateP2Gen(index, P1_Gen) : null;
 
             return (
               <tr key={time}>
                 <td className={`border`}>{time}</td>
                 <td className={`border`}>{P1}</td>
-                {selectedSubject?.subject_type === "ЭПО" && <td className={`border`}>{P1_Gen}</td>}
+                {selectedSubject?.subject_type !== "CONSUMER" && <td className={`border`}>{P1_Gen}</td>}
                 <td className={`border`}>
                   <input
                     type="number"
@@ -390,7 +390,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
                 <td className={`border ${localHourPlan[index]?.P2_message === "Успешно!" ? 'bg-green-100' : localHourPlan[index]?.P2_message === "Ошибка!" ? 'bg-red-100' : ''}`}>
                   {localHourPlan[index]?.P2_message || ''}
                 </td>
-                {selectedSubject?.subject_type === "ЭПО" && (
+                {selectedSubject?.subject_type !== "CONSUMER" && (
                   <td className={`border ${P2Gen < 0 ? 'bg-red-100' : ''}`}>
                     {P2Gen}
                   </td>
