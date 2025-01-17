@@ -270,7 +270,7 @@ const ObjectTable = ({
                 onClick={() => {
                   setIsModalOpen(true);
                   setPlanData({
-                    planMode: "P2_Gen",
+                    planMode: "P3",
                     isGen: false,
                   });
                 }}

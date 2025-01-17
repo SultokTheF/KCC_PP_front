@@ -86,8 +86,6 @@ const Dashboard = () => {
           ...(subject?.subject_type === 'ЭПО' ? ['F1_Gen'] : []),
           'F2',
           ...(subject?.subject_type === 'ЭПО' ? ['F2_Gen'] : []),
-          ...(isFullExport ? ['Coefficient', 'Volume'] : []), // Include columns based on role
-          'P2_Message',
         ];
 
         // Prepare subject table data
@@ -106,9 +104,7 @@ const Dashboard = () => {
               hourData.F1 || 0,
               ...(subject?.subject_type === 'ЭПО' ? [hourData.F1_Gen || 0] : []),
               hourData.F2 || 0,
-              ...(subject?.subject_type === 'ЭПО' ? [hourData.F2_Gen || 0] : []),
-              ...(isFullExport ? [hourData.coefficient || 1, hourData.volume || 0] : []), // Include values based on role
-              hourData.P2_message || '',
+              ...(subject?.subject_type === 'ЭПО' ? [hourData.F2_Gen || 0] : [])
             ];
           }),
         ];
@@ -142,9 +138,7 @@ const Dashboard = () => {
             'F1',
             ...(object?.object_type === 'ЭПО' ? ['F1_Gen'] : []),
             'F2',
-            ...(object?.object_type === 'ЭПО' ? ['F2_Gen'] : []),
-            ...(isFullExport ? ['Coefficient', 'Volume'] : []), // Include columns based on role
-            'P2_Message',
+            ...(object?.object_type === 'ЭПО' ? ['F2_Gen'] : [])
           ];
 
           const objectTableData = [
@@ -162,9 +156,7 @@ const Dashboard = () => {
                 hourData.F1 || 0,
                 ...(object?.object_type === 'ЭПО' ? [hourData.F1_Gen || 0] : []),
                 hourData.F2 || 0,
-                ...(object?.object_type === 'ЭПО' ? [hourData.F2_Gen || 0] : []),
-                ...(isFullExport ? [hourData.coefficient || 1, hourData.volume || 0] : []), // Include values based on role
-                hourData.P2_message || '',
+                ...(object?.object_type === 'ЭПО' ? [hourData.F2_Gen || 0] : [])
               ];
             }),
           ];
