@@ -61,6 +61,8 @@ const Dashboard = () => {
         '18 - 19', '19 - 20', '20 - 21', '21 - 22', '22 - 23', '23 - 00',
       ];
 
+      const isFullExport = ['admin', 'dispatcher'].includes(user.role); // Check user role
+
       // Prepare combined data
       const combinedData = [];
 
@@ -84,8 +86,7 @@ const Dashboard = () => {
           ...(subject?.subject_type === 'ЭПО' ? ['F1_Gen'] : []),
           'F2',
           ...(subject?.subject_type === 'ЭПО' ? ['F2_Gen'] : []),
-          'Coefficient',
-          'Volume',
+          ...(isFullExport ? ['Coefficient', 'Volume'] : []), // Include columns based on role
           'P2_Message',
         ];
 
@@ -106,8 +107,7 @@ const Dashboard = () => {
               ...(subject?.subject_type === 'ЭПО' ? [hourData.F1_Gen || 0] : []),
               hourData.F2 || 0,
               ...(subject?.subject_type === 'ЭПО' ? [hourData.F2_Gen || 0] : []),
-              hourData.coefficient || 1,
-              hourData.volume || 0,
+              ...(isFullExport ? [hourData.coefficient || 1, hourData.volume || 0] : []), // Include values based on role
               hourData.P2_message || '',
             ];
           }),
@@ -143,6 +143,7 @@ const Dashboard = () => {
             ...(object?.object_type === 'ЭПО' ? ['F1_Gen'] : []),
             'F2',
             ...(object?.object_type === 'ЭПО' ? ['F2_Gen'] : []),
+            ...(isFullExport ? ['Coefficient', 'Volume'] : []), // Include columns based on role
             'P2_Message',
           ];
 
@@ -162,6 +163,7 @@ const Dashboard = () => {
                 ...(object?.object_type === 'ЭПО' ? [hourData.F1_Gen || 0] : []),
                 hourData.F2 || 0,
                 ...(object?.object_type === 'ЭПО' ? [hourData.F2_Gen || 0] : []),
+                ...(isFullExport ? [hourData.coefficient || 1, hourData.volume || 0] : []), // Include values based on role
                 hourData.P2_message || '',
               ];
             }),

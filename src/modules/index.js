@@ -16,7 +16,8 @@ import {
   DispatcherTableOverview,
   DispatcherGraphs,
   DispatcherDisbalance,
-  DispatcherHistory
+  DispatcherHistory,
+  DispatcherHoursTable
 } from "./dispatcher";
 
 import {
@@ -62,7 +63,8 @@ export {
   DispatcherFormContructor,
   DispatcherGraphs,
   DispatcherDisbalance,
-  DispatcherHistory
+  DispatcherHistory,
+  DispatcherHoursTable
 }
 
 export {

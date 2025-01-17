@@ -5,6 +5,7 @@ import TableOverview from './components/Forms/TableOverview/TableOverview';
 import Graphs from './components/Reports/Graphs/Graphs';
 import Disbalance from './components/Reports/Disbalance/Disbalance';
 import History from './components/Reports/History';
+import HoursTable from './components/Reports/HoursTable';
 
 export {
   Profile,
@@ -13,5 +14,6 @@ export {
   TableOverview as DispatcherTableOverview,
   Graphs as DispatcherGraphs,
   Disbalance as DispatcherDisbalance,
-  History as DispatcherHistory
+  History as DispatcherHistory,
+  HoursTable as DispatcherHoursTable
 }

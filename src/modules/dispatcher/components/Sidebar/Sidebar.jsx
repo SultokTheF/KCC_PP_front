@@ -104,6 +104,16 @@ export default function Sidebar() {
               </a>
             </List>
             <List className="p-0">
+              <a href="/reports/hours-table">
+                <ListItem>
+                  <ListItemPrefix>
+                    <ChevronRightIcon strokeWidth={3} className="h-3 w-5" />
+                  </ListItemPrefix>
+                  Просмотр данных
+                </ListItem>
+              </a>
+            </List>
+            <List className="p-0">
               <a href="/forms/table/">
                 <ListItem>
                   <ListItemPrefix>

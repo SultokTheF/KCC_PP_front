@@ -25,6 +25,7 @@ import {
   DispatcherGraphs,
   DispatcherDisbalance,
   DispatcherHistory,
+  DispatcherHoursTable,
 
   // Admin
   AdminProfile,
@@ -84,6 +85,7 @@ const Router = ({ userRole }) => {
           <Route path="/reports/export" element={<DispatcherDisbalance />} />
           <Route path="/forms/table" element={<DispatcherTableOverview />} />
           <Route path="/forms/table/:id" element={<DispatcherFormContructor />} />
+          <Route path="/reports/hours-table" element={<DispatcherHoursTable />} />
           <Route path="/history" element={<DispatcherHistory />} />
           <Route path="/graphs" element={<DispatcherGraphs />} />
           <Route path="*" element={<PageNotFound />} />
