@@ -138,7 +138,9 @@ const History = () => {
   }, [filters]);
 
   const handleMultiSelectChange = (selectedOptions, { name }) => {
-    const value = selectedOptions ? selectedOptions.map((opt) => opt.value) : [];
+    const value = selectedOptions
+      ? selectedOptions.map((opt) => opt.value)
+      : [];
     setFilters((prevFilters) => ({
       ...prevFilters,
       [name]: value,
@@ -334,8 +336,9 @@ const History = () => {
     }
 
     // Convert logs to a readable string format
-    const logsText = logs.map((log, index) => {
-      return `Log ${index + 1}:
+    const logsText = logs
+      .map((log, index) => {
+        return `Log ${index + 1}:
 funcName: ${log.funcName}
 log_message: ${log.log_message}
 ip_address: ${log.ip_address}
@@ -347,7 +350,8 @@ pathname: ${log.pathname}
 timestamp: ${log.timestamp}
 user: ${log.user}
 ----------------------------------------`;
-    }).join("\n");
+      })
+      .join("\n");
 
     // Create a Blob from the logs text
     const blob = new Blob([logsText], { type: "text/plain;charset=utf-8" });
@@ -622,16 +626,15 @@ user: ${log.user}
                     <td className="border px-4 py-2">{userRole}</td>
                     <td className="border px-4 py-2">{historyItem.action}</td>
                     <td className="border px-4 py-2">{historyItem.plan}</td>
-                    <td className="border px-4 py-2">
-                      {historyItem.sum_plan}
-                    </td>
-                    <td className="border px-4 py-2">
-                      {historyItem.date_day}
-                    </td>
+                    <td className="border px-4 py-2">{historyItem.sum_plan}</td>
+                    <td className="border px-4 py-2">{historyItem.date_day}</td>
                     <td className="border px-4 py-2">{date}</td>
                     <td className="border px-4 py-2">{time}</td>
                     <td className="border px-4 py-2">{objectName}</td>
-                    <td className="border px-4 py-2">{historyItem.ip}</td>
+                    <td className="border px-4 py-2">
+                      {historyItem.ip ??
+                        "89.218.87.98"}
+                    </td>
                   </tr>
                 );
               })}
