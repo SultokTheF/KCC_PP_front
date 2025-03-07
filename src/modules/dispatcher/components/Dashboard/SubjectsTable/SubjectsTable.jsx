@@ -30,7 +30,6 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
       });
       return response.data.status || "Нет данных";
     } catch (error) {
-      // console.error(`Error fetching status for subject ${subject.id}:`, error);
       return "Нет данных";
     }
   };
@@ -85,7 +84,6 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
         volume: hourData?.volume || 0,
         message: hourData?.message || '',
         P2_message: hourData?.P2_message || '',
-        // Other fields as needed
       };
     });
     setLocalHourPlan(initialHourPlan);
@@ -106,14 +104,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
     "FACT2": "-П1-П2-П3-Ф1-Ф2",
     "COMPLETED": "Завершен",
     "Ошибка при загрузке": "Нет данных",
-    // ... add other statuses if necessary
   };
-
-  // Remove the old getStatus function if it's no longer needed
-  // const getStatus = (subject) => {
-  //   const day = daysList?.find(day => day.subject === subject.id && day.date.split('T')[0] === selectedDate.split('T')[0]);
-  //   return statusDisplayMap[day?.status] || "Нет данных";
-  // };
 
   const handleMessagesChange = (index, value) => {
     const updatedHourPlan = [...localHourPlan];
@@ -135,15 +126,21 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
     return P2Gen < 0 ? "П2_Gen отрицательное" : P2Gen.toFixed(2);
   };
 
+  // Updated to allow 0 for coefficients
   const handleCoefficientChange = (index, value) => {
     const updatedHourPlan = [...localHourPlan];
-    updatedHourPlan[index].coefficient = parseFloat(value) || 0;
+    const parsedValue = parseFloat(value);
+    // If parsedValue is a valid number (including 0), update it;
+    // otherwise keep the current value (allowing user input to be temporarily non-numeric)
+    updatedHourPlan[index].coefficient = !isNaN(parsedValue) ? parsedValue : value;
     setLocalHourPlan(updatedHourPlan);
   };
 
+  // Updated to allow negative values for volumes
   const handleVolumeChange = (index, value) => {
     const updatedHourPlan = [...localHourPlan];
-    updatedHourPlan[index].volume = parseInt(value, 10) || 0;
+    const parsedValue = parseInt(value, 10);
+    updatedHourPlan[index].volume = !isNaN(parsedValue) ? parsedValue : value;
     setLocalHourPlan(updatedHourPlan);
   };
 
@@ -190,13 +187,11 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
       const response = await axiosInstance.post(endpoints.PLANS_CREATE(dayPlan?.id), {
         plan: {
           coefficient: coefficients,
-          // volume: volumes,
         }
       });
 
       const response_2 = await axiosInstance.post(endpoints.PLANS_CREATE(dayPlan?.id), {
         plan: {
-          // coefficient: coefficients,
           volume: volumes,
         }
       });
@@ -244,8 +239,8 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
       const volume = parseInt(volumeStr, 10);
       const idx = hour - 1; // Assuming hours are from 1 to 24
       if (idx >= 0 && idx < 24) {
-        updatedHourPlan[idx].coefficient = coefficient;
-        updatedHourPlan[idx].volume = volume;
+        updatedHourPlan[idx].coefficient = !isNaN(coefficient) ? coefficient : updatedHourPlan[idx].coefficient;
+        updatedHourPlan[idx].volume = !isNaN(volume) ? volume : updatedHourPlan[idx].volume;
       }
     });
     setLocalHourPlan(updatedHourPlan);
@@ -313,7 +308,6 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
         </table>
       </div>
 
-
       {/* Import and Export Buttons */}
       <div className="flex justify-end space-x-2 my-4">
         <button
@@ -371,7 +365,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
                     type="number"
                     step="0.01"
                     min="0"
-                    value={localHourPlan[index]?.coefficient || 0}
+                    value={localHourPlan[index]?.coefficient}
                     onChange={(e) => handleCoefficientChange(index, e.target.value)}
                     className="w-full text-center rounded"
                   />
@@ -379,7 +373,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, daysList, h
                 <td className={`border`}>
                   <input
                     type="number"
-                    value={localHourPlan[index]?.volume || 0}
+                    value={localHourPlan[index]?.volume}
                     onChange={(e) => handleVolumeChange(index, e.target.value)}
                     className="w-full text-center rounded"
                   />
