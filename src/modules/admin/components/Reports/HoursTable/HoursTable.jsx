@@ -64,13 +64,21 @@ const HoursTable = () => {
         return [];
       }
 
+      // if (!response.data || response.data.error || response.data.length === 0) {
+      //   console.error(
+      //     'Ошибка при получении часов:',
+      //     response.data?.error || 'Часы не найдены с указанными критериями.'
+      //   );
+      //   return [];
+      // }
+
       // Filter hours based on startHour and endHour
       const filteredHours = response.data.filter(
         (hour) => hour.hour >= formData.startHour && hour.hour <= formData.endHour
       );
 
       console.log('Filtered hours:', filteredHours);
-
+      console.log(filteredHours.length);
       return filteredHours;
     } catch (error) {
       console.error('Ошибка при получении часов:', error);
