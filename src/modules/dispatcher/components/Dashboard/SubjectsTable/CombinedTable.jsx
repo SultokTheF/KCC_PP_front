@@ -341,9 +341,11 @@ const CombinedTable = ({
 
   const handleCoefficientChange = (index, value) => {
     const updatedHourPlan = [...localHourPlan];
-    updatedHourPlan[index].coefficient = parseFloat(value) || 0;
+    // If value is empty, keep it as "", otherwise convert to number
+    updatedHourPlan[index].coefficient = value === "" ? "" : parseFloat(value);
     setLocalHourPlan(updatedHourPlan);
   };
+  
 
   const handleExportGP1 = () => {
     const exportDataGP1 = [
@@ -431,19 +433,19 @@ const CombinedTable = ({
 
   const handleCoefficientGenChange = (index, value) => {
     const updatedHourPlan = [...localHourPlan];
-    updatedHourPlan[index].coefficient_Gen = parseFloat(value) || 0;
+    updatedHourPlan[index].coefficient_Gen = value === "" ? "" : parseFloat(value);
     setLocalHourPlan(updatedHourPlan);
   };
 
   const handleVolumeChange = (index, value) => {
     const updatedHourPlan = [...localHourPlan];
-    updatedHourPlan[index].volume = parseInt(value, 10) || 0;
+    updatedHourPlan[index].volume = value === "" ? "" : parseInt(value, 10);
     setLocalHourPlan(updatedHourPlan);
   };
 
   const handleVolumeGenChange = (index, value) => {
     const updatedHourPlan = [...localHourPlan];
-    updatedHourPlan[index].volume_Gen = parseInt(value, 10) || 0;
+    updatedHourPlan[index].volume_Gen = value === "" ? "" : parseInt(value, 10);
     setLocalHourPlan(updatedHourPlan);
   };
 
@@ -511,10 +513,10 @@ const CombinedTable = ({
           ...(selectedSubject?.subject_type !== "CONSUMER"
             ? [hourData.F2_Gen || 0]
             : []),
-          hourData.coefficient || 1,
-          hourData.coefficient_Gen || 1,
-          hourData.volume || 0,
-          hourData.volume_Gen || 0,
+          hourData.coefficient ?? "",
+          hourData.coefficient_Gen ?? "",
+          hourData.volume ?? "",
+          hourData.volume_Gen ?? "",
           hourData.P2_message || "",
           ...(showMessageCol ? [hourData.message || ""] : []),
         ];
@@ -1045,7 +1047,7 @@ const CombinedTable = ({
                           type="number"
                           step="0.01"
                           min="0"
-                          value={localHourPlan[index]?.coefficient || 1}
+                          value={localHourPlan[index]?.coefficient ?? ""}
                           onChange={(e) =>
                             handleCoefficientChange(index, e.target.value)
                           }
@@ -1058,7 +1060,7 @@ const CombinedTable = ({
                             type="number"
                             step="0.01"
                             min="0"
-                            value={localHourPlan[index]?.coefficient_Gen || 1}
+                            value={localHourPlan[index]?.coefficient_Gen ?? ""}
                             onChange={(e) =>
                               handleCoefficientGenChange(index, e.target.value)
                             }
@@ -1069,7 +1071,7 @@ const CombinedTable = ({
                       <td className="border">
                         <input
                           type="number"
-                          value={localHourPlan[index]?.volume || 0}
+                          value={localHourPlan[index]?.volume ?? ""}
                           onChange={(e) =>
                             handleVolumeChange(index, e.target.value)
                           }
@@ -1080,7 +1082,7 @@ const CombinedTable = ({
                         <td className="border">
                           <input
                             type="number"
-                            value={localHourPlan[index]?.volume_Gen || 0}
+                            value={localHourPlan[index]?.volume_Gen ?? ""}
                             onChange={(e) =>
                               handleVolumeGenChange(index, e.target.value)
                             }
