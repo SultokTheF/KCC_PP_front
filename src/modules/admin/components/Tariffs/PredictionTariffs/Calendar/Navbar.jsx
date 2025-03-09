@@ -44,7 +44,7 @@ const Navbar = ({ date, setDate, data, setData }) => {
     const rows = data.tableData.map(dayData => {
       const day = Object.keys(dayData)[0];
       const row = [day.split('-').reverse().join('.')]; // Date in format dd.mm.yyyy
-      row.push(...dayData[day].map(hourValue => hourValue === 0 ? getRandomValue() : hourValue));
+      row.push(...dayData[day].map(hourValue => hourValue === 0 ? hourValue : hourValue));
       // row.push(...dayData[day].map(hourValue => hourValue === 0 ? hourValue : hourValue));
       return row;
     });

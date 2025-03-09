@@ -19,7 +19,7 @@ const HoursTable = () => {
   const [formData, setFormData] = useState({
     object: 0,
     startDate: dayjs().format('YYYY-MM-DD'), // YYYY-MM-DD
-    endDate: dayjs().format('YYYY-MM-DD'),   // YYYY-MM-DD
+    endDate: dayjs().format('YYYY-MM-DD'),     // YYYY-MM-DD
     subject: 0,
     startHour: 1,
     endHour: 24,
@@ -64,21 +64,12 @@ const HoursTable = () => {
         return [];
       }
 
-      // if (!response.data || response.data.error || response.data.length === 0) {
-      //   console.error(
-      //     'Ошибка при получении часов:',
-      //     response.data?.error || 'Часы не найдены с указанными критериями.'
-      //   );
-      //   return [];
-      // }
-
-      // Filter hours based on startHour and endHour
+      // Filter hours based on startHour and endHour (assumes API returns hours in the same numbering as the form)
       const filteredHours = response.data.filter(
         (hour) => hour.hour >= formData.startHour && hour.hour <= formData.endHour
       );
 
       console.log('Filtered hours:', filteredHours);
-      console.log(filteredHours.length);
       return filteredHours;
     } catch (error) {
       console.error('Ошибка при получении часов:', error);
@@ -117,7 +108,6 @@ const HoursTable = () => {
       );
 
       console.log('Filtered base tariffs:', filteredTariffs);
-
       return filteredTariffs;
     } catch (error) {
       if (
@@ -162,7 +152,6 @@ const HoursTable = () => {
       });
 
       console.log('Providers Map:', providersMap);
-
       return providersMap;
     } catch (error) {
       console.error('Ошибка при получении провайдеров:', error);
@@ -171,6 +160,7 @@ const HoursTable = () => {
   };
 
   // Merge hours, tariffs, and providers data
+  // Instead of using a fixed divisor to compute day offsets, we detect when the hour resets
   const mergeData = (hours, tariffs, providersMap) => {
     console.log('Merging data...');
     console.log('Hours:', hours);
@@ -185,21 +175,24 @@ const HoursTable = () => {
       tariffMap[key] = tariff;
     });
 
-    console.log('Tariff Map:', tariffMap);
+    // Assign date to each hour based on when the hour value “resets”
+    let currentDate = dayjs(formData.startDate);
+    let previousHour = null;
 
-    // Assign date to each hour
-    const startDate = dayjs(formData.startDate);
-    const mergedData = hours.map((hour, index) => {
-      // Calculate the date based on the hour index
-      const dayOffset = Math.floor(index / 24);
-      const date = startDate.add(dayOffset, 'day').format('YYYY-MM-DD');
+    const mergedData = hours.map((hour) => {
+      // If we have a previous hour and the current hour is less than or equal to the previous,
+      // assume that we have rolled over to the next day.
+      if (previousHour !== null && hour.hour <= previousHour) {
+        currentDate = currentDate.add(1, 'day');
+      }
+      previousHour = hour.hour;
 
-      // Fetch base tariff for this date and hour
-      const key = `${date}_${hour.hour}`;
+      const dateStr = currentDate.format('YYYY-MM-DD');
+      const key = `${dateStr}_${hour.hour}`;
       const baseTariff = tariffMap[key];
 
-      // Extract month from the date to fetch providers
-      const month = dayjs(date).format('YYYY-MM');
+      // Get providers based on month of the current date
+      const month = currentDate.format('YYYY-MM');
       const providers = providersMap[month] ? providersMap[month].join(', ') : 'Нет Провайдеров';
 
       const subjectInfo = subjectsList.find((subj) => subj.id === formData.subject);
@@ -212,7 +205,7 @@ const HoursTable = () => {
 
       return {
         id: hour.id,
-        date: date, // New Date Column
+        date: dateStr,
         hour: hour.hour,
         coefficient: hour.coefficient,
         volume: hour.volume,
@@ -237,7 +230,6 @@ const HoursTable = () => {
         EZ_T_ВИЭ: baseTariff ? baseTariff.EZ_T_ВИЭ : 0.0,
         EZ_T_РЭК: baseTariff ? baseTariff.EZ_T_РЭК : 0.0,
         T_Coef: hour.T_Coef,
-        // W_Prov_P1_Gen: hour.W_Prov_P1_Gen,
         W_Prov_P3: hour.W_Prov_P3,
         W_Prov_P3_Gen: hour.W_Prov_P3_Gen,
         W_Prov_F1: hour.W_Prov_F1,
@@ -248,12 +240,11 @@ const HoursTable = () => {
         message: hour.message,
         subject: subjectName,
         type: subjectType,
-        providers: providers, // Assigned Providers
+        providers: providers,
       };
     });
 
     console.log('Merged Data:', mergedData);
-
     return mergedData;
   };
 
@@ -271,7 +262,6 @@ const HoursTable = () => {
 
       // Step 2: Fetch base tariffs
       const baseTariffs = await fetchBaseTariffs();
-
       if (baseTariffs.length === 0) {
         console.warn('No base tariffs found, proceeding with hours data only.');
       }
