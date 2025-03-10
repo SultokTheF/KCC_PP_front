@@ -1,11 +1,10 @@
-// HoursTable.jsx
+// HoursTable.jsx (Dispatcher version)
 import React, { useState, useEffect } from 'react';
-import dayjs from 'dayjs'; // Import Day.js for date manipulation
+import dayjs from 'dayjs'; // For date manipulation
 import { axiosInstance, endpoints } from '../../../../services/apiConfig';
 import Sidebar from '../Sidebar/Sidebar';
-import { useAuth } from '../../../../hooks/useAuth';
 
-// Tailwind CSS spinner component
+// Simple Tailwind spinner
 const Spinner = () => (
   <div className="flex justify-center items-center h-full">
     <div className="w-12 h-12 border-4 border-blue-500 border-solid border-t-transparent rounded-full animate-spin"></div>
@@ -13,26 +12,32 @@ const Spinner = () => (
 );
 
 const HoursTable = () => {
-  // State for subjects list
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  State
+  // ─────────────────────────────────────────────────────────────────────────────
   const [subjectsList, setSubjectsList] = useState([]);
 
-  // State for form inputs
+  const user = JSON.parse(localStorage.getItem('user'));
+
   const [formData, setFormData] = useState({
     object: 0,
-    startDate: dayjs().format('YYYY-MM-DD'), // YYYY-MM-DD
-    endDate: dayjs().format('YYYY-MM-DD'),   // YYYY-MM-DD
+    startDate: dayjs().format('YYYY-MM-DD'), // e.g. "2025-03-13"
+    endDate: dayjs().format('YYYY-MM-DD'),
     subject: 0,
     startHour: 1,
     endHour: 24,
   });
 
-  // Loading state
   const [loading, setLoading] = useState(false);
-
-  // State to hold merged table data
+  const [isConsumer, setIsConsumer] = useState(true);
   const [tableData, setTableData] = useState([]);
 
-  // Fetch subjects on component mount
+  // We'll store day objects (fetched from server) in a map: dayId -> day object
+  const [dayMap, setDayMap] = useState({});
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Fetch Subjects
+  // ─────────────────────────────────────────────────────────────────────────────
   const fetchSubjects = async () => {
     try {
       const subjectsResponse = await axiosInstance.get(endpoints.SUBJECTS,
@@ -40,14 +45,15 @@ const HoursTable = () => {
           params: { user: user.id },
         }
       );
-      console.log('Fetched subjects:', subjectsResponse.data);
       setSubjectsList(subjectsResponse.data);
     } catch (error) {
       console.error('Ошибка при получении субъектов:', error);
     }
   };
 
-  // Fetch hours data
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Fetch Hours
+  // ─────────────────────────────────────────────────────────────────────────────
   const fetchHours = async () => {
     try {
       const response = await axiosInstance.get(endpoints.HOURS, {
@@ -58,8 +64,6 @@ const HoursTable = () => {
         },
       });
 
-      console.log('Fetched hours:', response.data);
-
       if (!response.data || response.data.error || response.data.length === 0) {
         console.error(
           'Ошибка при получении часов:',
@@ -68,21 +72,19 @@ const HoursTable = () => {
         return [];
       }
 
-      // Filter hours based on startHour and endHour
-      const filteredHours = response.data.filter(
+      // Filter hours by startHour/endHour
+      return response.data.filter(
         (hour) => hour.hour >= formData.startHour && hour.hour <= formData.endHour
       );
-
-      console.log('Filtered hours:', filteredHours);
-
-      return filteredHours;
     } catch (error) {
       console.error('Ошибка при получении часов:', error);
       return [];
     }
   };
 
-  // Fetch base tariffs data
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Fetch Base Tariffs
+  // ─────────────────────────────────────────────────────────────────────────────
   const fetchBaseTariffs = async () => {
     try {
       const response = await axiosInstance.get(endpoints.BASE_TARIFF, {
@@ -93,34 +95,28 @@ const HoursTable = () => {
         },
       });
 
-      console.log('Fetched base tariffs:', response.data);
-
       if (!response.data || response.data.error || response.data.length === 0) {
-        if (response.data?.error === "No BaseTariffs found with the provided criteria.") {
-          console.warn('No BaseTariffs found, filling tariffs with zeroes.');
+        if (response.data?.error === 'No BaseTariffs found with the provided criteria.') {
+          console.warn('No BaseTariffs found, proceeding with zeros.');
         } else {
           console.error(
             'Ошибка при получении базовых тарифов:',
-            response.data?.error || 'Базовые тарифы не найдены с указанными критериями.'
+            response.data?.error || 'Базовые тарифы не найдены.'
           );
         }
         return [];
       }
 
-      // Filter tariffs where 'subjects' includes the selected subject
-      const filteredTariffs = response.data.filter((tariff) =>
+      // Filter tariffs relevant to the chosen subject
+      return response.data.filter((tariff) =>
         tariff.subjects.includes(formData.subject)
       );
-
-      console.log('Filtered base tariffs:', filteredTariffs);
-
-      return filteredTariffs;
     } catch (error) {
       if (
         error.response &&
-        error.response.data.error === "No BaseTariffs found with the provided criteria."
+        error.response.data.error === 'No BaseTariffs found with the provided criteria.'
       ) {
-        console.warn('No BaseTariffs found, filling tariffs with zeroes.');
+        console.warn('No BaseTariffs found, using zeros.');
       } else {
         console.error('Ошибка при получении базовых тарифов:', error);
       }
@@ -128,37 +124,33 @@ const HoursTable = () => {
     }
   };
 
-  // Fetch providers data with corrected date format
-  const fetchProviders = async (subject) => {
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Fetch Providers
+  // ─────────────────────────────────────────────────────────────────────────────
+  const fetchProviders = async (subjectId) => {
     try {
       const response = await axiosInstance.get(endpoints.PROVIDERS, {
         params: {
-          sub: subject,
-          // Format dates to 'YYYY-MM' as required by the API
+          sub: subjectId,
           start_date: dayjs(formData.startDate).format('YYYY-MM'),
           end_date: dayjs(formData.endDate).format('YYYY-MM'),
         },
       });
-
-      console.log('Fetched providers:', response.data);
 
       if (!response.data || response.data.error || response.data.length === 0) {
         console.warn('No providers found for the given criteria.');
         return {};
       }
 
-      // Assuming the response includes a 'month' field for each provider entry
+      // Build a map: { 'YYYY-MM': ['Provider1', 'Provider2'], ... }
       const providersMap = {};
       response.data.forEach((provider) => {
-        const month = provider.month; // e.g., '2024-10'
+        const month = provider.month; // e.g. "2025-03"
         if (!providersMap[month]) {
           providersMap[month] = [];
         }
         providersMap[month].push(provider.name);
       });
-
-      console.log('Providers Map:', providersMap);
-
       return providersMap;
     } catch (error) {
       console.error('Ошибка при получении провайдеров:', error);
@@ -166,39 +158,91 @@ const HoursTable = () => {
     }
   };
 
-  // Merge hours, tariffs, and providers data
-  const mergeData = (hours, tariffs, providersMap) => {
-    console.log('Merging data...');
-    console.log('Hours:', hours);
-    console.log('Tariffs:', tariffs);
-    console.log('Providers Map:', providersMap);
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Fetch Day Objects
+  // ─────────────────────────────────────────────────────────────────────────────
+  /**
+   * Each hour has a `day` field (e.g. 10565).
+   * We call endpoints.DAYS/<dayId> to get the real date from the server.
+   */
+  const fetchDayObjects = async (hoursArray) => {
+    const uniqueDayIds = [...new Set(hoursArray.map((h) => h.day))];
+    const dayMapTemp = {};
 
-    // Create a map for tariffs based on date and hour for quick lookup
+    for (const dayId of uniqueDayIds) {
+      try {
+        // e.g. GET /api/days/10565/
+        const response = await axiosInstance.get(`${endpoints.DAYS}${dayId}/`);
+        dayMapTemp[dayId] = response.data;
+      } catch (error) {
+        console.error(`Ошибка при получении day ID ${dayId}:`, error);
+        dayMapTemp[dayId] = null;
+      }
+    }
+
+    setDayMap(dayMapTemp);
+    return dayMapTemp;
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Merge Data
+  // ─────────────────────────────────────────────────────────────────────────────
+  const mergeData = (hours, tariffs, providersMap, dayMapObj) => {
+    // Build a map for baseTariffs by date + hour
     const tariffMap = {};
     tariffs.forEach((tariff) => {
-      const date = tariff.date.split('T')[0]; // Extract date in YYYY-MM-DD
-      const key = `${date}_${tariff.hour}`;
+      const datePart = tariff.date.split('T')[0]; // e.g. "2025-03-13"
+      const key = `${datePart}_${tariff.hour}`;
       tariffMap[key] = tariff;
     });
 
-    console.log('Tariff Map:', tariffMap);
+    // Construct final table rows
+    const mergedData = hours.map((hour) => {
+      const dayObj = dayMapObj[hour.day];
+      if (!dayObj) {
+        // If no day object found, fallback
+        return {
+          id: hour.id,
+          date: '—',
+          dateRaw: null,
+          hour: hour.hour,
+          subject: 'Неизвестный субъект',
+          type: 'Неизвестный тип',
+          providers: 'Нет Провайдеров',
+          P1: hour.P1,
+          P2: hour.P2,
+          P3: hour.P3,
+          F1: hour.F1,
+          F2: hour.F2,
+          P1_Gen: hour.P1_Gen,
+          P2_Gen: hour.P2_Gen,
+          P3_Gen: hour.P3_Gen,
+          F1_Gen: hour.F1_Gen,
+          F2_Gen: hour.F2_Gen,
+          EZ_T: 0.0,
+          EZ_Base_T: 0.0,
+          BE_T: 0.0,
+          OD_T: 0.0,
+          EZ_T_ВИЭ: 0.0,
+          EZ_T_РЭК: 0.0,
+        };
+      }
 
-    // Assign date to each hour
-    const startDate = dayjs(formData.startDate);
-    const mergedData = hours.map((hour, index) => {
-      // Calculate the date based on the hour index
-      const dayOffset = Math.floor(index / 24);
-      const date = startDate.add(dayOffset, 'day').format('YYYY-MM-DD');
+      // dayObj.date => "2025-03-13T00:00:00+01:00"
+      const serverDate = dayjs(dayObj.date);
+      const dateFormatted = serverDate.isValid() ? serverDate.format('DD-MM-YYYY') : '';
 
-      // Fetch base tariff for this date and hour
-      const key = `${date}_${hour.hour}`;
-      const baseTariff = tariffMap[key];
+      // Build key for tariffs
+      const datePart = serverDate.format('YYYY-MM-DD');
+      const tariffKey = `${datePart}_${hour.hour}`;
+      const baseTariff = tariffMap[tariffKey];
 
-      // Extract month from the date to fetch providers
-      const month = dayjs(date).format('YYYY-MM');
-      const providers = providersMap[month] ? providersMap[month].join(', ') : 'Нет Провайдеров';
+      // For providers, we match by month
+      const monthPart = serverDate.format('YYYY-MM');
+      const providers = providersMap[monthPart] ? providersMap[monthPart].join(', ') : 'Нет Провайдеров';
 
-      const subjectInfo = subjectsList.find((subj) => subj.id === formData.subject);
+      // Subject info
+      const subjectInfo = subjectsList.find((s) => s.id === formData.subject);
       const subjectName = subjectInfo ? subjectInfo.subject_name : 'Неизвестный субъект';
       const subjectType = subjectInfo
         ? subjectInfo.subject_type === 'CONSUMER'
@@ -208,10 +252,13 @@ const HoursTable = () => {
 
       return {
         id: hour.id,
-        date: date, // New Date Column
+        date: dateFormatted,    // For display
+        dateRaw: serverDate,    // For sorting
         hour: hour.hour,
-        coefficient: hour.coefficient,
-        volume: hour.volume,
+        subject: subjectName,
+        type: subjectType,
+        providers,
+        // Removed coefficient & volume
         P1: hour.P1,
         P2: hour.P2,
         P3: hour.P3,
@@ -222,62 +269,54 @@ const HoursTable = () => {
         P3_Gen: hour.P3_Gen,
         F1_Gen: hour.F1_Gen,
         F2_Gen: hour.F2_Gen,
-        Pred_T: hour.Pred_T,
-        plan_t: hour.plan_t,
-        Wo_Prov_T: hour.Wo_Prov_T,
-        W_Prov_T: hour.W_Prov_T,
         EZ_T: baseTariff ? baseTariff.EZ_T : 0.0,
         EZ_Base_T: baseTariff ? baseTariff.EZ_Base_T : 0.0,
         BE_T: baseTariff ? baseTariff.BE_T : 0.0,
         OD_T: baseTariff ? baseTariff.OD_T : 0.0,
         EZ_T_ВИЭ: baseTariff ? baseTariff.EZ_T_ВИЭ : 0.0,
         EZ_T_РЭК: baseTariff ? baseTariff.EZ_T_РЭК : 0.0,
-        T_Coef: hour.T_Coef,
-        // W_Prov_P1_Gen: hour.W_Prov_P1_Gen,
-        W_Prov_P3: hour.W_Prov_P3,
-        W_Prov_P3_Gen: hour.W_Prov_P3_Gen,
-        W_Prov_F1: hour.W_Prov_F1,
-        W_Prov_F1_Gen: hour.W_Prov_F1_Gen,
-        W_Prov_F2: hour.W_Prov_F2,
-        W_Prov_F2_Gen: hour.W_Prov_F2_Gen,
-        direction: baseTariff ? baseTariff.direction : '-',
-        message: hour.message,
-        subject: subjectName,
-        type: subjectType,
-        providers: providers, // Assigned Providers
       };
     });
 
-    console.log('Merged Data:', mergedData);
+    // Sort by date, then by hour
+    mergedData.sort((a, b) => {
+      if (!a.dateRaw && !b.dateRaw) return 0;
+      if (!a.dateRaw) return 1;
+      if (!b.dateRaw) return -1;
+      if (a.dateRaw.isBefore(b.dateRaw)) return -1;
+      if (a.dateRaw.isAfter(b.dateRaw)) return 1;
+      // Same date => sort by hour
+      return a.hour - b.hour;
+    });
 
     return mergedData;
   };
 
-  // Fetch and merge data
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Fetch & Merge
+  // ─────────────────────────────────────────────────────────────────────────────
   const fetchAndMergeData = async () => {
     setLoading(true);
     try {
-      // Step 1: Fetch hours
+      // 1) Get hours
       const hours = await fetchHours();
-
       if (hours.length === 0) {
         setTableData([]);
         return;
       }
 
-      // Step 2: Fetch base tariffs
+      // 2) Fetch day objects
+      const dayMapObj = await fetchDayObjects(hours);
+
+      // 3) Base tariffs
       const baseTariffs = await fetchBaseTariffs();
 
-      if (baseTariffs.length === 0) {
-        console.warn('No base tariffs found, proceeding with hours data only.');
-      }
-
-      // Step 3: Fetch providers with corrected date format
+      // 4) Providers
       const providersMap = await fetchProviders(formData.subject);
 
-      // Step 4: Merge data
-      const mergedData = mergeData(hours, baseTariffs, providersMap);
-      setTableData(mergedData);
+      // 5) Merge
+      const merged = mergeData(hours, baseTariffs, providersMap, dayMapObj);
+      setTableData(merged);
     } catch (error) {
       console.error('Ошибка при обработке данных:', error);
       setTableData([]);
@@ -286,21 +325,25 @@ const HoursTable = () => {
     }
   };
 
-  // Handle form input changes
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Handlers
+  // ─────────────────────────────────────────────────────────────────────────────
   const handleChange = (name, value) => {
-    setFormData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
+    setFormData((prevData) => ({ ...prevData, [name]: value }));
+    if (name === 'subject') {
+      const selectedSubject = subjectsList.find((subj) => subj.id === value);
+      setIsConsumer(selectedSubject?.subject_type === 'CONSUMER');
+    }
   };
 
-  // Fetch subjects on component mount
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Effects
+  // ─────────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     fetchSubjects();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fetch and merge data when formData changes
   useEffect(() => {
     if (formData.subject !== 0 && formData.startDate && formData.endDate) {
       fetchAndMergeData();
@@ -310,8 +353,9 @@ const HoursTable = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData]);
 
-  const { user } = useAuth();
-
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Render
+  // ─────────────────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col lg:flex-row">
       <Sidebar />
@@ -319,6 +363,8 @@ const HoursTable = () => {
         <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
           Таблица часов
         </h1>
+
+        {/* Form Section */}
         <div className="bg-white p-6 rounded-lg shadow-md mb-8">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             {/* Subject Selection */}
@@ -342,6 +388,7 @@ const HoursTable = () => {
                 ))}
               </select>
             </div>
+
             {/* Start Date */}
             <div className="w-full">
               <label htmlFor="startDate" className="block text-gray-700 font-semibold mb-2">
@@ -357,6 +404,7 @@ const HoursTable = () => {
                 required
               />
             </div>
+
             {/* End Date */}
             <div className="w-full">
               <label htmlFor="endDate" className="block text-gray-700 font-semibold mb-2">
@@ -372,6 +420,7 @@ const HoursTable = () => {
                 required
               />
             </div>
+
             {/* Start Hour */}
             <div className="w-full">
               <label htmlFor="startHour" className="block text-gray-700 font-semibold mb-2">
@@ -392,6 +441,7 @@ const HoursTable = () => {
                 ))}
               </select>
             </div>
+
             {/* End Hour */}
             <div className="w-full">
               <label htmlFor="endHour" className="block text-gray-700 font-semibold mb-2">
@@ -415,209 +465,89 @@ const HoursTable = () => {
           </div>
         </div>
 
-        {/* Loading Spinner */}
+        {/* Table or Spinner */}
         {loading ? (
           <Spinner />
-        ) : (
-          // Table Rendering
-          tableData.length > 0 ? (
-            <div className="overflow-x-auto max-w-[1550px] bg-white shadow-md rounded-lg">
-              <table className="table-fixed min-w-full text-sm bg-white border border-gray-200">
-                <thead className="bg-gray-100 text-center">
-                  <tr>
-                    {[
-                      'Дата',          // New Date Column
-                      'Час',
-                      'Субъект',
-                      'Провайдеры',
-                      'Тип',
-                      'coefficient',
-                      'volume',
-                      'P1',
-                      'P2',
-                      'P3',
-                      'F1',
-                      'F2',
-                      'P1_Gen',
-                      'P2_Gen',
-                      'P3_Gen',
-                      'F1_Gen',
-                      'F2_Gen',
-                      // 'EZ_T',
-                      // 'EZ_Base_T',
-                      // 'EZ_T_ВИЭ',
-                      // 'EZ_T_РЭК',
-                      // 'Pred_T',
-                      // 'plan_T',
-                      // 'Wo_Prov_T',
-                      // 'W_Prov_T',
-                      // 'BE_T',
-                      // 'OD_T',
-                      // 'T_Coef',
-                      // 'W_Prov_P1_Gen',
-                      // 'W_Prov_P3',
-                      // 'W_Prov_P3_Gen',
-                      // 'W_Prov_F1',
-                      // 'W_Prov_F1_Gen',
-                      // 'W_Prov_F2',
-                      // 'W_Prov_F2_Gen',
-                      // 'direction',
-                      // 'message',
-                    ].map((header) => (
-                      <th
-                        key={header}
-                        className={`px-2 py-1 border-b border-gray-200 font-medium text-gray-700 ${
-                          header === 'Дата' ? 'w-48' : ''
-                        }`}
-                      >
-                        {header}
-                      </th>
-                    ))}
+        ) : tableData.length > 0 ? (
+          <div className="overflow-x-auto max-w-[1550px] bg-white shadow-md rounded-lg">
+            <table className="table-fixed min-w-full text-sm bg-white border border-gray-200">
+              <thead className="bg-gray-100 text-center">
+                <tr>
+                  {[
+                    'Дата',        // dd-mm-yyyy
+                    'Час',
+                    'Субъект',
+                    'Тип',
+                    'Провайдеры',
+                    // Removed coefficient & volume
+                    'P1',
+                    'P2',
+                    'P3',
+                    'F1',
+                    'F2',
+                    // If not consumer => show gen columns
+                    ...(!isConsumer
+                      ? ['P1_Gen', 'P2_Gen', 'P3_Gen', 'F1_Gen', 'F2_Gen']
+                      : []),
+                    'EZ_T',
+                    'EZ_Base_T',
+                    'BE_T',
+                    'OD_T',
+                    'EZ_T_ВИЭ',
+                    'EZ_T_РЭК',
+                  ].map((header) => (
+                    <th
+                      key={header}
+                      className="px-2 py-1 border-b border-gray-200 font-medium text-gray-700"
+                    >
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {tableData.map((row) => (
+                  <tr key={row.id} className="text-center">
+                    <td className="px-2 py-1 border-b border-gray-200">
+                      {row.date}
+                    </td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.hour}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.subject}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.type}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.providers}</td>
+
+                    {/* P1, P2, P3, F1, F2 */}
+                    <td className="px-2 py-1 border-b border-gray-200">{row.P1}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.P2}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.P3}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.F1}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.F2}</td>
+
+                    {/* Gen columns if not consumer */}
+                    {!isConsumer && (
+                      <>
+                        <td className="px-2 py-1 border-b border-gray-200">{row.P1_Gen}</td>
+                        <td className="px-2 py-1 border-b border-gray-200">{row.P2_Gen}</td>
+                        <td className="px-2 py-1 border-b border-gray-200">{row.P3_Gen}</td>
+                        <td className="px-2 py-1 border-b border-gray-200">{row.F1_Gen}</td>
+                        <td className="px-2 py-1 border-b border-gray-200">{row.F2_Gen}</td>
+                      </>
+                    )}
+
+                    {/* Tariffs */}
+                    <td className="px-2 py-1 border-b border-gray-200">{row.EZ_T}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.EZ_Base_T}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.BE_T}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.OD_T}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.EZ_T_ВИЭ}</td>
+                    <td className="px-2 py-1 border-b border-gray-200">{row.EZ_T_РЭК}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {tableData.map((row, index) => {
-                    const isNewDate = index === 0 || row.date !== tableData[index - 1].date;
-                    return (
-                      <tr
-                        key={row.id}
-                        className={`text-center ${
-                          isNewDate ? 'bg-gray-100' : 'bg-white'
-                        }`}
-                      >
-                        {/* Date Column */}
-                        <td className="px-2 py-1 border-b w-48 border-gray-200">
-                          {row.date}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.hour}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.subject}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.providers}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.type}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.coefficient}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.volume}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.P1}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.P2}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.P3}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.F1}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.F2}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.P1_Gen}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.P2_Gen}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.P3_Gen}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.F1_Gen}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.F2_Gen}
-                        </td>
-                        {/* <td className="px-2 py-1 border-b border-gray-200">
-                          {row.EZ_T}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.EZ_Base_T}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.EZ_T_ВИЭ}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.EZ_T_РЭК}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.Pred_T}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.plan_t}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.Wo_Prov_T}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.W_Prov_T}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.BE_T}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.OD_T}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.T_Coef}
-                        </td> */}
-                        {/* <td className="px-2 py-1 border-b border-gray-200">
-                          {row.W_Prov_P1_Gen}
-                        </td> */}
-                        {/* <td className="px-2 py-1 border-b border-gray-200">
-                          {row.W_Prov_P3}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.W_Prov_P3_Gen}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.W_Prov_F1}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.W_Prov_F1_Gen}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.W_Prov_F2}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.W_Prov_F2_Gen}
-                        </td>
-                        <td
-                          className={`px-2 py-1 border-b border-gray-200 ${
-                            row.direction === 'DOWN'
-                              ? 'bg-green-100'
-                              : row.direction === 'UP'
-                              ? 'bg-red-100'
-                              : ''
-                          }`}
-                        >
-                          {row.direction === 'UP'
-                            ? '↑'
-                            : row.direction === 'DOWN'
-                            ? '↓'
-                            : '-'}
-                        </td>
-                        <td className="px-2 py-1 border-b border-gray-200">
-                          {row.message}
-                        </td> */}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center text-gray-500">Нет данных для отображения.</div>
-          )
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center text-gray-500">Нет данных для отображения.</div>
         )}
       </div>
     </div>

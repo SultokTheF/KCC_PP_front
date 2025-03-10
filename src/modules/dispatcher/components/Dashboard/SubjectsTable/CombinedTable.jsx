@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 import * as XLSX from "xlsx";
 
+// 24-hour labels
 const timeIntervals = [
   "00 - 01",
   "01 - 02",
@@ -29,6 +30,32 @@ const timeIntervals = [
   "23 - 00",
 ];
 
+// Default plan for 24 hours
+function initializeDefaultHourPlan() {
+  return Array(24)
+    .fill()
+    .map((_, index) => ({
+      hour: index + 1,
+      P1: 0,
+      P1_Gen: 0,
+      P2: 0,
+      P2_Gen: 0,
+      P3: 0,
+      P3_Gen: 0,
+      F1: 0,
+      F1_Gen: 0,
+      F2: 0,
+      F2_Gen: 0,
+      coefficient: 1,
+      volume: 0,
+      coefficient_Gen: 1,
+      volume_Gen: 0,
+      P2_message: "",
+      P2_Gen_message: "",
+      message: "",
+    }));
+}
+
 const CombinedTable = ({
   selectedData,
   setSelectedData,
@@ -36,7 +63,9 @@ const CombinedTable = ({
   objectsList,
   selectedDate,
 }) => {
-  // State variables
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  State
+  // ─────────────────────────────────────────────────────────────────────────────
   const [subjectHoursList, setSubjectHoursList] = useState([]);
   const [objectHoursMap, setObjectHoursMap] = useState({});
 
@@ -47,44 +76,25 @@ const CombinedTable = ({
   const [subjectStatusError, setSubjectStatusError] = useState(null);
   const [objectStatusError, setObjectStatusError] = useState(null);
 
-  // State for local hour plan
+  // Local hour plan for the selected subject
   const [localHourPlan, setLocalHourPlan] = useState(
     initializeDefaultHourPlan()
   );
 
-  // State for P2 message display
+  // Show/hide "Message" column (for disapproval)
   const [showMessageCol, setShowMessageCol] = useState(false);
+
+  // Info / warning messages
   const [warningMessage, setWarningMessage] = useState("");
 
+  // File input refs for normal import & GP1 import
   const fileInputRef = useRef(null);
+  const fileInputRefGP1 = useRef(null);
 
-  // Initialize default hour plan with 24 entries
-  function initializeDefaultHourPlan() {
-    return Array(24)
-      .fill()
-      .map((_, index) => ({
-        hour: index + 1,
-        P1: 0,
-        P1_Gen: 0,
-        P2: 0,
-        P2_Gen: 0,
-        P3: 0,
-        P3_Gen: 0,
-        F1: 0,
-        F1_Gen: 0,
-        F2: 0,
-        F2_Gen: 0,
-        coefficient: 1,
-        volume: 0,
-        coefficient_Gen: 1,
-        volume_Gen: 0,
-        P2_message: "",
-        P2_Gen_message: "",
-        message: "",
-      }));
-  }
-
-  // Effect to auto-dismiss warningMessage after 3 seconds
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Effects
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Auto-dismiss warning after 3 seconds
   useEffect(() => {
     if (warningMessage) {
       const timer = setTimeout(() => {
@@ -94,14 +104,13 @@ const CombinedTable = ({
     }
   }, [warningMessage]);
 
-  // Fetch subject statuses when selectedDate or subjectsList changes
+  // Fetch statuses, hours, etc. based on current selection
   useEffect(() => {
     if (subjectsList.length > 0 && selectedData.selectedSubject) {
       fetchSubjectStatuses();
     }
   }, [selectedDate, subjectsList, selectedData.selectedSubject]);
 
-  // Fetch object statuses when selectedSubject, selectedDate, or objectsList changes
   useEffect(() => {
     if (selectedData.selectedSubject) {
       fetchObjectStatuses();
@@ -110,7 +119,6 @@ const CombinedTable = ({
     }
   }, [selectedDate, selectedData.selectedSubject, objectsList]);
 
-  // Fetch subject hours when selectedDate or selectedSubject changes
   useEffect(() => {
     if (selectedData.selectedSubject) {
       fetchSubjectHours();
@@ -122,86 +130,9 @@ const CombinedTable = ({
     }
   }, [selectedDate, selectedData.selectedSubject]);
 
-  // Fetch hours based on whether subject or object is selected
-  const fetchSubjectHours = async () => {
-    try {
-      const response = await axiosInstance.get(endpoints.HOURS, {
-        params: { day: selectedDate, sub: selectedData.selectedSubject },
-      });
-      const subjectHours = response.data || [];
-      setSubjectHoursList(subjectHours);
-
-      // Initialize localHourPlan with subjectHours data or default values
-      const initialHourPlan = initializeDefaultHourPlan().map(
-        (hourPlan, index) => {
-          const hourData = subjectHours.find((hour) => hour.hour === index + 1);
-          return {
-            ...hourPlan,
-            P1: hourData?.P1 || 0,
-            P1_Gen: hourData?.P1_Gen || 0,
-            P2: hourData?.P2 || 0,
-            P2_Gen: hourData?.P2_Gen || 0,
-            P3: hourData?.P3 || 0,
-            P3_Gen: hourData?.P3_Gen || 0,
-            F1: hourData?.F1 || 0,
-            F1_Gen: hourData?.F1_Gen || 0,
-            F2: hourData?.F2 || 0,
-            F2_Gen: hourData?.F2_Gen || 0,
-            coefficient: hourData?.coefficient ?? 1,
-            volume: hourData?.volume || 0,
-            coefficient_Gen: hourData?.coefficient_Gen ?? 1,
-            volume_Gen: hourData?.volume_Gen || 0,
-            P2_message: hourData?.P2_message || "",
-            P2_Gen_message: hourData?.P2_Gen_message || "",
-            message: hourData?.message || "",
-          };
-        }
-      );
-      setLocalHourPlan(initialHourPlan);
-    } catch (error) {
-      console.error("Error fetching subject hours:", error);
-      setSubjectHoursList([]);
-      setLocalHourPlan(initializeDefaultHourPlan());
-    }
-  };
-
-  const fetchAllObjectHours = async () => {
-    try {
-      const objectsForSubject = objectsList.filter(
-        (object) => object.subject === selectedData.selectedSubject
-      );
-
-      const objectHoursPromises = objectsForSubject.map(async (object) => {
-        try {
-          const response = await axiosInstance.get(endpoints.HOURS, {
-            params: { day: selectedDate, obj: object.id },
-          });
-          return { id: object.id, hours: response.data || [] };
-        } catch (error) {
-          console.error(
-            `Error fetching object hours for object ${object.id}:`,
-            error
-          );
-          // Return empty array if there's an error, so other objects can still load.
-          return { id: object.id, hours: [] };
-        }
-      });
-
-      const objectHoursArray = await Promise.all(objectHoursPromises);
-
-      const newObjectHoursMap = {};
-      objectHoursArray.forEach(({ id, hours }) => {
-        newObjectHoursMap[id] = hours;
-      });
-
-      setObjectHoursMap(newObjectHoursMap);
-    } catch (error) {
-      console.error("Error fetching all object hours:", error);
-      setObjectHoursMap({});
-    }
-  };
-
-  // Fetch statuses
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Fetch logic
+  // ─────────────────────────────────────────────────────────────────────────────
   const getPlanStatus = async (date, params) => {
     try {
       const response = await axiosInstance.get(endpoints.GET_STATUS, {
@@ -212,7 +143,7 @@ const CombinedTable = ({
       });
       return response.data || {};
     } catch (error) {
-      console.error(`Error fetching status:`, error);
+      console.error("Error fetching status:", error);
       return {};
     }
   };
@@ -220,7 +151,6 @@ const CombinedTable = ({
   const fetchSubjectStatuses = async () => {
     setLoadingSubjectStatuses(true);
     setSubjectStatusError(null);
-
     const newSubjectStatusMap = {};
 
     try {
@@ -232,13 +162,10 @@ const CombinedTable = ({
           })
         )
       );
-
       const subjectStatuses = await Promise.all(subjectStatusPromises);
-
       subjectStatuses.forEach(({ id, statuses }) => {
         newSubjectStatusMap[id] = statuses;
       });
-
       setSubjectStatusMap(newSubjectStatusMap);
     } catch (error) {
       console.error("Error fetching subject statuses:", error);
@@ -250,7 +177,6 @@ const CombinedTable = ({
   const fetchObjectStatuses = async () => {
     setLoadingObjectStatuses(true);
     setObjectStatusError(null);
-
     const newObjectStatusMap = {};
 
     try {
@@ -263,13 +189,10 @@ const CombinedTable = ({
           statuses,
         }))
       );
-
       const objectStatuses = await Promise.all(objectStatusPromises);
-
       objectStatuses.forEach(({ id, statuses }) => {
         newObjectStatusMap[id] = statuses;
       });
-
       setObjectStatusMap(newObjectStatusMap);
     } catch (error) {
       console.error("Error fetching object statuses:", error);
@@ -278,34 +201,98 @@ const CombinedTable = ({
     }
   };
 
-  const calculateP2Gen = (index, P1_Gen) => {
-    const coefficient_Gen = localHourPlan[index]?.coefficient_Gen || 0;
-    const volume_Gen = localHourPlan[index]?.volume_Gen || 0;
-    const P2_Gen = P1_Gen * coefficient_Gen + volume_Gen;
-    return P2_Gen.toFixed(2);
+  const fetchSubjectHours = async () => {
+    try {
+      const response = await axiosInstance.get(endpoints.HOURS, {
+        params: { day: selectedDate, sub: selectedData.selectedSubject },
+      });
+      const subjectHours = response.data || [];
+      setSubjectHoursList(subjectHours);
+
+      // Build localHourPlan from the fetched hours
+      const initialHourPlan = initializeDefaultHourPlan().map((row, idx) => {
+        const hourData = subjectHours.find((h) => h.hour === idx + 1);
+        return {
+          ...row,
+          P1: hourData?.P1 || 0,
+          P1_Gen: hourData?.P1_Gen || 0,
+          P2: hourData?.P2 || 0,
+          P2_Gen: hourData?.P2_Gen || 0,
+          P3: hourData?.P3 || 0,
+          P3_Gen: hourData?.P3_Gen || 0,
+          F1: hourData?.F1 || 0,
+          F1_Gen: hourData?.F1_Gen || 0,
+          F2: hourData?.F2 || 0,
+          F2_Gen: hourData?.F2_Gen || 0,
+          coefficient: hourData?.coefficient ?? 1,
+          volume: hourData?.volume || 0,
+          coefficient_Gen: hourData?.coefficient_Gen ?? 1,
+          volume_Gen: hourData?.volume_Gen || 0,
+          P2_message: hourData?.P2_message || "",
+          P2_Gen_message: hourData?.P2_Gen_message || "",
+          message: hourData?.message || "",
+        };
+      });
+      setLocalHourPlan(initialHourPlan);
+    } catch (error) {
+      console.error("Error fetching subject hours:", error);
+      setSubjectHoursList([]);
+      setLocalHourPlan(initializeDefaultHourPlan());
+    }
   };
 
+  const fetchAllObjectHours = async () => {
+    try {
+      const objectsForSubject = objectsList.filter(
+        (obj) => obj.subject === selectedData.selectedSubject
+      );
+      const objectHoursPromises = objectsForSubject.map(async (object) => {
+        try {
+          const response = await axiosInstance.get(endpoints.HOURS, {
+            params: { day: selectedDate, obj: object.id },
+          });
+          return { id: object.id, hours: response.data || [] };
+        } catch (error) {
+          console.error(
+            `Error fetching object hours for object ${object.id}:`,
+            error
+          );
+          return { id: object.id, hours: [] };
+        }
+      });
+
+      const objectHoursArray = await Promise.all(objectHoursPromises);
+      const newObjectHoursMap = {};
+      objectHoursArray.forEach(({ id, hours }) => {
+        newObjectHoursMap[id] = hours;
+      });
+      setObjectHoursMap(newObjectHoursMap);
+    } catch (error) {
+      console.error("Error fetching all object hours:", error);
+      setObjectHoursMap({});
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Utility / Display
+  // ─────────────────────────────────────────────────────────────────────────────
   const generateStatusDisplayComponents = (statuses) => {
     if (!statuses || Object.keys(statuses).length === 0) {
       return "Нет данных";
     }
-
     const planKeys = ["P1_Status", "P2_Status", "P3_Status", "F1_Status"];
-
     const planAbbreviations = {
       P1_Status: "П1",
       P2_Status: "П2",
       P3_Status: "П3",
       F1_Status: "Ф",
     };
-
     const statusColors = {
       COMPLETED: "text-green-500",
       IN_PROGRESS: "text-orange-500",
       OUTDATED: "text-red-500",
-      NOT_STARTED: "text-black", // default color
+      NOT_STARTED: "text-black",
     };
-
     return (
       <div>
         {planKeys.map((key) => {
@@ -323,50 +310,245 @@ const CombinedTable = ({
   };
 
   const selectedSubject = subjectsList.find(
-    (subject) => subject.id === selectedData.selectedSubject
+    (sub) => sub.id === selectedData.selectedSubject
   );
   const selectedObject = objectsList.find(
-    (object) => object.id === selectedData.selectedObject
+    (obj) => obj.id === selectedData.selectedObject
   );
 
-  const subjectHourPlan = localHourPlan || [];
-
-  // Functions for P2 calculations and handling changes
+  // Calculate P2 from P1 * coefficient + volume
   const calculateP2 = (index, P1) => {
-    const coefficient = localHourPlan[index]?.coefficient || 0;
-    const volume = localHourPlan[index]?.volume || 0;
-    const P2 = P1 * coefficient + volume;
-    return P2.toFixed(2);
+    const c = localHourPlan[index]?.coefficient || 0;
+    const v = localHourPlan[index]?.volume || 0;
+    return (P1 * c + v).toFixed(2);
   };
 
-  const handleCoefficientChange = (index, value) => {
-    const updatedHourPlan = [...localHourPlan];
-    // If value is empty, keep it as "", otherwise convert to number
-    updatedHourPlan[index].coefficient = value === "" ? "" : parseFloat(value);
-    setLocalHourPlan(updatedHourPlan);
+  // Calculate P2_Gen from P1_Gen * coefficient_Gen + volume_Gen
+  const calculateP2Gen = (index, P1_Gen) => {
+    const cGen = localHourPlan[index]?.coefficient_Gen || 0;
+    const vGen = localHourPlan[index]?.volume_Gen || 0;
+    return (P1_Gen * cGen + vGen).toFixed(2);
   };
-  
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Handlers: local hour plan changes
+  // ─────────────────────────────────────────────────────────────────────────────
+  const handleCoefficientChange = (index, value) => {
+    const updated = [...localHourPlan];
+    updated[index].coefficient = value === "" ? "" : parseFloat(value);
+    setLocalHourPlan(updated);
+  };
+
+  const handleCoefficientGenChange = (index, value) => {
+    const updated = [...localHourPlan];
+    updated[index].coefficient_Gen = value === "" ? "" : parseFloat(value);
+    setLocalHourPlan(updated);
+  };
+
+  const handleVolumeChange = (index, value) => {
+    const updated = [...localHourPlan];
+    updated[index].volume = value === "" ? "" : parseInt(value, 10);
+    setLocalHourPlan(updated);
+  };
+
+  const handleVolumeGenChange = (index, value) => {
+    const updated = [...localHourPlan];
+    updated[index].volume_Gen = value === "" ? "" : parseInt(value, 10);
+    setLocalHourPlan(updated);
+  };
+
+  const handleMessagesChange = (index, value) => {
+    const updated = [...localHourPlan];
+    updated[index].message = value;
+    setLocalHourPlan(updated);
+  };
+
+  const handleDisapprove = () => {
+    setShowMessageCol(true);
+  };
+  const handleCancel = () => {
+    setShowMessageCol(false);
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  File Import/Export for subject => Coefficient / Volume
+  // ─────────────────────────────────────────────────────────────────────────────
+  const handleImportFromFile = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (
+      file.type !==
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    ) {
+      setWarningMessage("Пожалуйста, выберите файл .xlsx");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function (event) {
+      try {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        // Check headers
+        const headers = jsonData[0];
+        if (
+          !headers ||
+          headers.length < 3 ||
+          headers[0] !== "Hour" ||
+          headers[1] !== "Coefficient" ||
+          headers[2] !== "Volume"
+        ) {
+          setWarningMessage(
+            "Неверный формат. Ожидаются заголовки: Hour, Coefficient, Volume."
+          );
+          return;
+        }
+        parseExcelData(jsonData);
+      } catch (error) {
+        console.error("Error reading Excel file:", error);
+        setWarningMessage("Ошибка при чтении файла.");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const parseExcelData = (rows) => {
+    const updated = initializeDefaultHourPlan();
+    rows.forEach((row, idx) => {
+      if (idx === 0) return; // skip header
+      const [hourStr, coefStr, volStr] = row;
+      const hour = parseInt(hourStr, 10);
+      const coefficient = parseFloat(coefStr);
+      const volume = parseInt(volStr, 10);
+      const i = hour - 1;
+      if (!isNaN(hour) && !isNaN(coefficient) && !isNaN(volume) && i >= 0 && i < 24) {
+        updated[i].coefficient = coefficient;
+        updated[i].volume = volume;
+      }
+    });
+    setLocalHourPlan(updated);
+    setWarningMessage("Данные успешно импортированы.");
+  };
+
+  const handleExport = () => {
+    // Export subject's Coefficient & Volume
+    const exportData = [
+      ["Hour", "Coefficient", "Volume"],
+      ...localHourPlan.map((row) => [row.hour, row.coefficient, row.volume]),
+    ];
+    const worksheet = XLSX.utils.aoa_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Coefficients_Volumes");
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+    const blobData = new Blob([excelBuffer], { type: "application/octet-stream" });
+    const url = URL.createObjectURL(blobData);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `coefficients_volumes_${
+      selectedSubject?.subject_name || "subject"
+    }_${selectedDate}.xlsx`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  File Import/Export for GP1 => Coefficient_Gen / Volume_Gen
+  // ─────────────────────────────────────────────────────────────────────────────
+  const handleImportFromFileGP1 = () => {
+    if (fileInputRefGP1.current) {
+      fileInputRefGP1.current.click();
+    }
+  };
+  const handleFileChangeGP1 = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (
+      file.type !==
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    ) {
+      setWarningMessage("Пожалуйста, выберите файл .xlsx для ГП1");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function (event) {
+      try {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        // Validate headers
+        const headers = jsonData[0];
+        if (
+          !headers ||
+          headers.length < 3 ||
+          headers[0] !== "Hour" ||
+          headers[1] !== "Coefficient_Gen" ||
+          headers[2] !== "Volume_Gen"
+        ) {
+          setWarningMessage(
+            "Неверный формат. Ожидаются заголовки: Hour, Coefficient_Gen, Volume_Gen."
+          );
+          return;
+        }
+        parseGP1ExcelData(jsonData);
+      } catch (error) {
+        console.error("Error reading Excel file (GP1):", error);
+        setWarningMessage("Ошибка при чтении файла ГП1.");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const parseGP1ExcelData = (rows) => {
+    const updated = [...localHourPlan];
+    rows.forEach((row, idx) => {
+      if (idx === 0) return; // skip header
+      const [hourStr, coefGenStr, volGenStr] = row;
+      const hourIndex = parseInt(hourStr, 10) - 1;
+      if (hourIndex >= 0 && hourIndex < 24) {
+        updated[hourIndex].coefficient_Gen = parseFloat(coefGenStr) || 0;
+        updated[hourIndex].volume_Gen = parseInt(volGenStr, 10) || 0;
+      }
+    });
+    setLocalHourPlan(updated);
+    setWarningMessage("Данные ГП1 успешно импортированы.");
+  };
 
   const handleExportGP1 = () => {
-    const exportDataGP1 = [
+    const exportData = [
       ["Hour", "Coefficient_Gen", "Volume_Gen"],
-      ...localHourPlan.map((hourData) => [
-        hourData.hour,
-        hourData.coefficient_Gen,
-        hourData.volume_Gen,
+      ...localHourPlan.map((row) => [
+        row.hour,
+        row.coefficient_Gen,
+        row.volume_Gen,
       ]),
     ];
-    const worksheetGP1 = XLSX.utils.aoa_to_sheet(exportDataGP1);
+    const worksheetGP1 = XLSX.utils.aoa_to_sheet(exportData);
     const workbookGP1 = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbookGP1, worksheetGP1, "GP1_Data");
     const excelBufferGP1 = XLSX.write(workbookGP1, {
       bookType: "xlsx",
       type: "array",
     });
-    const dataGP1 = new Blob([excelBufferGP1], {
+    const blobDataGP1 = new Blob([excelBufferGP1], {
       type: "application/octet-stream",
     });
-    const urlGP1 = URL.createObjectURL(dataGP1);
+    const urlGP1 = URL.createObjectURL(blobDataGP1);
     const linkGP1 = document.createElement("a");
     linkGP1.href = urlGP1;
     linkGP1.download = `gp1_data_${selectedDate}.xlsx`;
@@ -374,97 +556,124 @@ const CombinedTable = ({
     URL.revokeObjectURL(urlGP1);
   };
 
-  const handleImportFromFileGP1 = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleFileChangeGP1 = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = function (event) {
-        try {
-          const data = new Uint8Array(event.target.result);
-          const workbook = XLSX.read(data, { type: "array" });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-          // Validate headers
-          const headers = jsonData[0];
-          if (
-            !headers ||
-            headers.length < 3 ||
-            headers[1] !== "Coefficient_Gen" ||
-            headers[2] !== "Volume_Gen"
-          ) {
-            setWarningMessage(
-              "Неверный формат файла. Ожидаются заголовки: Hour, Coefficient_Gen, Volume_Gen."
-            );
-            return;
-          }
-
-          parseGP1ExcelData(jsonData);
-        } catch (error) {
-          console.error("Error reading Excel file:", error);
-          setWarningMessage("Ошибка при чтении файла.");
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    }
-  };
-
-  const parseGP1ExcelData = (rows) => {
-    const updatedHourPlan = [...localHourPlan];
-    rows.forEach((row, index) => {
-      if (index === 0) return; // Skip header
-      const [hour, coefficient_Gen, volume_Gen] = row;
-      const idx = parseInt(hour, 10) - 1;
-      if (idx >= 0 && idx < 24) {
-        updatedHourPlan[idx].coefficient_Gen = parseFloat(coefficient_Gen) || 0;
-        updatedHourPlan[idx].volume_Gen = parseInt(volume_Gen, 10) || 0;
-      }
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Plan Actions (Save, Approve, Create, Full Export)
+  // ─────────────────────────────────────────────────────────────────────────────
+  const handleApprove = async () => {
+    console.log({
+      call: "calculate",
+      subject: selectedData.selectedSubject,
+      date: selectedDate,
+      plan: {
+        volume: localHourPlan.map((h) => h.volume),
+        coefficient: localHourPlan.map((h) => h.coefficient),
+        coefficient_Gen: localHourPlan.map((h) => h.coefficient_Gen),
+        volume_Gen: localHourPlan.map((h) => h.volume_Gen),
+      },
     });
-    setLocalHourPlan(updatedHourPlan);
-    setWarningMessage("Данные ГП1 успешно импортированы.");
+
+    try {
+      const response = await axiosInstance.post(endpoints.CALCULATE_P2, {
+        call: "calculate",
+        subject: selectedData.selectedSubject,
+        date: selectedDate,
+        plan: {
+          volume: localHourPlan.map((h) => h.volume),
+          coefficient: localHourPlan.map((h) => h.coefficient),
+          coefficient_Gen: localHourPlan.map((h) => h.coefficient_Gen),
+          volume_Gen: localHourPlan.map((h) => h.volume_Gen),
+        },
+      });
+
+      if (response.status === 200 || response.status === 201) {
+        setWarningMessage("План успешно утвержден.");
+        fetchSubjectHours();
+        fetchAllObjectHours();
+        fetchObjectStatuses();
+        fetchSubjectStatuses();
+      } else {
+        setWarningMessage("Ошибка при утверждении плана.");
+      }
+    } catch (error) {
+      console.error("Error approving plan:", error);
+      setWarningMessage("Ошибка при утверждении плана.");
+    }
   };
 
-  const handleCoefficientGenChange = (index, value) => {
-    const updatedHourPlan = [...localHourPlan];
-    updatedHourPlan[index].coefficient_Gen = value === "" ? "" : parseFloat(value);
-    setLocalHourPlan(updatedHourPlan);
+  const handleCreate = async () => {
+    console.log({
+      subject: selectedData.selectedSubject,
+      date: selectedDate,
+      coefficient: localHourPlan.map((h) => h.coefficient),
+      coefficient_Gen: localHourPlan.map((h) => h.coefficient_Gen),
+    });
+
+    try {
+      const response = await axiosInstance.post(endpoints.DAYS, {
+        subject: selectedData.selectedSubject,
+        date: selectedDate,
+        coefficient: localHourPlan.map((h) => h.coefficient),
+        coefficient_Gen: localHourPlan.map((h) => h.coefficient_Gen),
+      });
+
+      if (response.status === 200 || response.status === 201) {
+        setWarningMessage("План успешно создан/утвержден.");
+        fetchSubjectHours();
+        fetchAllObjectHours();
+        fetchObjectStatuses();
+        fetchSubjectStatuses();
+      } else {
+        setWarningMessage("Ошибка при создании плана.");
+      }
+    } catch (error) {
+      console.error("Error creating plan:", error);
+      setWarningMessage("Ошибка при создании плана.");
+    }
   };
 
-  const handleVolumeChange = (index, value) => {
-    const updatedHourPlan = [...localHourPlan];
-    updatedHourPlan[index].volume = value === "" ? "" : parseInt(value, 10);
-    setLocalHourPlan(updatedHourPlan);
-  };
+  const handleSave = async () => {
+    console.log({
+      call: "save",
+      subject: selectedData.selectedSubject,
+      date: selectedDate,
+      plan: {
+        volume: localHourPlan.map((h) => h.volume),
+        coefficient: localHourPlan.map((h) => h.coefficient),
+        coefficient_Gen: localHourPlan.map((h) => h.coefficient_Gen),
+        volume_Gen: localHourPlan.map((h) => h.volume_Gen),
+      },
+    });
 
-  const handleVolumeGenChange = (index, value) => {
-    const updatedHourPlan = [...localHourPlan];
-    updatedHourPlan[index].volume_Gen = value === "" ? "" : parseInt(value, 10);
-    setLocalHourPlan(updatedHourPlan);
-  };
+    try {
+      const response = await axiosInstance.post(endpoints.CALCULATE_P2, {
+        call: "save",
+        subject: selectedData.selectedSubject,
+        date: selectedDate,
+        plan: {
+          volume: localHourPlan.map((h) => h.volume),
+          coefficient: localHourPlan.map((h) => h.coefficient),
+          coefficient_Gen: localHourPlan.map((h) => h.coefficient_Gen),
+          volume_Gen: localHourPlan.map((h) => h.volume_Gen),
+        },
+      });
 
-  const handleMessagesChange = (index, value) => {
-    const updatedHourPlan = [...localHourPlan];
-    updatedHourPlan[index].message = value;
-    setLocalHourPlan(updatedHourPlan);
-  };
-
-  const handleDisapprove = () => {
-    setShowMessageCol(true);
-  };
-
-  const handleCancel = () => {
-    setShowMessageCol(false);
+      if (response.status === 200 || response.status === 201) {
+        setWarningMessage("Данные успешно сохранены.");
+        fetchSubjectHours();
+        fetchAllObjectHours();
+        fetchObjectStatuses();
+        fetchSubjectStatuses();
+      } else {
+        setWarningMessage("Ошибка при сохранении данных.");
+      }
+    } catch (error) {
+      console.error("Error saving data:", error);
+      setWarningMessage("Ошибка при сохранении данных.");
+    }
   };
 
   const handleFullExport = () => {
-    // Subject Table Headers
+    // Build subject table
     const subjectTableHeaders = [
       "Time",
       "P1",
@@ -482,50 +691,46 @@ const CombinedTable = ({
       "Volume",
       "Volume_Gen",
       "P2_Message",
-      "P2_Gen_message",
+      ...(selectedSubject?.subject_type !== "CONSUMER" ? ["P2_Gen_message"] : []),
       ...(showMessageCol ? ["Message"] : []),
     ];
 
-    // Prepare subject table data
     const subjectTableData = [
       subjectTableHeaders,
-      ...timeIntervals.map((time, index) => {
-        const hourData = localHourPlan[index] || {};
+      ...timeIntervals.map((time, idx) => {
+        const row = localHourPlan[idx] || {};
         return [
           time,
-          hourData.P1 || 0,
+          row.P1 || 0,
           ...(selectedSubject?.subject_type !== "CONSUMER"
-            ? [hourData.P1_Gen || 0]
+            ? [row.P1_Gen || 0]
             : []),
-          hourData.P2 || 0,
+          row.P2 || calculateP2(idx, row.P1 || 0),
           ...(selectedSubject?.subject_type !== "CONSUMER"
-            ? [hourData.P2_Gen || 0]
+            ? [row.P2_Gen || calculateP2Gen(idx, row.P1_Gen || 0)]
             : []),
-          hourData.P3 || 0,
+          row.P3 || 0,
+          ...(selectedSubject?.subject_type !== "CONSUMER" ? [row.P3_Gen || 0] : []),
+          row.F1 || 0,
+          ...(selectedSubject?.subject_type !== "CONSUMER" ? [row.F1_Gen || 0] : []),
+          row.F2 || 0,
+          ...(selectedSubject?.subject_type !== "CONSUMER" ? [row.F2_Gen || 0] : []),
+          row.coefficient ?? "",
+          row.coefficient_Gen ?? "",
+          row.volume ?? "",
+          row.volume_Gen ?? "",
+          row.P2_message || "",
           ...(selectedSubject?.subject_type !== "CONSUMER"
-            ? [hourData.P3_Gen || 0]
+            ? [row.P2_Gen_message || ""]
             : []),
-          hourData.F1 || 0,
-          ...(selectedSubject?.subject_type !== "CONSUMER"
-            ? [hourData.F1_Gen || 0]
-            : []),
-          hourData.F2 || 0,
-          ...(selectedSubject?.subject_type !== "CONSUMER"
-            ? [hourData.F2_Gen || 0]
-            : []),
-          hourData.coefficient ?? "",
-          hourData.coefficient_Gen ?? "",
-          hourData.volume ?? "",
-          hourData.volume_Gen ?? "",
-          hourData.P2_message || "",
-          ...(showMessageCol ? [hourData.message || ""] : []),
+          ...(showMessageCol ? [row.message || ""] : []),
         ];
       }),
     ];
 
-    // Prepare objects data
+    // Build object tables
     const objectsData = objectsList
-      .filter((object) => object.subject === selectedData.selectedSubject)
+      .filter((obj) => obj.subject === selectedData.selectedSubject)
       .map((object) => {
         const objectHours = objectHoursMap[object.id] || [];
         const objectTableHeaders = [
@@ -541,12 +746,13 @@ const CombinedTable = ({
           "F2",
           ...(object?.object_type !== "CONSUMER" ? ["F2_Gen"] : []),
           "P2_Message",
+          ...(object?.object_type !== "CONSUMER" ? ["P2_Gen_message"] : []),
         ];
+
         const objectTableData = [
           objectTableHeaders,
-          ...timeIntervals.map((time, index) => {
-            const hourData =
-              objectHours.find((hour) => hour.hour === index + 1) || {};
+          ...timeIntervals.map((time, i) => {
+            const hourData = objectHours.find((h) => h.hour === i + 1) || {};
             return [
               time,
               hourData.P1 || 0,
@@ -570,6 +776,9 @@ const CombinedTable = ({
                 ? [hourData.F2_Gen || 0]
                 : []),
               hourData.P2_message || "",
+              ...(object?.object_type !== "CONSUMER"
+                ? [hourData.P2_Gen_message || ""]
+                : []),
             ];
           }),
         ];
@@ -579,22 +788,22 @@ const CombinedTable = ({
         };
       });
 
-    // Combine tables into one sheet
+    // Combine into single sheet
     const combinedData = [
-      ["Subject:", selectedSubject.subject_name],
+      ["Subject:", selectedSubject?.subject_name || "Unknown"],
       [],
       ["Subject Table"],
       ...subjectTableData,
       [],
     ];
-
-    objectsData.forEach((objectData) => {
-      combinedData.push(["Object:", objectData.objectName]);
+    objectsData.forEach((objData) => {
+      combinedData.push(["Object:", objData.objectName]);
       combinedData.push([]);
-      combinedData.push(...objectData.data);
+      combinedData.push(...objData.data);
       combinedData.push([]);
     });
 
+    // Build workbook & export
     const worksheet = XLSX.utils.aoa_to_sheet(combinedData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Full Export");
@@ -602,10 +811,8 @@ const CombinedTable = ({
       bookType: "xlsx",
       type: "array",
     });
-
-    // Save file
-    const data = new Blob([excelBuffer], { type: "application/octet-stream" });
-    const url = URL.createObjectURL(data);
+    const blobData = new Blob([excelBuffer], { type: "application/octet-stream" });
+    const url = URL.createObjectURL(blobData);
     const link = document.createElement("a");
     link.href = url;
     link.download = `full_export_${selectedDate}.xlsx`;
@@ -613,256 +820,21 @@ const CombinedTable = ({
     URL.revokeObjectURL(url);
   };
 
-  const handleApprove = async () => {
-    // Console log as per requirement
-    console.log({
-      call: "calculate",
-      subject: selectedData.selectedSubject,
-      date: selectedDate,
-      plan: {
-        volume: localHourPlan.map((hour) => hour.volume),
-        coefficient: localHourPlan.map((hour) => hour.coefficient),
-        coefficient_Gen: localHourPlan.map((hour) => hour.coefficient_Gen),
-        volume_Gen: localHourPlan.map((hour) => hour.volume_Gen),
-      },
-    });
-
-    try {
-      const response = await axiosInstance.post(endpoints.CALCULATE_P2, {
-        call: "calculate",
-        subject: selectedData.selectedSubject,
-        date: selectedDate,
-        plan: {
-          volume: localHourPlan.map((hour) => hour.volume),
-          coefficient: localHourPlan.map((hour) => hour.coefficient),
-          coefficient_Gen: localHourPlan.map((hour) => hour.coefficient_Gen),
-          volume_Gen: localHourPlan.map((hour) => hour.volume_Gen),
-        },
-      });
-
-      if (response.status === 200 || response.status === 201) {
-        setWarningMessage("План успешно утвержден.");
-        fetchSubjectHours(); // added
-        fetchAllObjectHours();
-        fetchObjectStatuses();
-        fetchSubjectStatuses();
-      } else {
-        setWarningMessage("Ошибка при утверждении плана.");
-      }
-    } catch (error) {
-      console.error("Error approving plan:", error);
-      setWarningMessage("Ошибка при утверждении плана.");
-    }
-  };
-
-  const handleCreate = async () => {
-    // Console log as per requirement
-    console.log({
-      // call: "calculate",
-      subject: selectedData.selectedSubject,
-      date: selectedDate,
-      coefficient: localHourPlan.map((hour) => hour.coefficient),
-      coefficient_Gen: localHourPlan.map((hour) => hour.coefficient_Gen),
-    });
-
-    try {
-      const response = await axiosInstance.post(endpoints.DAYS, {
-        // call: "calculate",
-        subject: selectedData.selectedSubject,
-        date: selectedDate,
-        coefficient: localHourPlan.map((hour) => hour.coefficient),
-        coefficient_Gen: localHourPlan.map((hour) => hour.coefficient_Gen),
-      });
-
-      if (response.status === 200 || response.status === 201) {
-        setWarningMessage("План успешно утвержден.");
-        fetchSubjectHours(); // added
-        fetchAllObjectHours();
-        fetchObjectStatuses();
-        fetchSubjectStatuses();
-      } else {
-        setWarningMessage("Ошибка при утверждении плана.");
-      }
-    } catch (error) {
-      console.error("Error approving plan:", error);
-      setWarningMessage("Ошибка при утверждении плана.");
-    }
-  };
-
-  const handleSave = async () => {
-    // Console log as per requirement
-    console.log({
-      call: "save",
-      subject: selectedData.selectedSubject,
-      date: selectedDate,
-      plan: {
-        volume: localHourPlan.map((hour) => hour.volume),
-        coefficient: localHourPlan.map((hour) => hour.coefficient),
-        coefficient_Gen: localHourPlan.map((hour) => hour.coefficient_Gen),
-        volume_Gen: localHourPlan.map((hour) => hour.volume_Gen),
-      },
-    });
-
-    try {
-      const response = await axiosInstance.post(endpoints.CALCULATE_P2, {
-        call: "save",
-        subject: selectedData.selectedSubject,
-        date: selectedDate,
-        plan: {
-          volume: localHourPlan.map((hour) => hour.volume),
-          coefficient: localHourPlan.map((hour) => hour.coefficient),
-          coefficient_Gen: localHourPlan.map((hour) => hour.coefficient_Gen),
-          volume_Gen: localHourPlan.map((hour) => hour.volume_Gen),
-        },
-      });
-
-      if (response.status === 200 || response.status === 201) {
-        setWarningMessage("Данные успешно сохранены.");
-        fetchSubjectHours(); // added
-        fetchAllObjectHours();
-        fetchObjectStatuses();
-        fetchSubjectStatuses();
-      } else {
-        if (error.response?.data?.error) {
-          alert(error.response?.data?.error);
-        } else {
-          alert("Произошла ошибка при обработке запроса.");
-        }
-        setWarningMessage("Ошибка при сохранении данных.");
-      }
-    } catch (error) {
-      console.error("Error saving data:", error);
-      setWarningMessage("Ошибка при сохранении данных.");
-    }
-  };
-
-  const handleImportFromFile = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (
-        file.type !==
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      ) {
-        setWarningMessage(
-          "Неподдерживаемый формат файла. Пожалуйста, выберите файл .xlsx."
-        );
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = function (event) {
-        try {
-          const data = new Uint8Array(event.target.result);
-          const workbook = XLSX.read(data, { type: "array" });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-          // Check if the headers are correct
-          const headers = jsonData[0];
-          if (
-            !headers ||
-            headers.length < 3 ||
-            headers[0] !== "Hour" ||
-            headers[1] !== "Coefficient" ||
-            headers[2] !== "Volume"
-          ) {
-            setWarningMessage(
-              "Неверный формат файла. Ожидаются заголовки: Hour, Coefficient, Volume."
-            );
-            return;
-          }
-
-          parseExcelData(jsonData);
-        } catch (error) {
-          console.error("Error reading Excel file:", error);
-          setWarningMessage("Ошибка при чтении файла.");
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    }
-  };
-
-  const parseExcelData = (rows) => {
-    const updatedHourPlan = initializeDefaultHourPlan();
-
-    rows.forEach((row, index) => {
-      if (index === 0) return; // Skip header row
-      if (row.length < 3) {
-        console.warn(`Row ${index + 1} is incomplete and will be skipped.`);
-        return;
-      }
-      const [hourStr, coefficientStr, volumeStr] = row;
-      const hour = parseInt(hourStr, 10);
-      const coefficient = parseFloat(coefficientStr);
-      const volume = parseInt(volumeStr, 10);
-      const idx = hour - 1; // Assuming hours are from 1 to 24
-      if (isNaN(hour) || isNaN(coefficient) || isNaN(volume)) {
-        console.warn(
-          `Row ${index + 1} contains invalid data and will be skipped.`
-        );
-        return;
-      }
-      if (idx >= 0 && idx < 24) {
-        updatedHourPlan[idx].coefficient = coefficient;
-        updatedHourPlan[idx].volume = volume;
-      } else {
-        console.warn(
-          `Hour ${hour} in row ${
-            index + 1
-          } is out of range and will be skipped.`
-        );
-      }
-    });
-
-    setLocalHourPlan(updatedHourPlan);
-    setWarningMessage("Данные успешно импортированы.");
-  };
-
-  const handleExport = () => {
-    const exportData = [
-      ["Hour", "Coefficient", "Volume"],
-      ...localHourPlan.map((hourData) => [
-        hourData.hour,
-        hourData.coefficient,
-        hourData.volume,
-      ]),
-    ];
-    const worksheet = XLSX.utils.aoa_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Coefficients_Volumes");
-    const excelBuffer = XLSX.write(workbook, {
-      bookType: "xlsx",
-      type: "array",
-    });
-    const data = new Blob([excelBuffer], { type: "application/octet-stream" });
-    const url = URL.createObjectURL(data);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `coefficients_volumes_${
-      selectedSubject?.subject_name || "subject"
-    }_${selectedDate}.xlsx`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Render
+  // ─────────────────────────────────────────────────────────────────────────────
   return (
     <div>
-      {/* Display Warning Message */}
+      {/* Info / Warning message */}
       {warningMessage && (
         <div className="mb-4 p-2 bg-yellow-200 text-yellow-800 rounded">
           {warningMessage}
         </div>
       )}
 
-      {/* Subject and Object Status Tables */}
+      {/* Subject & Object Status Tables */}
       <div className="mb-4">
-        {/* Subject Status Table */}
+        {/* Subject Status */}
         {subjectsList.length > 0 && (
           <table className="w-full text-sm text-center text-gray-500 mb-3">
             <thead className="text-xs text-gray-700 uppercase bg-gray-300">
@@ -880,7 +852,7 @@ const CombinedTable = ({
                       setSelectedData({
                         ...selectedData,
                         selectedSubject: subject.id,
-                        selectedObject: null, // Reset selectedObject when subject changes
+                        selectedObject: null,
                       })
                     }
                   >
@@ -900,9 +872,7 @@ const CombinedTable = ({
                       ? "Загрузка..."
                       : subjectStatusError
                       ? subjectStatusError
-                      : generateStatusDisplayComponents(
-                          subjectStatusMap[subject.id]
-                        )}
+                      : generateStatusDisplayComponents(subjectStatusMap[subject.id])}
                   </td>
                 ))}
               </tr>
@@ -910,16 +880,14 @@ const CombinedTable = ({
           </table>
         )}
 
-        {/* Objects Status Table */}
+        {/* Object Status */}
         {selectedData.selectedSubject && (
           <table className="w-full text-sm text-center text-gray-500 mb-3">
             <thead className="text-xs text-gray-700 uppercase bg-gray-300">
               <tr>
                 <th>Объект</th>
                 {objectsList
-                  .filter(
-                    (object) => object.subject === selectedData.selectedSubject
-                  )
+                  .filter((obj) => obj.subject === selectedData.selectedSubject)
                   .map((object) => (
                     <th
                       key={object.id}
@@ -946,18 +914,14 @@ const CombinedTable = ({
                   Статус
                 </td>
                 {objectsList
-                  .filter(
-                    (object) => object.subject === selectedData.selectedSubject
-                  )
+                  .filter((obj) => obj.subject === selectedData.selectedSubject)
                   .map((object) => (
                     <td key={object.id} className="border">
                       {loadingObjectStatuses
                         ? "Загрузка..."
                         : objectStatusError
                         ? objectStatusError
-                        : generateStatusDisplayComponents(
-                            objectStatusMap[object.id]
-                          )}
+                        : generateStatusDisplayComponents(objectStatusMap[object.id])}
                     </td>
                   ))}
               </tr>
@@ -966,21 +930,12 @@ const CombinedTable = ({
         )}
       </div>
 
-      {/* Save and Approve Buttons */}
-      <div className="flex justify-end space-x-2 mt-4">
-        <button
-          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
-          onClick={handleFullExport}
-        >
-          Экспорт полного отчета
-        </button>
-      </div>
-
-      {/* Tables Side by Side */}
       <div className="flex flex-col md:flex-row">
-        {/* Subject Data Table */}
+        {/* ────────────────────────────────────────────────────────────────────
+            SUBJECT TABLE (Left)
+          ──────────────────────────────────────────────────────────────────── */}
         <div className="w-full md:w-2/3 mr-0 md:mr-2 mb-4 md:mb-0">
-          {/* Hidden File Input */}
+          {/* Hidden file inputs for normal import & GP1 import */}
           <input
             type="file"
             accept=".xlsx"
@@ -988,148 +943,156 @@ const CombinedTable = ({
             style={{ display: "none" }}
             onChange={handleFileChange}
           />
+          <input
+            type="file"
+            accept=".xlsx"
+            ref={fileInputRefGP1}
+            style={{ display: "none" }}
+            onChange={handleFileChangeGP1}
+          />
 
-          {/* Subject Table */}
+          {/* Only show table if a subject is selected */}
           {selectedData.selectedSubject && (
             <table className="w-full text-sm text-center text-gray-500 mb-3">
-              {/* Table Head */}
               <thead className="text-xs text-gray-700 uppercase bg-gray-300">
                 <tr>
                   <th className="w-[50px]">Время</th>
-                  <th className="w-[100px]">П1</th>
+                  <th className="w-[80px]">П1</th>
                   {selectedSubject?.subject_type !== "CONSUMER" && (
-                    <th className="w-[100px]">ГП1</th>
+                    <th className="w-[80px]">ГП1</th>
                   )}
                   <th className="w-[100px]">Коэффициент</th>
                   {selectedSubject?.subject_type !== "CONSUMER" && (
-                    <th className="w-[100px]">Коэффициен Генерации</th>
+                    <th className="w-[120px]">Коэф. Генерации</th>
                   )}
-                  <th className="w-[100px]">Объем</th>
+                  <th className="w-[80px]">Объем</th>
                   {selectedSubject?.subject_type !== "CONSUMER" && (
-                    <th className="w-[100px]">Объем Генерации</th>
+                    <th className="w-[110px]">Объем Ген.</th>
                   )}
-                  <th className="w-[100px]">П2</th>
+                  <th className="w-[80px]">П2</th>
                   {selectedSubject?.subject_type !== "CONSUMER" && (
-                    <th className="w-[100px]">ГП2</th>
+                    <th className="w-[80px]">ГП2</th>
                   )}
-                  <th className="w-[150px]">Сообщение П2</th>
+                  <th className="w-[130px]">Сообщ. П2</th>
                   {selectedSubject?.subject_type !== "CONSUMER" && (
-                    <th className="w-[150px]">Сообщение П2 Генерации</th>
+                    <th className="w-[140px]">Сообщ. П2 Ген.</th>
                   )}
                   {showMessageCol && <th className="w-[150px]">Сообщение</th>}
                 </tr>
               </thead>
-              {/* Table Body */}
               <tbody>
-                {timeIntervals.map((time, index) => {
-                  const subjectHourData = localHourPlan[index] || {};
+                {timeIntervals.map((time, idx) => {
+                  const rowData = localHourPlan[idx] || {};
+                  const P1 = rowData.P1 || 0;
+                  const P1_Gen = rowData.P1_Gen || 0;
+                  const P2_msg = rowData.P2_message || "";
+                  const P2_gen_msg = rowData.P2_Gen_message || "";
 
-                  const P1 = subjectHourData.P1 || 0;
-                  const P1_Gen = subjectHourData.P1_Gen || 0;
-                  const P2_message = subjectHourData.P2_message || "";
-                  const P2_Gen_message = subjectHourData.P2_Gen_message || "";
-
-                  const P2 =
-                    subjectHourData.P2 != null && subjectHourData.P2 !== 0
-                      ? subjectHourData.P2
-                      : calculateP2(index, P1);
+                  // If rowData.P2 is 0, calculate it
+                  const P2Val =
+                    rowData.P2 !== 0 ? rowData.P2 : calculateP2(idx, P1);
 
                   return (
                     <tr key={time}>
                       <td className="border">{time}</td>
-                      {/* Subject Data */}
                       <td className="border">{P1}</td>
                       {selectedSubject?.subject_type !== "CONSUMER" && (
                         <td className="border">{P1_Gen}</td>
                       )}
+                      {/* Coefficient */}
                       <td className="border">
                         <input
                           type="number"
                           step="0.01"
                           min="0"
-                          value={localHourPlan[index]?.coefficient ?? ""}
+                          value={rowData.coefficient ?? ""}
                           onChange={(e) =>
-                            handleCoefficientChange(index, e.target.value)
+                            handleCoefficientChange(idx, e.target.value)
                           }
                           className="w-full text-center rounded"
                         />
                       </td>
+                      {/* Coefficient_Gen if not consumer */}
                       {selectedSubject?.subject_type !== "CONSUMER" && (
                         <td className="border">
                           <input
                             type="number"
                             step="0.01"
                             min="0"
-                            value={localHourPlan[index]?.coefficient_Gen ?? ""}
+                            value={rowData.coefficient_Gen ?? ""}
                             onChange={(e) =>
-                              handleCoefficientGenChange(index, e.target.value)
+                              handleCoefficientGenChange(idx, e.target.value)
                             }
                             className="w-full text-center rounded"
                           />
                         </td>
                       )}
+                      {/* Volume */}
                       <td className="border">
                         <input
                           type="number"
-                          value={localHourPlan[index]?.volume ?? ""}
-                          onChange={(e) =>
-                            handleVolumeChange(index, e.target.value)
-                          }
+                          value={rowData.volume ?? ""}
+                          onChange={(e) => handleVolumeChange(idx, e.target.value)}
                           className="w-full text-center rounded"
                         />
                       </td>
+                      {/* Volume_Gen if not consumer */}
                       {selectedSubject?.subject_type !== "CONSUMER" && (
                         <td className="border">
                           <input
                             type="number"
-                            value={localHourPlan[index]?.volume_Gen ?? ""}
+                            value={rowData.volume_Gen ?? ""}
                             onChange={(e) =>
-                              handleVolumeGenChange(index, e.target.value)
+                              handleVolumeGenChange(idx, e.target.value)
                             }
                             className="w-full text-center rounded"
                           />
                         </td>
                       )}
-                      <td className="border">{P2}</td>
+                      {/* P2 */}
+                      <td className="border">{P2Val}</td>
+                      {/* P2_Gen */}
                       {selectedSubject?.subject_type !== "CONSUMER" && (
                         <td className="border">
-                          {subjectHourData.P2_Gen != null &&
-                          subjectHourData.P2_Gen !== 0
-                            ? subjectHourData.P2_Gen
-                            : calculateP2Gen(index, P1_Gen)}
+                          {rowData.P2_Gen
+                            ? rowData.P2_Gen
+                            : calculateP2Gen(idx, P1_Gen)}
                         </td>
                       )}
+                      {/* P2_message */}
                       <td
                         className={`border ${
-                          P2_message
-                            ? P2_message === "Успешно!"
+                          P2_msg
+                            ? P2_msg === "Успешно!"
                               ? "bg-green-100"
                               : "bg-red-100"
                             : ""
                         }`}
                       >
-                        {P2_message || ""}
+                        {P2_msg}
                       </td>
+                      {/* P2_Gen_message */}
                       {selectedSubject?.subject_type !== "CONSUMER" && (
                         <td
                           className={`border ${
-                            P2_Gen_message
-                              ? P2_Gen_message === "Успешно!"
+                            P2_gen_msg
+                              ? P2_gen_msg === "Успешно!"
                                 ? "bg-green-100"
                                 : "bg-red-100"
                               : ""
                           }`}
                         >
-                          {P2_Gen_message || ""}
+                          {P2_gen_msg}
                         </td>
                       )}
+                      {/* Disapproval Message */}
                       {showMessageCol && (
                         <td className="border">
                           <input
                             type="text"
-                            value={localHourPlan[index]?.message || ""}
+                            value={rowData.message || ""}
                             onChange={(e) =>
-                              handleMessagesChange(index, e.target.value)
+                              handleMessagesChange(idx, e.target.value)
                             }
                             className="w-full text-center rounded"
                           />
@@ -1142,35 +1105,57 @@ const CombinedTable = ({
             </table>
           )}
 
-          {/* Save and Approve Buttons */}
-          <div className="flex justify-end space-x-2 mt-4">
+          {/* Action Buttons (all in one row) */}
+          <div className="flex flex-wrap justify-end space-x-2 mt-4">
             <button
-              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
+              className="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600 transition"
               onClick={handleSave}
             >
               Сохранить
             </button>
             <button
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+              className="bg-teal-500 text-white px-4 py-2 rounded hover:bg-teal-600 transition"
               onClick={handleApprove}
             >
               Утвердить
             </button>
             <button
-              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
+              className="bg-amber-500 text-white px-4 py-2 rounded hover:bg-amber-600 transition"
               onClick={handleExport}
             >
               Экспорт
             </button>
             <button
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+              className="bg-pink-500 text-white px-4 py-2 rounded hover:bg-pink-600 transition"
               onClick={handleImportFromFile}
             >
-              Импорт из файла
+              Импорт
+            </button>
+            {selectedSubject?.subject_type !== "CONSUMER" && (
+              <>
+                <button
+                  className="bg-lime-500 text-white px-4 py-2 rounded hover:bg-lime-600 transition"
+                  onClick={handleExportGP1}
+                >
+                  Экспорт ГП1
+                </button>
+                <button
+                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-fuchsia-600 transition"
+                  onClick={handleImportFromFileGP1}
+                >
+                  Импорт ГП1
+                </button>
+              </>
+            )}
+            <button
+              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
+              onClick={handleFullExport}
+            >
+              Экспорт полного отчета
             </button>
           </div>
 
-          {/* Message Input for Disapprove */}
+          {/* If disapprove is active, show "Отправить" + "Отмена" */}
           {showMessageCol && (
             <div className="flex justify-end space-x-2 mt-4">
               <button
@@ -1189,15 +1174,14 @@ const CombinedTable = ({
           )}
         </div>
 
-        {/* Object Data Table */}
+        {/* ────────────────────────────────────────────────────────────────────
+            OBJECT TABLE (Right)
+          ──────────────────────────────────────────────────────────────────── */}
         <div className="w-full md:w-1/3 ml-0 md:ml-2">
-          {/* Always display the Object Table if an object is selected */}
           {selectedData.selectedObject && (
             <table className="w-full text-sm text-center text-gray-500 mb-3">
-              {/* Table Head */}
               <thead className="text-xs text-gray-700 uppercase bg-gray-300">
                 <tr>
-                  {/* <th className="w-[50px]">Время</th> */}
                   <th>П1</th>
                   {selectedObject?.object_type !== "CONSUMER" && <th>ГП1</th>}
                   <th>Объем</th>
@@ -1206,63 +1190,60 @@ const CombinedTable = ({
                   <th>П3</th>
                   {selectedObject?.object_type !== "CONSUMER" && <th>ГП3</th>}
                   <th>Ф</th>
-                  {selectedObject?.object_type !== "CONSUMER" && <th>Гф</th>}
+                  {selectedObject?.object_type !== "CONSUMER" && <th>ГФ</th>}
                   <th>Сообщение П2</th>
                   {selectedObject?.object_type !== "CONSUMER" && (
-                    <th>Сообщение П2 Генерации</th>
+                    <th>Сообщ. П2 Ген.</th>
                   )}
                 </tr>
               </thead>
-              {/* Table Body */}
               <tbody>
-                {timeIntervals.map((time, index) => {
-                  const objectHourData =
+                {timeIntervals.map((time, idx) => {
+                  const hourData =
                     objectHoursMap[selectedData.selectedObject]?.find(
-                      (hour) => hour.hour === index + 1
+                      (h) => h.hour === idx + 1
                     ) || {};
-
                   return (
                     <tr key={time}>
-                      {/* <td className="border">{time}</td> */}
-                      <td className="border">{objectHourData.P1 || 0}</td>
+                      <td className="border">{hourData.P1 || 0}</td>
                       {selectedObject?.object_type !== "CONSUMER" && (
-                        <td className="border">{objectHourData.P1_Gen || 0}</td>
+                        <td className="border">{hourData.P1_Gen || 0}</td>
                       )}
-                      <td className="border">{objectHourData.volume || 0}</td>
-                      <td className="border">{objectHourData.P2 || 0}</td>
+                      <td className="border">{hourData.volume || 0}</td>
+                      <td className="border">{hourData.P2 || 0}</td>
                       {selectedObject?.object_type !== "CONSUMER" && (
-                        <td className="border">{objectHourData.P2_Gen || 0}</td>
+                        <td className="border">{hourData.P2_Gen || 0}</td>
                       )}
-                      <td className="border">{objectHourData.P3 || 0}</td>
+                      <td className="border">{hourData.P3 || 0}</td>
                       {selectedObject?.object_type !== "CONSUMER" && (
-                        <td className="border">{objectHourData.P3_Gen || 0}</td>
+                        <td className="border">{hourData.P3_Gen || 0}</td>
                       )}
-                      <td className="border">{objectHourData.F1 || 0}</td>
+                      <td className="border">{hourData.F1 || 0}</td>
                       {selectedObject?.object_type !== "CONSUMER" && (
-                        <td className="border">{objectHourData.F1_Gen || 0}</td>
+                        <td className="border">{hourData.F1_Gen || 0}</td>
                       )}
                       <td
                         className={`border ${
-                          objectHourData.P2_message
-                            ? objectHourData.P2_message === "Успешно!"
+                          hourData.P2_message
+                            ? hourData.P2_message === "Успешно!"
                               ? "bg-green-100"
                               : "bg-red-100"
                             : ""
                         }`}
                       >
-                        {objectHourData.P2_message || ""}
+                        {hourData.P2_message || ""}
                       </td>
                       {selectedObject?.object_type !== "CONSUMER" && (
                         <td
                           className={`border ${
-                            objectHourData.P2_Gen_message
-                              ? objectHourData.P2_Gen_message === "Успешно!"
+                            hourData.P2_Gen_message
+                              ? hourData.P2_Gen_message === "Успешно!"
                                 ? "bg-green-100"
                                 : "bg-red-100"
                               : ""
                           }`}
                         >
-                          {objectHourData.P2_Gen_message || ""}
+                          {hourData.P2_Gen_message || ""}
                         </td>
                       )}
                     </tr>
@@ -1271,24 +1252,6 @@ const CombinedTable = ({
               </tbody>
             </table>
           )}
-
-          <div className="flex justify-start space-x-2">
-            <button
-              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
-              onClick={handleExportGP1}
-            >
-              Экспорт ГП1
-            </button>
-            <button
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
-              onClick={handleImportFromFileGP1}
-            >
-              Импорт ГП1
-            </button>
-          </div>
-
-          {/* Save and Approve Buttons */}
-          <div className="flex justify-end space-x-2 mt-4"></div>
         </div>
       </div>
     </div>

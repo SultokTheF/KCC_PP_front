@@ -355,7 +355,7 @@ const HoursTable = () => {
       <Sidebar />
       <div className="flex-1 p-6 bg-gray-50 min-h-screen">
         <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
-          Таблица часов (Dispatcher)
+          Таблица часов
         </h1>
 
         {/* Form Section */}
