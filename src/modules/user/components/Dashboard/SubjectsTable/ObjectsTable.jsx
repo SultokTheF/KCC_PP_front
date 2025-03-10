@@ -1,33 +1,14 @@
+// ObjectTable.jsx
 import React, { useState, useEffect } from "react";
 import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 import useDataFetching from "../../../../../hooks/useDataFetching";
 import CreatePlanModal from "../CreatePlanModal/CreatePlanModal";
 
 const timeIntervals = [
-  "00 - 01",
-  "01 - 02",
-  "02 - 03",
-  "03 - 04",
-  "04 - 05",
-  "05 - 06",
-  "06 - 07",
-  "07 - 08",
-  "08 - 09",
-  "09 - 10",
-  "10 - 11",
-  "11 - 12",
-  "12 - 13",
-  "13 - 14",
-  "14 - 15",
-  "15 - 16",
-  "16 - 17",
-  "17 - 18",
-  "18 - 19",
-  "19 - 20",
-  "20 - 21",
-  "21 - 22",
-  "22 - 23",
-  "23 - 00",
+  "00 - 01", "01 - 02", "02 - 03", "03 - 04", "04 - 05", "05 - 06",
+  "06 - 07", "07 - 08", "08 - 09", "09 - 10", "10 - 11", "11 - 12",
+  "12 - 13", "13 - 14", "14 - 15", "15 - 16", "16 - 17", "17 - 18",
+  "18 - 19", "19 - 20", "20 - 21", "21 - 22", "22 - 23", "23 - 00",
 ];
 
 const ObjectTable = ({
@@ -53,14 +34,17 @@ const ObjectTable = ({
       day.object === selectedObject?.id &&
       day.date.split("T")[0] === selectedDate.split("T")[0]
   );
-  const hourPlan = hoursList?.filter((hour) => hour.day === dayPlan?.id);
+
+  // Filter hours for the chosen object/day, then sort by hour
+  const unsortedHourPlan = hoursList?.filter((hour) => hour.day === dayPlan?.id) || [];
+  const hourPlan = [...unsortedHourPlan].sort((a, b) => a.hour - b.hour);
 
   const [planData, setPlanData] = useState({
     planMode: "P1",
     isGen: false,
   });
 
-  // State Variables for Status Management
+  // State for statuses
   const [statusMap, setStatusMap] = useState({});
   const [loadingStatuses, setLoadingStatuses] = useState(true);
   const [statusError, setStatusError] = useState(null);
@@ -81,7 +65,7 @@ const ObjectTable = ({
     }
   };
 
-  // Fetch All Statuses When selectedDate or objectsList Change
+  // Fetch statuses for all objects
   useEffect(() => {
     const fetchAllStatuses = async () => {
       setLoadingStatuses(true);
@@ -97,7 +81,6 @@ const ObjectTable = ({
         );
 
         const statuses = await Promise.all(statusPromises);
-
         statuses.forEach(({ id, statuses }) => {
           newStatusMap[id] = statuses;
         });
@@ -116,7 +99,7 @@ const ObjectTable = ({
     }
   }, [selectedDate, objectsList]);
 
-  // Function to generate status display components
+  // Helper to generate status display
   const generateStatusDisplayComponents = (statuses) => {
     if (!statuses || Object.keys(statuses).length === 0) {
       return "Нет данных";
@@ -148,7 +131,7 @@ const ObjectTable = ({
       COMPLETED: "text-green-500",
       IN_PROGRESS: "text-orange-500",
       OUTDATED: "text-red-500",
-      NOT_STARTED: "text-black", // default color
+      NOT_STARTED: "text-black",
     };
 
     return (
@@ -166,12 +149,13 @@ const ObjectTable = ({
       </div>
     );
   };
-  // Filter Objects Based on Selected Subject
+
+  // Filter objects for the chosen subject
   const objects = objectsList.filter(
     (object) => object.subject === selectedData.selectedSubject
   );
 
-  // Set Default Selected Object if Not Already Selected
+  // Set default selected object if not set
   useEffect(() => {
     if (!selectedData.selectedObject && objects.length > 0) {
       setSelectedData((prevData) => ({
@@ -187,7 +171,7 @@ const ObjectTable = ({
       <table className="w-full text-sm text-center text-gray-500 mb-3">
         <thead className="text-xs text-gray-700 uppercase bg-gray-300">
           <tr>
-            <th>{"Объект"}</th>
+            <th>Объект</th>
             {objects.map((object) => (
               <th key={object.id}>{object.object_name}</th>
             ))}
@@ -333,21 +317,21 @@ const ObjectTable = ({
           {timeIntervals.map((time, index) => (
             <tr key={time}>
               <td className="border">{time}</td>
-              <td className="border">{hourPlan?.[index]?.P1 || 0}</td>
+              <td className="border">{hourPlan[index]?.P1 || 0}</td>
               {selectedObject?.object_type !== "CONSUMER" && (
-                <td className="border">{hourPlan?.[index]?.P1_Gen || 0}</td>
+                <td className="border">{hourPlan[index]?.P1_Gen || 0}</td>
               )}
-              <td className="border">{hourPlan?.[index]?.P2 || 0}</td>
+              <td className="border">{hourPlan[index]?.P2 || 0}</td>
               {selectedObject?.object_type !== "CONSUMER" && (
-                <td className="border">{hourPlan?.[index]?.P2_Gen || 0}</td>
+                <td className="border">{hourPlan[index]?.P2_Gen || 0}</td>
               )}
-              <td className="border">{hourPlan?.[index]?.P3 || 0}</td>
+              <td className="border">{hourPlan[index]?.P3 || 0}</td>
               {selectedObject?.object_type !== "CONSUMER" && (
-                <td className="border">{hourPlan?.[index]?.P3_Gen || 0}</td>
+                <td className="border">{hourPlan[index]?.P3_Gen || 0}</td>
               )}
-              <td className="border">{hourPlan?.[index]?.F1 || 0}</td>
+              <td className="border">{hourPlan[index]?.F1 || 0}</td>
               {selectedObject?.object_type !== "CONSUMER" && (
-                <td className="border">{hourPlan?.[index]?.F1_Gen || 0}</td>
+                <td className="border">{hourPlan[index]?.F1_Gen || 0}</td>
               )}
             </tr>
           ))}

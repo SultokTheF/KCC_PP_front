@@ -1,5 +1,4 @@
-// PlanModal.js
-
+// CreatePlanModal.jsx
 import React, { useState, useEffect } from "react";
 import { Button } from "@material-tailwind/react";
 import Modal from "react-modal";
@@ -29,6 +28,7 @@ const PlanModal = ({
   const [importedData, setImportedData] = useState(null);
   const [textareaInput, setTextareaInput] = useState("");
 
+  // We'll keep the final array in state
   const [formData, setFormData] = useState({
     object: selectedObject?.id || 0,
     date: selectedDate.split("T")[0] || new Date().toISOString().split("T")[0],
@@ -36,8 +36,25 @@ const PlanModal = ({
     mode: planMode,
   });
 
+  useEffect(() => {
+    // Sort the original "plans" by hour first
+    const sortedPlans = Array.isArray(plans)
+      ? [...plans].sort((a, b) => a.hour - b.hour)
+      : [];
+
+    // Map the relevant plan field
+    const mappedPlan = sortedPlans.map((hourItem) => hourItem[planMode] ?? 0);
+
+    setFormData((prevData) => ({
+      ...prevData,
+      object: selectedObject?.id || 0,
+      date: selectedDate.split("T")[0],
+      plan: mappedPlan,
+      mode: planMode,
+    }));
+  }, [selectedDate, selectedObject, planMode, plans]);
+
   const handleTableChange = (object, date, updatedPlans, mode) => {
-    // Directly trust updatedPlans. They should already be numeric values.
     setFormData({
       object: object,
       date: date,
@@ -45,24 +62,6 @@ const PlanModal = ({
       mode: mode,
     });
   };
-
-  useEffect(() => {
-    // Map the existing plan data for the chosen mode if `plans` is provided.
-    // If `plans` is an array of objects like [{P1:10, P2:20, ...}, {P1:15, ...}], 
-    // we extract the relevant plan based on `planMode`.
-    const mappedPlan = Array.isArray(plans) && plans.length > 0
-      ? plans.map((hour) => hour[planMode] ?? 0)
-      : [];
-
-    setFormData((prevData) => ({
-      ...prevData,
-      object: selectedObject?.id || 0,
-      date:
-        selectedDate.split("T")[0] || new Date().toISOString().split("T")[0],
-      plan: mappedPlan,
-      mode: planMode,
-    }));
-  }, [selectedDate, selectedObject, planMode, plans]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -72,7 +71,7 @@ const PlanModal = ({
     const finalPlan = formData.plan;
 
     try {
-      if (formData.mode === "P1" && plans.length === 0) {
+      if (formData.mode === "P1" && (!plans || plans.length === 0)) {
         // Sending P1 when no plans exist yet
         const response = await axiosInstance.post(endpoints.DAYS, {
           object: formData.object,
@@ -84,8 +83,6 @@ const PlanModal = ({
           console.log("План успешно создан:", response.data);
           window.location.href = "/dashboard";
         }
-
-        console.log("Ответ API:", response.data);
       } else {
         // Sending other plans
         // We assume plans[0].day is available. If not, handle accordingly.
@@ -100,8 +97,6 @@ const PlanModal = ({
           console.log("План успешно создан:", response.data);
           window.location.href = "/dashboard";
         }
-
-        console.log("Ответ API:", response.data);
       }
     } catch (error) {
       console.error("Произошла ошибка при запросе к API:", error);
@@ -116,12 +111,9 @@ const PlanModal = ({
   };
 
   const handleExport = () => {
-    const { object, date, plan, mode } = formData;
-
-    // Slice the plan array to get only the first 24 elements
+    const { date, plan, mode } = formData;
     const slicedPlan = plan.slice(0, 24);
 
-    // Create a new workbook and worksheet
     const workbook = XLSXUtils.book_new();
     const worksheetData = [
       [`Объект: ${selectedObject?.object_name}`, `Дата: ${date}`, mode],
@@ -129,15 +121,9 @@ const PlanModal = ({
       ...slicedPlan.map((value, index) => [index + 1, value]),
     ];
     const worksheet = XLSXUtils.aoa_to_sheet(worksheetData);
-
-    // Add the worksheet to the workbook
     XLSXUtils.book_append_sheet(workbook, worksheet, "PlanData");
 
-    // Generate the Excel file
-    XLSXWriteFile(
-      workbook,
-      `${selectedObject?.object_name}_${date}_${mode}.xlsx`
-    );
+    XLSXWriteFile(workbook, `${selectedObject?.object_name}_${date}_${mode}.xlsx`);
   };
 
   const handleImport = async () => {
@@ -154,7 +140,7 @@ const PlanModal = ({
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         const parsedData = XLSXUtils.sheet_to_json(worksheet, { header: 1 });
 
-        // Assuming that the data starts from row 3 (after headers)
+        // We assume data starts from row 3
         const planValues = parsedData.slice(2).map((row) => Number(row[1]) || 0);
 
         setFormData((prevData) => ({
@@ -170,7 +156,6 @@ const PlanModal = ({
   };
 
   const handleImportFromText = () => {
-    // Split the input by spaces, commas, or newlines
     const values = textareaInput
       .split(/[\s,]+/)
       .map((item) => item.trim())
@@ -178,7 +163,7 @@ const PlanModal = ({
       .map(Number)
       .map((num) => (isNaN(num) ? 0 : num));
 
-    // Ensure the plan has exactly 24 elements, filling missing with 0
+    // Ensure we have exactly 24 elements
     const updatedPlan = Array.from({ length: 24 }, (_, index) => values[index] || 0);
 
     setFormData((prevData) => ({
@@ -188,7 +173,7 @@ const PlanModal = ({
   };
 
   const handlePullFromP2 = () => {
-    // When mode = P3 or P3_Gen, load data from P2 or P2_Gen respectively
+    // If mode = P3 or P3_Gen, load from P2 or P2_Gen
     if (formData.mode === "P3") {
       const p2Plan = plans.map((hour) => hour.P2 || 0);
       setFormData((prevData) => ({
@@ -196,7 +181,6 @@ const PlanModal = ({
         plan: p2Plan,
       }));
     } else if (formData.mode === "P3_Gen") {
-      // Load data from P2_Gen
       const p2GenPlan = plans.map((hour) => hour.P2_Gen || 0);
       setFormData((prevData) => ({
         ...prevData,
@@ -206,7 +190,7 @@ const PlanModal = ({
   };
 
   const handlePullFromP3 = () => {
-    // When mode = F1 or F1_Gen, load data from P3 or P3_Gen respectively
+    // If mode = F1 or F1_Gen, load from P3 or P3_Gen
     if (formData.mode === "F1") {
       const p3Plan = plans.map((hour) => hour.P3 || 0);
       setFormData((prevData) => ({
@@ -267,6 +251,7 @@ const PlanModal = ({
                         </option>
                       ))}
                     </select>
+
                     <label
                       htmlFor="mode"
                       className="block text-gray-700 font-medium my-2"
@@ -309,7 +294,6 @@ const PlanModal = ({
                         Загрузить данные из P2
                       </button>
                     )}
-
                     {formData.mode === "P3_Gen" && (
                       <button
                         className="border rounded px-6 py-3 my-2 hover:bg-gray-300 w-full"
@@ -319,7 +303,6 @@ const PlanModal = ({
                         Загрузить данные из P2_Gen
                       </button>
                     )}
-
                     {formData.mode === "F1" && (
                       <button
                         className="border rounded px-6 py-3 my-2 hover:bg-gray-300 w-full"
@@ -329,7 +312,6 @@ const PlanModal = ({
                         Загрузить данные из P3
                       </button>
                     )}
-
                     {formData.mode === "F1_Gen" && (
                       <button
                         className="border rounded px-6 py-3 my-2 hover:bg-gray-300 w-full"
@@ -368,7 +350,6 @@ const PlanModal = ({
                       >
                         Выберите файл для импорта
                       </label>
-
                       <input
                         type="file"
                         name="file-input"
