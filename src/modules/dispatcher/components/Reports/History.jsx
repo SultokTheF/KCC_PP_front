@@ -1,19 +1,29 @@
 import React, { useState, useEffect } from "react";
-import { axiosInstance, endpoints } from "../../../../services/apiConfig";
-import Sidebar from "../Sidebar/Sidebar";
+import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
+import Sidebar from "../../Sidebar/Sidebar";
 import Select from "react-select";
 import pdfMake from "pdfmake/build/pdfmake";
 import * as pdfFonts from "pdfmake/build/vfs_fonts";
-import { useAuth } from '../../../../hooks/useAuth';
 import * as XLSX from "xlsx";
 
-pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts.vfs ? pdfFonts.vfs : pdfMake.vfs;
+pdfMake.vfs = pdfFonts.pdfMake
+  ? pdfFonts.pdfMake.vfs
+  : pdfFonts.vfs
+  ? pdfFonts.vfs
+  : pdfFonts;
 
 const History = () => {
   const [history, setHistory] = useState([]);
   const [objects, setObjects] = useState([]);
   const [users, setUsers] = useState([]);
-  const { user } = useAuth();
+
+  // New state variables for logs modal
+  const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
+  const [logs, setLogs] = useState([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+  const [logsStartDate, setLogsStartDate] = useState("");
+  const [logsEndDate, setLogsEndDate] = useState("");
+  const [logsCount, setLogsCount] = useState(0); // State to hold count of logs
 
   // Set initial dates to current date
   const currentDate = new Date().toISOString().split("T")[0];
@@ -25,8 +35,8 @@ const History = () => {
     sumPlanMax: "",
     dateDayStart: currentDate,
     dateDayEnd: currentDate,
-    dateStart: currentDate,
-    dateEnd: currentDate,
+    dateStart: currentDate, // New filter
+    dateEnd: currentDate, // New filter
     timeStart: "",
     timeEnd: "",
     userRole: [],
@@ -61,13 +71,12 @@ const History = () => {
     DISPATCHER: "Диспетчер",
   };
 
-  // Fetch objects assigned to the user
+  // Fetch objects
   const fetchObjects = async () => {
     try {
+      const accessToken = localStorage.getItem("accessToken");
       const response = await axiosInstance.get("/api/objects/", {
-        params: {
-          user: user.id,
-        },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
       setObjects(response.data);
     } catch (error) {
@@ -75,7 +84,7 @@ const History = () => {
     }
   };
 
-  // Fetch all users
+  // Fetch users
   const fetchUsers = async () => {
     try {
       const response = await axiosInstance.get(endpoints.USERS);
@@ -96,11 +105,6 @@ const History = () => {
   }));
 
   const fetchData = async () => {
-    if (objects.length === 0) {
-      // Wait until objects are loaded
-      return;
-    }
-
     try {
       const accessToken = localStorage.getItem("accessToken");
       const params = {};
@@ -111,19 +115,13 @@ const History = () => {
       if (filters.sumPlanMax) params.sum_plan_max = filters.sumPlanMax;
       if (filters.dateDayStart) params.date_day_start = filters.dateDayStart;
       if (filters.dateDayEnd) params.date_day_end = filters.dateDayEnd;
-      if (filters.dateStart) params.date_start = filters.dateStart;
-      if (filters.dateEnd) params.date_end = filters.dateEnd;
+      if (filters.dateStart) params.date_start = filters.dateStart; // New
+      if (filters.dateEnd) params.date_end = filters.dateEnd; // New
       if (filters.timeStart) params.time_start = filters.timeStart;
       if (filters.timeEnd) params.time_end = filters.timeEnd;
       if (filters.userRole.length > 0)
         params.user_role = filters.userRole.join(",");
-
-      // If no objects are selected, include all objects assigned to the user
-      if (filters.object.length === 0) {
-        params.object = objects.map((obj) => obj.id).join(",");
-      } else {
-        params.object = filters.object.join(",");
-      }
+      if (filters.object.length > 0) params.object = filters.object.join(",");
 
       const historyResponse = await axiosInstance.get("/api/history/", {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -137,10 +135,12 @@ const History = () => {
 
   useEffect(() => {
     fetchData();
-  }, [filters, objects]);
+  }, [filters]);
 
   const handleMultiSelectChange = (selectedOptions, { name }) => {
-    const value = selectedOptions ? selectedOptions.map((opt) => opt.value) : [];
+    const value = selectedOptions
+      ? selectedOptions.map((opt) => opt.value)
+      : [];
     setFilters((prevFilters) => ({
       ...prevFilters,
       [name]: value,
@@ -173,9 +173,9 @@ const History = () => {
       const { date, time } = formatDateTime(historyItem.date, historyItem.time);
 
       // Get user role based on email
-      const userObj = users.find((u) => u.email === historyItem.user);
-      const userRole = userObj
-        ? userRoleMapping[userObj.role] || "Неизвестно"
+      const user = users.find((u) => u.email === historyItem.user);
+      const userRole = user
+        ? userRoleMapping[user.role] || "Неизвестно"
         : "Неизвестно";
 
       return [
@@ -244,9 +244,9 @@ const History = () => {
       const { date, time } = formatDateTime(historyItem.date, historyItem.time);
 
       // Get user role based on email
-      const userObj = users.find((u) => u.email === historyItem.user);
-      const userRole = userObj
-        ? userRoleMapping[userObj.role] || "Неизвестно"
+      const user = users.find((u) => u.email === historyItem.user);
+      const userRole = user
+        ? userRoleMapping[user.role] || "Неизвестно"
         : "Неизвестно";
 
       return {
@@ -267,6 +267,102 @@ const History = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, "History");
 
     XLSX.writeFile(workbook, "history.xlsx");
+  };
+
+  // Fetch logs function with start_date and end_date
+  const fetchLogs = async (start_date, end_date) => {
+    setIsLoadingLogs(true);
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      const params = {
+        start_date: start_date,
+        end_date: end_date,
+      };
+      const response = await axiosInstance.get(endpoints.GET_LOGS, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        params: params,
+      });
+      setLogs(response.data);
+      setLogsCount(response.data.length); // Set the count of logs
+    } catch (error) {
+      console.error("Error fetching logs:", error);
+      setLogsCount(0); // Reset count on error
+    } finally {
+      setIsLoadingLogs(false);
+    }
+  };
+
+  // Open logs modal
+  const openLogsModal = () => {
+    // Initialize modal dates with current filter dates
+    setLogsStartDate(filters.dateDayStart);
+    setLogsEndDate(filters.dateDayEnd);
+    setIsLogsModalOpen(true);
+    fetchLogs(filters.dateDayStart, filters.dateDayEnd);
+  };
+
+  // Close logs modal
+  const closeLogsModal = () => {
+    setIsLogsModalOpen(false);
+    setLogs([]);
+    setLogsCount(0);
+  };
+
+  // Handle date changes in the modal
+  const handleLogsDateChange = (e) => {
+    const { name, value } = e.target;
+    if (name === "logsStartDate") {
+      setLogsStartDate(value);
+    } else if (name === "logsEndDate") {
+      setLogsEndDate(value);
+    }
+  };
+
+  // Handle fetching logs with updated dates
+  const handleFetchLogs = () => {
+    // Validate dates
+    if (logsStartDate > logsEndDate) {
+      alert("Начальная дата не может быть позже конечной даты.");
+      return;
+    }
+    fetchLogs(logsStartDate, logsEndDate);
+  };
+
+  // Function to download logs as TXT
+  const downloadLogsAsTxt = () => {
+    if (logs.length === 0) {
+      alert("Нет логов для скачивания.");
+      return;
+    }
+
+    // Convert logs to a readable string format
+    const logsText = logs
+      .map((log, index) => {
+        return `Log ${index + 1}:
+funcName: ${log.funcName}
+log_message: ${log.log_message}
+ip_address: ${log.ip_address}
+level: ${log.level}
+lineno: ${log.lineno}
+logger: ${log.logger}
+message: ${log.message}
+pathname: ${log.pathname}
+timestamp: ${log.timestamp}
+user: ${log.user}
+----------------------------------------`;
+      })
+      .join("\n");
+
+    // Create a Blob from the logs text
+    const blob = new Blob([logsText], { type: "text/plain;charset=utf-8" });
+
+    // Create a link to download the Blob as a file
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `logs_${logsStartDate}_to_${logsEndDate}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -414,7 +510,7 @@ const History = () => {
                 value={filters.dateStart}
                 onChange={handleInputChange}
                 className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                  focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
             {/* Date End Filter */}
@@ -428,7 +524,7 @@ const History = () => {
                 value={filters.dateEnd}
                 onChange={handleInputChange}
                 className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                  focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
             {/* Time Start Filter */}
@@ -468,11 +564,11 @@ const History = () => {
           </div>
         </div>
 
-        {/* Export Buttons */}
-        <div className="flex justify-end mb-4">
+        {/* Export and Show Logs Buttons */}
+        <div className="flex justify-end mb-4 space-x-2">
           <button
             onClick={exportPDF}
-            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mr-2"
+            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
           >
             Экспортировать в PDF
           </button>
@@ -481,6 +577,12 @@ const History = () => {
             className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
           >
             Экспортировать в Excel
+          </button>
+          <button
+            onClick={openLogsModal}
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Показать логи
           </button>
         </div>
 
@@ -498,6 +600,7 @@ const History = () => {
                 <th className="px-4 py-2 border">Дата</th>
                 <th className="px-4 py-2 border">Время</th>
                 <th className="px-4 py-2 border">Объект</th>
+                <th className="px-4 py-2 border">IP</th>
               </tr>
             </thead>
             <tbody>
@@ -512,9 +615,9 @@ const History = () => {
                 );
 
                 // Get user role based on email
-                const userObj = users.find((u) => u.email === historyItem.user);
-                const userRole = userObj
-                  ? userRoleMapping[userObj.role] || "Неизвестно"
+                const user = users.find((u) => u.email === historyItem.user);
+                const userRole = user
+                  ? userRoleMapping[user.role] || "Неизвестно"
                   : "Неизвестно";
 
                 return (
@@ -528,12 +631,127 @@ const History = () => {
                     <td className="border px-4 py-2">{date}</td>
                     <td className="border px-4 py-2">{time}</td>
                     <td className="border px-4 py-2">{objectName}</td>
+                    <td className="border px-4 py-2">
+                      {historyItem.ip ??
+                        "89.218.87.98"}
+                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
+
+        {/* Logs Modal */}
+        {isLogsModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white w-11/12 md:w-3/4 lg:w-2/3 xl:w-1/2 rounded-lg shadow-lg overflow-y-auto max-h-full p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Логи</h2>
+                <button
+                  onClick={closeLogsModal}
+                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                >
+                  &times;
+                </button>
+              </div>
+
+              {/* Date Filters within Modal */}
+              <div className="mb-4 p-4 bg-gray-50 rounded-md">
+                <h3 className="text-lg font-medium mb-2">Фильтр по датам</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Start Date */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Начало периода
+                    </label>
+                    <input
+                      type="date"
+                      name="logsStartDate"
+                      value={logsStartDate}
+                      onChange={handleLogsDateChange}
+                      className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
+                            focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    />
+                  </div>
+                  {/* End Date */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Конец периода
+                    </label>
+                    <input
+                      type="date"
+                      name="logsEndDate"
+                      value={logsEndDate}
+                      onChange={handleLogsDateChange}
+                      className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
+                            focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end mt-4">
+                  <button
+                    onClick={handleFetchLogs}
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                  >
+                    Применить
+                  </button>
+                </div>
+              </div>
+
+              {/* Logs Count Display */}
+              <div className="mb-4">
+                {isLoadingLogs ? (
+                  <div className="flex justify-center items-center">
+                    <svg
+                      className="animate-spin h-8 w-8 text-blue-500"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v8H4z"
+                      ></path>
+                    </svg>
+                  </div>
+                ) : (
+                  <div className="text-center text-lg font-medium">
+                    Всего логов за выбранный период: {logsCount}
+                  </div>
+                )}
+              </div>
+
+              {/* Download Logs Button */}
+              <div className="flex justify-center mb-4">
+                <button
+                  onClick={downloadLogsAsTxt}
+                  className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  Скачать Логи
+                </button>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={closeLogsModal}
+                  className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  Закрыть
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
