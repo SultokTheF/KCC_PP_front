@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
-import Sidebar from "../../Sidebar/Sidebar";
+import { axiosInstance, endpoints } from "../../../../services/apiConfig";
+import Sidebar from "../Sidebar/Sidebar";
 import Select from "react-select";
 import pdfMake from "pdfmake/build/pdfmake";
 import * as pdfFonts from "pdfmake/build/vfs_fonts";
