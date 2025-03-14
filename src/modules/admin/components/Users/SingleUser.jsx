@@ -68,24 +68,24 @@ const SingleUser = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       [name]: value,
-    });
+    }));
   };
 
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
-    setPasswordFormData({
-      ...passwordFormData,
+    setPasswordFormData((prev) => ({
+      ...prev,
       [name]: value,
-    });
+    }));
   };
 
   // Update password validity based on current password input
   useEffect(() => {
-    const validity = passwordRequirements.map((requirement) =>
-      requirement.test(passwordFormData.new_password)
+    const validity = passwordRequirements.map((req) =>
+      req.test(passwordFormData.new_password)
     );
     setPasswordValidity(validity);
   }, [passwordFormData.new_password]);
@@ -93,16 +93,13 @@ const SingleUser = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axiosInstance.put(
-        `user/users/${id}/`,
-        formData
-      );
-      // Assuming the response contains updated user data
+      const response = await axiosInstance.put(`user/users/${id}/`, formData);
+      // Update user data and close edit mode
       setUserData(response.data);
       setIsEditing(false);
     } catch (error) {
       console.error("Failed to update user data:", error);
-      // Optionally, display error messages to the admin
+      // Optionally, display error messages
     }
   };
 
@@ -118,10 +115,10 @@ const SingleUser = () => {
       return;
     }
 
-    // Check if all password requirements are met before sending to server
-    const unmetRequirements = passwordRequirements.filter(
-      (req) => !req.test(new_password)
-    ).map((req) => req.label);
+    // Check if all password requirements are met
+    const unmetRequirements = passwordRequirements
+      .filter((req) => !req.test(new_password))
+      .map((req) => req.label);
 
     if (unmetRequirements.length > 0) {
       setPasswordErrors(unmetRequirements);
@@ -131,22 +128,15 @@ const SingleUser = () => {
     try {
       const response = await axiosInstance.post(
         endpoints.ADMIN_CHANGE_PASSWORD(id),
-        {
-          new_password: new_password,
-          new_password2: new_password2,
-        }
+        { new_password, new_password2 }
       );
       console.log("Пароль успешно изменён:", response.data);
       setPasswordSuccess("Пароль успешно изменён.");
-      setPasswordFormData({
-        new_password: "",
-        new_password2: "",
-      });
+      setPasswordFormData({ new_password: "", new_password2: "" });
       setIsChangingPassword(false);
     } catch (error) {
       console.error("Failed to change password:", error);
       if (error.response && error.response.data) {
-        // Assuming error.response.data.new_password is an array of error messages
         if (error.response.data.new_password) {
           setPasswordErrors(error.response.data.new_password);
         } else if (error.response.data.detail) {
@@ -169,17 +159,15 @@ const SingleUser = () => {
       }
     } catch (error) {
       console.error("Failed to recover user account:", error);
-      // Optionally, display error messages to the admin
     }
   };
 
   const handleDelete = async () => {
     try {
       await axiosInstance.delete(`user/users/${id}/`);
-      navigate("/users"); // Redirect to the users list or another appropriate page after deletion
+      navigate("/users");
     } catch (error) {
       console.error("Failed to delete user:", error);
-      // Optionally, display error messages to the admin
     }
   };
 
@@ -199,12 +187,13 @@ const SingleUser = () => {
           Профиль {formData.subject_name}
         </h1>
         <div className="bg-white p-6 rounded-lg shadow-md">
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              {/* Имя */}
-              <div className="flex items-center mb-4">
-                <label className="w-1/4 font-medium">Имя:</label>
-                {isEditing ? (
+          {isEditing ? (
+            // Editable form (only used for updating the profile)
+            <form onSubmit={handleSubmit}>
+              <div className="mb-4">
+                {/* Имя */}
+                <div className="flex items-center mb-4">
+                  <label className="w-1/4 font-medium">Имя:</label>
                   <input
                     type="text"
                     name="subject_name"
@@ -213,14 +202,10 @@ const SingleUser = () => {
                     className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
                   />
-                ) : (
-                  <div>{userData.subject_name}</div>
-                )}
-              </div>
-              {/* БИН/ИИН */}
-              <div className="flex items-center mb-4">
-                <label className="w-1/4 font-medium">БИН/ИИН:</label>
-                {isEditing ? (
+                </div>
+                {/* БИН/ИИН */}
+                <div className="flex items-center mb-4">
+                  <label className="w-1/4 font-medium">БИН/ИИН:</label>
                   <input
                     type="text"
                     name="subject_bin"
@@ -229,14 +214,10 @@ const SingleUser = () => {
                     className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
                   />
-                ) : (
-                  <div>{userData.subject_bin}</div>
-                )}
-              </div>
-              {/* Email */}
-              <div className="flex items-center mb-4">
-                <label className="w-1/4 font-medium">Email:</label>
-                {isEditing ? (
+                </div>
+                {/* Email */}
+                <div className="flex items-center mb-4">
+                  <label className="w-1/4 font-medium">Email:</label>
                   <input
                     type="email"
                     name="email"
@@ -245,17 +226,12 @@ const SingleUser = () => {
                     className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
                   />
-                ) : (
-                  <div>{userData.email}</div>
-                )}
-              </div>
-              {/* Роль */}
-              <div className="flex items-center mb-4">
-                <label className="w-1/4 font-medium">Роль:</label>
-                {isEditing ? (
+                </div>
+                {/* Роль */}
+                <div className="flex items-center mb-4">
+                  <label className="w-1/4 font-medium">Роль:</label>
                   <select
                     name="role"
-                    id="role"
                     className="h-10 border border-gray-300 rounded px-4 w-full focus:outline-none focus:border-blue-500"
                     value={formData.role}
                     onChange={handleChange}
@@ -264,74 +240,107 @@ const SingleUser = () => {
                     <option value="ADMIN">Администратор</option>
                     <option value="DISPATCHER">Диспетчер</option>
                   </select>
-                ) : (
-                  <div>{userData.role}</div>
+                </div>
+                {userData.last_login && (
+                  <div className="flex items-center mb-2">
+                    <label className="w-1/4 font-medium">
+                      Последний вход:
+                    </label>
+                    <div>
+                      {new Date(userData.last_login).toLocaleString("ru-RU")}
+                    </div>
+                  </div>
                 )}
+              </div>
+              {/* Save and Cancel buttons inside the form */}
+              <div className="flex items-center space-x-2">
+                <button
+                  type="submit"
+                  className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition duration-300"
+                >
+                  Сохранить
+                </button>
+                <button
+                  type="button"
+                  className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition duration-300"
+                  onClick={() => {
+                    setIsEditing(false);
+                    // Reset formData to match userData
+                    setFormData({
+                      subject_name: userData.subject_name || "",
+                      subject_bin: userData.subject_bin || "",
+                      email: userData.email || "",
+                      role: userData.role || "USER",
+                    });
+                  }}
+                >
+                  Отменить
+                </button>
+              </div>
+            </form>
+          ) : (
+            // Read-only view of profile
+            <div>
+              <div className="flex items-center mb-4">
+                <label className="w-1/4 font-medium">Имя:</label>
+                <div>{userData.subject_name}</div>
+              </div>
+              <div className="flex items-center mb-4">
+                <label className="w-1/4 font-medium">БИН/ИИН:</label>
+                <div>{userData.subject_bin}</div>
+              </div>
+              <div className="flex items-center mb-4">
+                <label className="w-1/4 font-medium">Email:</label>
+                <div>{userData.email}</div>
+              </div>
+              <div className="flex items-center mb-4">
+                <label className="w-1/4 font-medium">Роль:</label>
+                <div>{userData.role}</div>
               </div>
               {userData.last_login && (
                 <div className="flex items-center mb-2">
-                  <label className="w-1/4 font-medium">Последний вход:</label>
+                  <label className="w-1/4 font-medium">
+                    Последний вход:
+                  </label>
                   <div>
                     {new Date(userData.last_login).toLocaleString("ru-RU")}
                   </div>
                 </div>
               )}
             </div>
-            {/* Кнопки редактирования */}
-            <div className="flex items-center space-x-2">
-              {isEditing ? (
-                <>
-                  <button
-                    type="submit"
-                    className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition duration-300"
-                  >
-                    Сохранить
-                  </button>
-                  <button
-                    type="button"
-                    className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition duration-300"
-                    onClick={() => {
-                      setIsEditing(false);
-                      // Reset form data to original user data
-                      setFormData({
-                        subject_name: userData.subject_name || "",
-                        subject_bin: userData.subject_bin || "",
-                        email: userData.email || "",
-                        role: userData.role || "USER",
-                      });
-                    }}
-                  >
-                    Отменить
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition duration-300"
-                    onClick={() => setIsEditing(true)}
-                  >
-                    Редактировать Профиль
-                  </button>
-                  {!userData.account_locked && (
-                    <button
-                      type="button"
-                      className="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition duration-300"
-                      onClick={() => setIsChangingPassword(!isChangingPassword)}
-                    >
-                      {isChangingPassword ? "Закрыть" : "Сменить пароль"}
-                    </button>
-                  )}
-                  <button
-                    className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition duration-300"
-                    onClick={handleDelete}
-                  >
-                    Удалить Профиль
-                  </button>
-                </>
+          )}
+
+          {/* Action buttons (placed outside the update form) */}
+          {!isEditing && (
+            <div className="flex items-center space-x-2 mt-4">
+              <button
+                type="button"
+                className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition duration-300"
+                onClick={() => setIsEditing(true)}
+              >
+                Редактировать Профиль
+              </button>
+              {!userData.account_locked && (
+                <button
+                  type="button"
+                  className="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition duration-300"
+                  onClick={() =>
+                    setIsChangingPassword((prev) => !prev)
+                  }
+                >
+                  {isChangingPassword ? "Закрыть" : "Сменить пароль"}
+                </button>
               )}
+              <button
+                type="button"
+                className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition duration-300"
+                onClick={handleDelete}
+              >
+                Удалить Профиль
+              </button>
               {userData.account_locked && (
                 <button
+                  type="button"
                   className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition duration-300"
                   onClick={handleReset}
                 >
@@ -339,7 +348,7 @@ const SingleUser = () => {
                 </button>
               )}
             </div>
-          </form>
+          )}
 
           {/* Форма смены пароля */}
           {isChangingPassword && !userData.account_locked && (
@@ -414,7 +423,6 @@ const SingleUser = () => {
                     required
                   />
                 </div>
-                {/* Display Password Errors */}
                 {passwordErrors.length > 0 && (
                   <div className="mb-4">
                     <div className="text-red-600 font-medium mb-2">
@@ -427,7 +435,6 @@ const SingleUser = () => {
                     </ul>
                   </div>
                 )}
-                {/* Display Password Success */}
                 {passwordSuccess && (
                   <div className="mb-4 text-green-600 font-medium">
                     {passwordSuccess}
@@ -450,10 +457,7 @@ const SingleUser = () => {
                     className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition duration-300"
                     onClick={() => {
                       setIsChangingPassword(false);
-                      setPasswordFormData({
-                        new_password: "",
-                        new_password2: "",
-                      });
+                      setPasswordFormData({ new_password: "", new_password2: "" });
                       setPasswordErrors([]);
                       setPasswordSuccess("");
                     }}
@@ -468,14 +472,6 @@ const SingleUser = () => {
       </div>
     </div>
   );
-};
-
-// Mapping for user roles (similar to History and Profile components)
-const userRoleMapping = {
-  ADMIN: "Администратор",
-  USER: "Пользователь",
-  DISPATCHER: "Диспетчер",
-  // Add more roles if necessary
 };
 
 export default SingleUser;

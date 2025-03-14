@@ -31,6 +31,7 @@ const PlanModal = ({
   // We'll keep the final array in state
   const [formData, setFormData] = useState({
     object: selectedObject?.id || 0,
+    keys: 0,
     date: selectedDate.split("T")[0] || new Date().toISOString().split("T")[0],
     plan: [],
     mode: planMode,
