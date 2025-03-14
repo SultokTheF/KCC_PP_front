@@ -1,3 +1,4 @@
+// Graphs.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
@@ -10,6 +11,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import dayjs from 'dayjs'; // For date parsing/format
 import { axiosInstance, endpoints } from '../../../../services/apiConfig';
 import Sidebar from '../Sidebar/Sidebar';
 import { useAuth } from '../../../../hooks/useAuth';
@@ -25,23 +27,30 @@ ChartJS.register(
 );
 
 const Graphs = () => {
+
+  const { user } = useAuth();
   const [subjectsList, setSubjectsList] = useState([]);
   const [objectsList, setObjectsList] = useState([]);
   const [selectedObjects, setSelectedObjects] = useState([]);
-  const [hoursByDate, setHoursByDate] = useState({});
+
+  // We'll store all hours from each object, then group them
+  const [allHours, setAllHours] = useState([]);
+
+  // dayMap: dayId -> dayObject from server
+  const [dayMap, setDayMap] = useState({});
+
   const [error, setError] = useState(null);
   const [isLoadingHours, setIsLoadingHours] = useState(false);
 
-  const { user } = useAuth();
-
   const [formData, setFormData] = useState({
     subject: '',
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0],
+    startDate: new Date().toISOString().split('T')[0], // "YYYY-MM-DD"
+    endDate: new Date().toISOString().split('T')[0],   // "YYYY-MM-DD"
     startHour: 1,
     endHour: 24,
   });
 
+  // Which lines to show on the chart
   const [selectedParameters, setSelectedParameters] = useState({
     P1: true,
     P2: true,
@@ -50,34 +59,41 @@ const Graphs = () => {
     F2: true,
   });
 
-  // Fetch subjects list
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Fetch Subjects
+  // ─────────────────────────────────────────────────────────────────────────────
   const fetchSubjects = async () => {
     try {
-      const subjectsResponse = await axiosInstance.get(endpoints.SUBJECTS, {
+      const response = await axiosInstance.get(endpoints.SUBJECTS, {
         params: { user: user.id },
       });
-      setSubjectsList(subjectsResponse.data);
-    } catch (error) {
-      console.error('Error fetching subjects:', error);
+      setSubjectsList(response.data);
+    } catch (err) {
+      console.error('Error fetching subjects:', err);
       setError('Failed to load subjects.');
     }
   };
 
-  // Fetch objects based on the selected subject
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Fetch Objects for a Subject
+  // ─────────────────────────────────────────────────────────────────────────────
   const fetchObjects = async (subjectId) => {
     try {
-      const objectsResponse = await axiosInstance.get(endpoints.OBJECTS, {
+      const response = await axiosInstance.get(endpoints.OBJECTS, {
         params: { sub: subjectId },
       });
-      setObjectsList(objectsResponse.data);
-      setSelectedObjects(objectsResponse.data.map((obj) => obj.id)); // Select all objects by default
-    } catch (error) {
-      console.error('Error fetching objects:', error);
+      setObjectsList(response.data);
+      // By default, select all objects
+      setSelectedObjects(response.data.map((obj) => obj.id));
+    } catch (err) {
+      console.error('Error fetching objects:', err);
       setError('Failed to load objects.');
     }
   };
 
-  // Fetch hours data for the selected objects
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Fetch Hours for Selected Objects
+  // ─────────────────────────────────────────────────────────────────────────────
   const fetchHoursData = useCallback(async () => {
     if (
       !formData.subject ||
@@ -85,14 +101,16 @@ const Graphs = () => {
       !formData.startDate ||
       !formData.endDate
     ) {
-      setHoursByDate({});
+      setAllHours([]);
+      setDayMap({});
       return;
     }
 
     setIsLoadingHours(true);
+    setError(null);
 
     try {
-      // Fetch hours for all selected objects
+      // 1) For each selected object, fetch hours from startDate to endDate
       const hoursPromises = selectedObjects.map((objId) =>
         axiosInstance
           .get(endpoints.HOURS, {
@@ -102,108 +120,198 @@ const Graphs = () => {
               end_date: formData.endDate,
             },
           })
-          .then((response) => response.data)
+          .then((response) => response.data || [])
           .catch((error) => {
             console.warn(
-              `Error fetching hours for object ${objId}, using default zeros.`
+              `Error fetching hours for object ${objId}, using empty data.`
             );
             return [];
           })
       );
 
+      // 2) Combine all hours into a single array
       const hoursResults = await Promise.all(hoursPromises);
+      // Flatten the arrays of hours
+      const combinedHours = hoursResults.flat();
+      setAllHours(combinedHours);
 
-      // Aggregate and sum up the data for the selected objects
-      const totalHoursByDate = sumHoursForSelectedObjects(hoursResults);
-      setHoursByDate(totalHoursByDate);
-    } catch (error) {
-      console.error('Error fetching hours data:', error);
+      // 3) Fetch day objects for each unique hour.day
+      const newDayMap = await fetchDayObjects(combinedHours);
+      setDayMap(newDayMap);
+    } catch (err) {
+      console.error('Error fetching hours data:', err);
       setError('Failed to load hourly data.');
+      setAllHours([]);
+      setDayMap({});
     } finally {
       setIsLoadingHours(false);
     }
   }, [formData, selectedObjects]);
 
-  // Aggregate hours across selected objects
-  const sumHoursForSelectedObjects = (hoursResults) => {
-    const groupedHours = {};
-    let currentDay = new Date(formData.startDate);
-    let currentDayString = currentDay.toISOString().split('T')[0];
-    let hourCounter = 0;
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Fetch Day Objects
+  // ─────────────────────────────────────────────────────────────────────────────
+  async function fetchDayObjects(hoursArray) {
+    const uniqueDayIds = [...new Set(hoursArray.map((h) => h.day))];
+    const dayMapTemp = {};
 
-    // Calculate total number of hours
-    const totalHours = hoursResults[0]?.length || 0;
-
-    for (let i = 0; i < totalHours; i++) {
-      if (hourCounter === 24) {
-        currentDay.setDate(currentDay.getDate() + 1);
-        currentDayString = currentDay.toISOString().split('T')[0];
-        hourCounter = 0;
+    for (const dayId of uniqueDayIds) {
+      if (!dayId) continue; // In case day is null
+      try {
+        const response = await axiosInstance.get(`${endpoints.DAYS}${dayId}/`);
+        dayMapTemp[dayId] = response.data;
+      } catch (err) {
+        console.error(`Error fetching day object for dayId=${dayId}:`, err);
+        dayMapTemp[dayId] = null;
       }
+    }
+    return dayMapTemp;
+  }
 
-      const hourInDay = (hourCounter % 24) + 1;
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Summation Logic
+  // ─────────────────────────────────────────────────────────────────────────────
+  /**
+   * Summation approach:
+   * 1) For each hour in allHours, find its real date from dayMap[ hour.day ].date.
+   * 2) Convert that date to "YYYY-MM-DD", parse the hour, filter by startHour/endHour if it is the startDate or endDate.
+   * 3) Group them by date in an object { dateString: [ hourData, hourData, ... ] }.
+   * 4) For each date+hour, sum the absolute differences across objects if you want. But if you already have them in `allHours` as separate rows, you might want to do a reduce pass.
+   *
+   * We'll do a single pass that merges hours with the same date+hour. Then we sum P1, P2, etc. for that date+hour.
+   */
+  function groupAndSumHoursByDateAndHour() {
+    const grouped = {};
 
-      // Determine if the hour should be included based on time filtration logic
+    // Combine hours for each date+hour
+    for (const hour of allHours) {
+      if (!hour.day) continue; // skip if day is missing
+      const dayObj = dayMap[hour.day];
+      if (!dayObj) continue; // skip if day object is missing
+      const dateStrRaw = dayObj.date; // e.g. "2025-03-13T00:00:00+01:00"
+      if (!dateStrRaw) continue;
+
+      // Convert to dayjs
+      const dateJs = dayjs(dateStrRaw);
+      if (!dateJs.isValid()) continue;
+
+      // Extract "YYYY-MM-DD"
+      const datePart = dateJs.format('YYYY-MM-DD');
+      const hourNum = hour.hour; // 1..24
+
+      // Filter logic:
+      // If datePart == startDate, only include hour >= startHour
+      // If datePart == endDate, only include hour <= endHour
+      // If datePart is between startDate and endDate, include all
       let includeHour = true;
-      if (formData.startDate === formData.endDate) {
-        // Single day selection
-        includeHour =
-          hourInDay >= formData.startHour && hourInDay <= formData.endHour;
-      } else {
-        if (currentDayString === formData.startDate) {
-          // First day
-          includeHour = hourInDay >= formData.startHour;
-        } else if (currentDayString === formData.endDate) {
-          // Last day
-          includeHour = hourInDay <= formData.endHour;
-        } else {
-          // Intermediate days
-          includeHour = true;
-        }
+
+      // Compare as dayjs for simpler logic
+      const startJs = dayjs(formData.startDate);
+      const endJs = dayjs(formData.endDate);
+      if (dateJs.isSame(startJs, 'day') && dateJs.isSame(endJs, 'day')) {
+        // Single day
+        includeHour = hourNum >= formData.startHour && hourNum <= formData.endHour;
+      } else if (dateJs.isSame(startJs, 'day')) {
+        // Start day
+        includeHour = hourNum >= formData.startHour;
+      } else if (dateJs.isSame(endJs, 'day')) {
+        // End day
+        includeHour = hourNum <= formData.endHour;
+      } else if (dateJs.isBefore(startJs, 'day')) {
+        includeHour = false;
+      } else if (dateJs.isAfter(endJs, 'day')) {
+        includeHour = false;
       }
 
-      if (includeHour) {
-        if (!groupedHours[currentDayString]) {
-          groupedHours[currentDayString] = [];
-        }
-
-        const summedHourData = { hour: hourInDay, P1: 0, P2: 0, P3: 0, F1: 0, F2: 0 };
-
-        hoursResults.forEach((objectHours) => {
-          const hourData = objectHours[i];
-          if (hourData) {
-            summedHourData.P1 += Math.max(
-              Math.abs(hourData.P1 - hourData.P1_Gen),
-              0
-            );
-            summedHourData.P2 += Math.max(
-              Math.abs(hourData.P2 - hourData.P2_Gen),
-              0
-            );
-            summedHourData.P3 += Math.max(
-              Math.abs(hourData.P3 - hourData.P3_Gen),
-              0
-            );
-            summedHourData.F1 += Math.max(
-              Math.abs(hourData.F1 - hourData.F1_Gen),
-              0
-            );
-            summedHourData.F2 += Math.max(
-              Math.abs(hourData.F2 - hourData.F2_Gen),
-              0
-            );
-          }
-        });
-
-        groupedHours[currentDayString].push(summedHourData);
+      if (!includeHour) {
+        continue;
       }
 
-      hourCounter++;
+      // Now group by datePart
+      if (!grouped[datePart]) {
+        grouped[datePart] = {};
+      }
+
+      // Within that date, group by hour
+      if (!grouped[datePart][hourNum]) {
+        // We'll store sums
+        grouped[datePart][hourNum] = {
+          P1: 0,
+          P2: 0,
+          P3: 0,
+          F1: 0,
+          F2: 0,
+        };
+      }
+
+      // Add the absolute difference
+      grouped[datePart][hourNum].P1 += Math.max(
+        Math.abs(hour.P1 - hour.P1_Gen),
+        0
+      );
+      grouped[datePart][hourNum].P2 += Math.max(
+        Math.abs(hour.P2 - hour.P2_Gen),
+        0
+      );
+      grouped[datePart][hourNum].P3 += Math.max(
+        Math.abs(hour.P3 - hour.P3_Gen),
+        0
+      );
+      grouped[datePart][hourNum].F1 += Math.max(
+        Math.abs(hour.F1 - hour.F1_Gen),
+        0
+      );
+      grouped[datePart][hourNum].F2 += Math.max(
+        Math.abs(hour.F2 - hour.F2_Gen),
+        0
+      );
     }
 
-    return groupedHours;
+    return grouped;
+  }
+
+  // Build chart data from grouped sums
+  const buildChartData = () => {
+    const grouped = groupAndSumHoursByDateAndHour();
+
+    // We want a sorted array of points
+    // sorted by date ascending, then hour ascending
+    const dateKeys = Object.keys(grouped).sort(); // "YYYY-MM-DD"
+    const chartDataPoints = [];
+    const chartLabels = [];
+
+    dateKeys.forEach((dateKey) => {
+      const hourMap = grouped[dateKey];
+      const hourKeys = Object.keys(hourMap)
+        .map(Number)
+        .sort((a, b) => a - b); // numeric sort
+      hourKeys.forEach((hr) => {
+        const hourData = hourMap[hr];
+        // We'll push a point for each hour
+        chartDataPoints.push({
+          date: dateKey,
+          hour: hr,
+          ...hourData,
+        });
+        // Label might be "2025-03-13 05:00"
+        chartLabels.push(`${dateKey} ${hr}:00`);
+      });
+    });
+
+    return { chartDataPoints, chartLabels };
   };
 
+  // Create chart dataset for each parameter
+  const generateDataSet = (parameter, label, color, dataPoints) => ({
+    label,
+    data: dataPoints.map((pt) => pt[parameter] || 0),
+    fill: false,
+    borderColor: color,
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  useEffects
+  // ─────────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     fetchSubjects();
   }, []);
@@ -218,7 +326,9 @@ const Graphs = () => {
     fetchHoursData();
   }, [fetchHoursData]);
 
-  // Handle subject selection
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Handlers
+  // ─────────────────────────────────────────────────────────────────────────────
   const handleSubjectSelection = (e) => {
     setFormData({
       ...formData,
@@ -226,44 +336,29 @@ const Graphs = () => {
     });
   };
 
-  // Handle object checkbox toggle
   const handleObjectToggle = (objId) => {
-    setSelectedObjects((prevSelectedObjects) =>
-      prevSelectedObjects.includes(objId)
-        ? prevSelectedObjects.filter((id) => id !== objId) // Remove unchecked object
-        : [...prevSelectedObjects, objId] // Add checked object
+    setSelectedObjects((prev) =>
+      prev.includes(objId) ? prev.filter((id) => id !== objId) : [...prev, objId]
     );
   };
 
-  // Generate data sets for graph
-  const generateDataSet = (parameter, label, color) => ({
-    label,
-    data: chartDataPoints.map((point) => point[parameter] || 0),
-    fill: false,
-    borderColor: color,
-  });
+  // Build the final chart data
+  const { chartDataPoints, chartLabels } = buildChartData();
 
-  // Prepare chart data points and labels
-  const chartDataPoints = [];
-  const chartLabels = [];
-
-  Object.keys(hoursByDate)
-    .sort()
-    .forEach((dayDate) => {
-      hoursByDate[dayDate].forEach((hourData) => {
-        chartDataPoints.push(hourData);
-        chartLabels.push(`${dayDate} ${hourData.hour}:00`);
-      });
-    });
-
+  // Prepare the actual data for <Line>
   const chartData = {
     labels: chartLabels,
     datasets: [
-      selectedParameters.P1 && generateDataSet('P1', 'P1', 'rgba(75,192,192,1)'),
-      selectedParameters.P2 && generateDataSet('P2', 'P2', 'rgba(153,102,255,1)'),
-      selectedParameters.P3 && generateDataSet('P3', 'P3', 'rgba(255,159,64,1)'),
-      selectedParameters.F1 && generateDataSet('F1', 'F1', 'rgba(255,99,132,1)'),
-      selectedParameters.F2 && generateDataSet('F2', 'F2', 'rgba(54,162,235,1)'),
+      selectedParameters.P1 &&
+        generateDataSet('P1', 'P1', 'rgba(75,192,192,1)', chartDataPoints),
+      selectedParameters.P2 &&
+        generateDataSet('P2', 'P2', 'rgba(153,102,255,1)', chartDataPoints),
+      selectedParameters.P3 &&
+        generateDataSet('P3', 'P3', 'rgba(255,159,64,1)', chartDataPoints),
+      selectedParameters.F1 &&
+        generateDataSet('F1', 'F1', 'rgba(255,99,132,1)', chartDataPoints),
+      selectedParameters.F2 &&
+        generateDataSet('F2', 'F2', 'rgba(54,162,235,1)', chartDataPoints),
     ].filter(Boolean),
   };
 
@@ -289,7 +384,7 @@ const Graphs = () => {
           )}
         </div>
 
-        {/* Prettier Selectors */}
+        {/* Selectors */}
         <div className="bg-gray-100 p-6 mt-8 rounded-lg shadow-md space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
             {/* Subject Selector */}
@@ -317,7 +412,7 @@ const Graphs = () => {
               </select>
             </div>
 
-            {/* Start Date Selector */}
+            {/* Start Date */}
             <div>
               <label
                 htmlFor="startDate"
@@ -338,7 +433,7 @@ const Graphs = () => {
               />
             </div>
 
-            {/* End Date Selector */}
+            {/* End Date */}
             <div>
               <label
                 htmlFor="endDate"
@@ -359,7 +454,7 @@ const Graphs = () => {
               />
             </div>
 
-            {/* Start Hour Selector */}
+            {/* Start Hour */}
             <div>
               <label
                 htmlFor="startHour"
@@ -388,7 +483,7 @@ const Graphs = () => {
               </select>
             </div>
 
-            {/* End Hour Selector */}
+            {/* End Hour */}
             <div>
               <label
                 htmlFor="endHour"
