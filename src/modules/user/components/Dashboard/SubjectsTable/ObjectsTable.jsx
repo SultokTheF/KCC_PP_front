@@ -257,7 +257,7 @@ const ObjectTable = ({
 
       {/* Plan Table */}
       <table className="w-full text-sm text-center text-gray-500 mb-3">
-        <thead className="text-xs text-gray-700 uppercase bg-gray-300">
+      <thead className="text-xs text-gray-700 uppercase bg-gray-300">
           <tr>
             <th></th>
             <th>
@@ -275,7 +275,7 @@ const ObjectTable = ({
                 📝
               </button>
             </th>
-            {selectedObject && selectedObject.object_type !== "CONSUMER" && (
+            {selectedObject?.object_type !== "CONSUMER" && (
               <th>
                 ГП1
                 <button
@@ -293,16 +293,70 @@ const ObjectTable = ({
               </th>
             )}
             <th>П2</th>
-            {selectedObject && selectedObject.object_type !== "CONSUMER" && (
-              <th>ГП2</th>
+            {selectedObject?.object_type !== "CONSUMER" && <th>ГП2</th>}
+            <th>
+              П3
+              <button
+                className="text-base mx-1"
+                onClick={() => {
+                  setIsModalOpen(true);
+                  setPlanData({
+                    planMode: "P3",
+                    isGen: false,
+                  });
+                }}
+              >
+                📝
+              </button>
+            </th>
+            {selectedObject?.object_type !== "CONSUMER" && (
+              <th>
+                ГП3
+                <button
+                  className="text-base mx-1"
+                  onClick={() => {
+                    setIsModalOpen(true);
+                    setPlanData({
+                      planMode: "P3_Gen",
+                      isGen: true,
+                    });
+                  }}
+                >
+                  📝
+                </button>
+              </th>
             )}
-            <th>П3</th>
-            {selectedObject && selectedObject.object_type !== "CONSUMER" && (
-              <th>ГП3</th>
-            )}
-            <th>Ф1</th>
-            {selectedObject && selectedObject.object_type !== "CONSUMER" && (
-              <th>ГФ1</th>
+            <th>
+              Ф1
+              <button
+                className="text-base mx-1"
+                onClick={() => {
+                  setIsModalOpen(true);
+                  setPlanData({
+                    planMode: "F1",
+                    isGen: false,
+                  });
+                }}
+              >
+                📝
+              </button>
+            </th>
+            {selectedObject?.object_type !== "CONSUMER" && (
+              <th>
+                ГФ1
+                <button
+                  className="text-base mx-1"
+                  onClick={() => {
+                    setIsModalOpen(true);
+                    setPlanData({
+                      planMode: "F1_Gen",
+                      isGen: true,
+                    });
+                  }}
+                >
+                  📝
+                </button>
+              </th>
             )}
           </tr>
         </thead>
