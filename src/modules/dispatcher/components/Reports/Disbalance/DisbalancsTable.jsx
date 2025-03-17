@@ -42,9 +42,9 @@ const DisbalanceTable = ({
           Date: date,
           Time: hourData.time || timeIntervals[hourIndex],
           Plan: hourData[formData.planMode],
-          ...(subject?.subject_type !== "CONSUMER" && { "Plan Generation": hourData[formData.planModeGen] }),
+          ...(subject?.subject_type !== "CONSUMER" && subject?.subject_type !== "РЭК" && { "Plan Generation": hourData[formData.planModeGen] }),
           Fact: hourData[formData.factMode],
-          ...(subject?.subject_type !== "CONSUMER" && { "Fact Generation": hourData[formData.factModeGen] }),
+          ...(subject?.subject_type !== "CONSUMER" && subject?.subject_type !== "РЭК" && { "Fact Generation": hourData[formData.factModeGen] }),
         };
         data.push(rowData);
       });
