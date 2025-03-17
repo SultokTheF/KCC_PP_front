@@ -61,8 +61,6 @@ const Dashboard = () => {
         '18 - 19', '19 - 20', '20 - 21', '21 - 22', '22 - 23', '23 - 00',
       ];
 
-      const isFullExport = ['admin', 'dispatcher'].includes(user.role); // Check user role
-
       // Prepare combined data
       const combinedData = [];
 
@@ -136,9 +134,7 @@ const Dashboard = () => {
             'P3',
             ...(object?.object_type === 'ЭПО' ? ['P3_Gen'] : []),
             'F1',
-            ...(object?.object_type === 'ЭПО' ? ['F1_Gen'] : []),
-            'F2',
-            ...(object?.object_type === 'ЭПО' ? ['F2_Gen'] : [])
+            ...(object?.object_type === 'ЭПО' ? ['F1_Gen'] : [])
           ];
 
           const objectTableData = [
@@ -154,9 +150,7 @@ const Dashboard = () => {
                 hourData.P3 || 0,
                 ...(object?.object_type === 'ЭПО' ? [hourData.P3_Gen || 0] : []),
                 hourData.F1 || 0,
-                ...(object?.object_type === 'ЭПО' ? [hourData.F1_Gen || 0] : []),
-                hourData.F2 || 0,
-                ...(object?.object_type === 'ЭПО' ? [hourData.F2_Gen || 0] : [])
+                ...(object?.object_type === 'ЭПО' ? [hourData.F1_Gen || 0] : [])
               ];
             }),
           ];
