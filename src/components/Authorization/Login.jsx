@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
-import {
-  Button
-} from "@material-tailwind/react";
-
+import { Button } from "@material-tailwind/react";
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 const Login = () => {
   const { login } = useAuth();
@@ -13,6 +11,9 @@ const Login = () => {
     email: '',
     password: '',
   });
+
+  // State to track whether to show the password
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -27,7 +28,10 @@ const Login = () => {
     await login(formData);
   };
 
-
+  // Toggle the showPassword state
+  const toggleShowPassword = () => {
+    setShowPassword((prev) => !prev);
+  };
 
   const navbarHeight = 100;
   const marginTop = `${navbarHeight}px`;
@@ -52,19 +56,33 @@ const Login = () => {
                 required
               />
             </div>
-            <div>
+            <div className="mb-4">
               <label htmlFor="password" className="block text-gray-700 font-medium mb-2">
                 Пароль
               </label>
-              <input
-                type="password"
-                name="password"
-                id="password"
-                className="h-10 border border-gray-300 rounded px-4 w-full focus:outline-none focus:border-blue-500"
-                value={formData.password}
-                onChange={handleChange}
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  id="password"
+                  className="h-10 border border-gray-300 rounded px-4 w-full focus:outline-none focus:border-blue-500"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={toggleShowPassword}
+                  className="absolute inset-y-0 right-2 flex items-center"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    <EyeSlashIcon className="w-5 h-5" />
+                  ) : (
+                    <EyeIcon className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="mb-6">
@@ -72,12 +90,13 @@ const Login = () => {
                 {/* Забыли пароль? */}
               </label>
             </div>
-            <div className="lg:flex">
-              <Button type='submit' fullWidth variant="gradient" size="sm" className="lg: w-1/8">
+            <div className="lg:flex items-center">
+              <Button type="submit" fullWidth variant="gradient" size="sm" className="lg:w-1/8">
                 <span>Войти</span>
               </Button>
-
-              <span className="lg:ml-5 lg:mt-1 lg: w-7/8">Нет аккаунта? <a href="/registration" className='text-blue-700'>Создайте ее</a></span> 
+              <span className="lg:ml-5 lg:mt-1 lg:w-7/8">
+                Нет аккаунта? <a href="/registration" className="text-blue-700">Создайте ее</a>
+              </span>
             </div>
           </form>
         </div>

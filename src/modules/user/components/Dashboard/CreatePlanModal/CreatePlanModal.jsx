@@ -68,8 +68,11 @@ const PlanModal = ({
     e.preventDefault();
     console.log("Form submitted:", formData);
 
-    // Use formData.plan directly as the final plan
-    const finalPlan = formData.plan;
+    // If plan array is empty, replace it with an array of 24 zeros.
+    const finalPlan =
+      formData.plan && formData.plan.length > 0
+        ? formData.plan
+        : Array(24).fill(0);
 
     try {
       if (formData.mode === "P1" && (!plans || plans.length === 0)) {
@@ -124,7 +127,10 @@ const PlanModal = ({
     const worksheet = XLSXUtils.aoa_to_sheet(worksheetData);
     XLSXUtils.book_append_sheet(workbook, worksheet, "PlanData");
 
-    XLSXWriteFile(workbook, `${selectedObject?.object_name}_${date}_${mode}.xlsx`);
+    XLSXWriteFile(
+      workbook,
+      `${selectedObject?.object_name}_${date}_${mode}.xlsx`
+    );
   };
 
   const handleImport = async () => {
