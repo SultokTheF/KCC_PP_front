@@ -1,15 +1,14 @@
+// src/components/Dashboard/SubjectsTable/PlanModal.jsx
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@material-tailwind/react";
 import Modal from "react-modal";
-
 import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
-
 import {
   utils as XLSXUtils,
   writeFile as XLSXWriteFile,
   read as XLSXRead,
 } from "xlsx";
-
 import PlanTable from "./PlanTable";
 
 Modal.setAppElement("#root");
@@ -20,39 +19,66 @@ const PlanModal = ({
   selectedDate,
   selectedObject,
   objectList,
-  plans,
+  plans, // no longer used for submission logic
   planMode,
   isGen,
 }) => {
   const [importedData, setImportedData] = useState(null);
   const [textareaInput, setTextareaInput] = useState("");
 
-  // We'll keep the final array in state
+  // New state to hold the fetched plan data for the current object/date/mode.
+  const [existingPlan, setExistingPlan] = useState([]);
+
+  // Form data state which is initialized based on the props.
   const [formData, setFormData] = useState({
     object: selectedObject?.id || 0,
-    keys: 0,
     date: selectedDate.split("T")[0] || new Date().toISOString().split("T")[0],
     plan: [],
     mode: planMode,
   });
 
+  // On mount or when these props change, initialize the form data.
   useEffect(() => {
-    // Sort the original "plans" by hour first
     const sortedPlans = Array.isArray(plans)
       ? [...plans].sort((a, b) => a.hour - b.hour)
       : [];
-
-    // Map the relevant plan field
     const mappedPlan = sortedPlans.map((hourItem) => hourItem[planMode] ?? 0);
-
-    setFormData((prevData) => ({
-      ...prevData,
+    setFormData({
       object: selectedObject?.id || 0,
       date: selectedDate.split("T")[0],
       plan: mappedPlan,
       mode: planMode,
-    }));
+    });
   }, [selectedDate, selectedObject, planMode, plans]);
+
+  // Fetch the current plan data based on the selected object, date, and mode.
+  // We also update the new existingPlan state.
+  useEffect(() => {
+    if (formData.object && formData.date && formData.mode) {
+      axiosInstance
+        .get(endpoints.HOURS, {
+          params: { day: formData.date, obj: formData.object },
+        })
+        .then((response) => {
+          const objectHours = response.data || [];
+          const sortedHours = objectHours.sort((a, b) => a.hour - b.hour);
+          const mappedPlan = sortedHours.map((hour) => hour[formData.mode] ?? 0);
+          setFormData((prevData) => ({
+            ...prevData,
+            plan: mappedPlan,
+          }));
+          setExistingPlan(objectHours);
+        })
+        .catch((error) => {
+          console.error("Error fetching plan for object", error);
+          setFormData((prevData) => ({
+            ...prevData,
+            plan: Array(24).fill(0),
+          }));
+          setExistingPlan([]);
+        });
+    }
+  }, [formData.object, formData.date, formData.mode]);
 
   const handleTableChange = (object, date, updatedPlans, mode) => {
     setFormData({
@@ -67,42 +93,50 @@ const PlanModal = ({
     e.preventDefault();
     console.log("Form submitted:", formData);
 
-    // If plan array is empty, replace it with an array of 24 zeros.
+    // Ensure that we always have a 24-element plan.
     const finalPlan =
       formData.plan && formData.plan.length > 0
         ? formData.plan
         : Array(24).fill(0);
 
     try {
-      if (formData.mode === "P1" && (!plans || plans.length === 0)) {
-        // Sending P1 when no plans exist yet
+      // If the mode is P1 and no plan exists for the current object, create a new plan.
+      if (formData.mode === "P1" && (!existingPlan || existingPlan.length === 0)) {
         const response = await axiosInstance.post(endpoints.DAYS, {
           object: formData.object,
           date: formData.date,
           P1: finalPlan,
         });
-
         if (response.status >= 200 && response.status < 300) {
           console.log("План успешно создан:", response.data);
           window.location.href = "/dashboard";
         }
-      } else {
-        // Sending other plans
-        // We assume plans[0].day is available. If not, handle accordingly.
-        const day = plans[0]?.day;
+      } else if (existingPlan && existingPlan.length > 0) {
+        // Otherwise, update the existing plan record.
+        const day = existingPlan[0]?.day;
         const response = await axiosInstance.post(endpoints.PLANS_CREATE(day), {
           plan: {
             [formData.mode]: finalPlan,
           },
         });
-
         if (response.status === 201) {
-          console.log("План успешно создан:", response.data);
+          console.log("План успешно обновлен:", response.data);
+          window.location.href = "/dashboard";
+        }
+      } else {
+        // Fallback: create a new plan record if no existing plan is found.
+        const response = await axiosInstance.post(endpoints.DAYS, {
+          object: formData.object,
+          date: formData.date,
+          [formData.mode]: finalPlan,
+        });
+        if (response.status >= 200 && response.status < 300) {
+          console.log("План успешно создан (fallback):", response.data);
           window.location.href = "/dashboard";
         }
       }
     } catch (error) {
-      console.error("Произошла ошибка при запросе к API:", error);
+      console.error("Ошибка при отправке плана:", error);
       if (error.response?.data?.error) {
         alert(error.response?.data?.error);
       } else if (error.response?.status === 500) {
@@ -116,10 +150,10 @@ const PlanModal = ({
   const handleExport = () => {
     const { date, plan, mode } = formData;
     const slicedPlan = plan.slice(0, 24);
-
+    const selectedObj = objectList.find((obj) => obj.id === formData.object);
     const workbook = XLSXUtils.book_new();
     const worksheetData = [
-      [`Объект: ${selectedObject?.object_name}`, `Дата: ${date}`, mode],
+      [`Объект: ${selectedObj?.object_name || ""}`, `Дата: ${date}`, mode],
       ["Час", "Значение"],
       ...slicedPlan.map((value, index) => [index + 1, value]),
     ];
@@ -128,7 +162,7 @@ const PlanModal = ({
 
     XLSXWriteFile(
       workbook,
-      `${selectedObject?.object_name}_${date}_${mode}.xlsx`
+      `${selectedObj?.object_name || "object"}_${date}_${mode}.xlsx`
     );
   };
 
@@ -145,10 +179,8 @@ const PlanModal = ({
         const workbook = XLSXRead(data, { type: "array" });
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         const parsedData = XLSXUtils.sheet_to_json(worksheet, { header: 1 });
-
-        // We assume data starts from row 3
+        // Assume data starts at row 3.
         const planValues = parsedData.slice(2).map((row) => Number(row[1]) || 0);
-
         setFormData((prevData) => ({
           ...prevData,
           plan: planValues,
@@ -169,9 +201,7 @@ const PlanModal = ({
       .map(Number)
       .map((num) => (isNaN(num) ? 0 : num));
 
-    // Ensure we have exactly 24 elements
     const updatedPlan = Array.from({ length: 24 }, (_, index) => values[index] || 0);
-
     setFormData((prevData) => ({
       ...prevData,
       plan: updatedPlan,
@@ -179,7 +209,6 @@ const PlanModal = ({
   };
 
   const handlePullFromP2 = () => {
-    // If mode = P3 or P3_Gen, load from P2 or P2_Gen
     if (formData.mode === "P3") {
       const p2Plan = plans.map((hour) => hour.P2 || 0);
       setFormData((prevData) => ({
@@ -196,7 +225,6 @@ const PlanModal = ({
   };
 
   const handlePullFromP3 = () => {
-    // If mode = F1 or F1_Gen, load from P3 or P3_Gen
     if (formData.mode === "F1") {
       const p3Plan = plans.map((hour) => hour.P3 || 0);
       setFormData((prevData) => ({
@@ -231,10 +259,7 @@ const PlanModal = ({
               <form onSubmit={handleSubmit}>
                 <div className="mb-4 flex">
                   <div className="w-1/2 pr-4">
-                    <label
-                      htmlFor="object"
-                      className="block text-gray-700 font-medium mb-2"
-                    >
+                    <label htmlFor="object" className="block text-gray-700 font-medium mb-2">
                       Выберите объект
                     </label>
                     <select
@@ -258,10 +283,7 @@ const PlanModal = ({
                       ))}
                     </select>
 
-                    <label
-                      htmlFor="mode"
-                      className="block text-gray-700 font-medium my-2"
-                    >
+                    <label htmlFor="mode" className="block text-gray-700 font-medium my-2">
                       План
                     </label>
                     <select
@@ -278,15 +300,15 @@ const PlanModal = ({
                       required
                     >
                       <option value="P1">Первичный план</option>
-                      {selectedObject?.object_type !== "CONSUMER" && (
+                      {objectList.find((obj) => obj.id === formData.object)?.object_type !== "CONSUMER" && (
                         <option value="P1_Gen">Первичный план Генерации</option>
                       )}
                       <option value="P3">План KEGOC</option>
-                      {selectedObject?.object_type !== "CONSUMER" && (
+                      {objectList.find((obj) => obj.id === formData.object)?.object_type !== "CONSUMER" && (
                         <option value="P3_Gen">План Генерации KEGOC</option>
                       )}
                       <option value="F1">Факт</option>
-                      {selectedObject?.object_type !== "CONSUMER" && (
+                      {objectList.find((obj) => obj.id === formData.object)?.object_type !== "CONSUMER" && (
                         <option value="F1_Gen">Генерация Факт</option>
                       )}
                     </select>
@@ -328,10 +350,7 @@ const PlanModal = ({
                       </button>
                     )}
 
-                    <label
-                      htmlFor="date"
-                      className="block text-gray-700 font-medium my-2"
-                    >
+                    <label htmlFor="date" className="block text-gray-700 font-medium my-2">
                       Выберите дату
                     </label>
                     <input
@@ -350,10 +369,7 @@ const PlanModal = ({
                     />
 
                     <div className="w-full mr-5 my-4">
-                      <label
-                        htmlFor="file-input"
-                        className="block text-gray-700 font-medium my-2"
-                      >
+                      <label htmlFor="file-input" className="block text-gray-700 font-medium my-2">
                         Выберите файл для импорта
                       </label>
                       <input
@@ -387,10 +403,7 @@ const PlanModal = ({
                     </div>
 
                     <div className="my-3">
-                      <label
-                        htmlFor="importArea"
-                        className="block text-gray-700 font-medium my-2"
-                      >
+                      <label htmlFor="importArea" className="block text-gray-700 font-medium my-2">
                         Введите значения для импорта
                       </label>
                       <textarea
