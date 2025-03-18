@@ -319,14 +319,13 @@ const CombinedTable = ({
     selectedSubject?.subject_type !== "CONSUMER" &&
     selectedSubject?.subject_type !== "РЭК";
 
-  // Calculate P2 from P1 * coefficient + volume (for subject table)
+  // Calculation functions used in the table
   const calculateP2 = (index, P1) => {
     const c = localHourPlan[index]?.coefficient || 0;
     const v = localHourPlan[index]?.volume || 0;
     return (P1 * c + v).toFixed(2);
   };
 
-  // Calculate P2_Gen from P1_Gen * coefficient_Gen + volume_Gen (for subject table)
   const calculateP2Gen = (index, P1_Gen) => {
     const cGen = localHourPlan[index]?.coefficient_Gen || 0;
     const vGen = localHourPlan[index]?.volume_Gen || 0;
@@ -680,67 +679,41 @@ const CombinedTable = ({
     const subjectTableHeaders = [
       "Time",
       "П1",
-      ...(showGenColumns ? [] : []), // we are not including other columns in summary export here
+      ...(showGenColumns ? ["ГП1"] : []),
+      "Коэффициент",
+      ...(showGenColumns ? ["Коэф. Генерации"] : []),
+      "Объем",
+      ...(showGenColumns ? ["Объем Ген."] : []),
       "П2",
       ...(showGenColumns ? ["ГП2"] : []),
+      "Сообщ. П2",
+      ...(showGenColumns ? ["Сообщ. П2 Ген."] : []),
+      ...(showMessageCol ? ["Сообщение"] : []),
     ];
 
     const subjectTableData = [
       subjectTableHeaders,
       ...timeIntervals.map((time, idx) => {
         const row = localHourPlan[idx] || {};
+        const P1 = row.P1 || 0;
+        const p2Val =
+          row.P2 !== 0 ? row.P2 : calculateP2(idx, P1);
         return [
           time,
-          row.P1 || 0,
-          row.P2 || calculateP2(idx, row.P1),
-          ...(showGenColumns
-            ? [row.P2_Gen || calculateP2Gen(idx, row.P1_Gen)]
-            : []),
+          P1,
+          ...(showGenColumns ? [row.P1_Gen || 0] : []),
+          row.coefficient,
+          ...(showGenColumns ? [row.coefficient_Gen] : []),
+          row.volume,
+          ...(showGenColumns ? [row.volume_Gen] : []),
+          p2Val,
+          ...(showGenColumns ? [row.P2_Gen || calculateP2Gen(idx, row.P1_Gen || 0)] : []),
+          row.P2_message || "",
+          ...(showGenColumns ? [row.P2_Gen_message || ""] : []),
+          ...(showMessageCol ? [row.message || ""] : []),
         ];
       }),
-      // Sum row
-      [
-        "Сумма",
-        localHourPlan.reduce((acc, row) => acc + (Number(row.P1) || 0), 0),
-        localHourPlan.reduce((acc, row, idx) => {
-          const p2 = row.P2 !== 0 ? Number(row.P2) : Number(calculateP2(idx, row.P1)) || 0;
-          return acc + p2;
-        }, 0),
-        ...(showGenColumns
-          ? [
-              localHourPlan.reduce((acc, row, idx) => {
-                const p2Gen = row.P2_Gen
-                  ? Number(row.P2_Gen)
-                  : Number(calculateP2Gen(idx, row.P1_Gen)) || 0;
-                return acc + p2Gen;
-              }, 0).toFixed(2),
-            ]
-          : []),
-      ],
-      // Average row
-      [
-        "Среднее",
-        (localHourPlan.reduce((acc, row) => acc + (Number(row.P1) || 0), 0) / localHourPlan.length).toFixed(2),
-        (localHourPlan.reduce((acc, row, idx) => {
-          const p2 = row.P2 !== 0 ? Number(row.P2) : Number(calculateP2(idx, row.P1)) || 0;
-          return acc + p2;
-        }, 0) / localHourPlan.length).toFixed(2),
-        ...(showGenColumns
-          ? [
-              (
-                localHourPlan.reduce((acc, row, idx) => {
-                  const p2Gen = row.P2_Gen
-                    ? Number(row.P2_Gen)
-                    : Number(calculateP2Gen(idx, row.P1_Gen)) || 0;
-                  return acc + p2Gen;
-                }, 0) / localHourPlan.length
-              ).toFixed(2),
-            ]
-          : []),
-      ],
     ];
-
-    // (Object table export logic would be similar if needed)
 
     const combinedData = [
       ["Subject:", selectedSubject?.subject_name || "Unknown"],
@@ -766,44 +739,93 @@ const CombinedTable = ({
   };
 
   // ─────────────────────────────────────────────────────────────────────────────
-  //  Compute sums and averages for П1, П2, and (if applicable) П2 ГП2 in the subject table
+  //  Compute sums and averages for each column in the subject table
   // ─────────────────────────────────────────────────────────────────────────────
   const rowCount = localHourPlan.length;
+  // For subject table, numeric columns (excluding time and non-numeric message columns)
   const sumP1 = localHourPlan.reduce((acc, row) => acc + (Number(row.P1) || 0), 0);
+  const avgP1 = rowCount ? sumP1 / rowCount : 0;
+  let sumP1Gen = 0, avgP1Gen = 0;
+  if (showGenColumns) {
+    sumP1Gen = localHourPlan.reduce((acc, row) => acc + (Number(row.P1_Gen) || 0), 0);
+    avgP1Gen = rowCount ? sumP1Gen / rowCount : 0;
+  }
+  const sumCoefficient = localHourPlan.reduce((acc, row) => acc + (Number(row.coefficient) || 0), 0);
+  const avgCoefficient = rowCount ? sumCoefficient / rowCount : 0;
+  let sumCoefficientGen = 0, avgCoefficientGen = 0;
+  if (showGenColumns) {
+    sumCoefficientGen = localHourPlan.reduce((acc, row) => acc + (Number(row.coefficient_Gen) || 0), 0);
+    avgCoefficientGen = rowCount ? sumCoefficientGen / rowCount : 0;
+  }
+  const sumVolume = localHourPlan.reduce((acc, row) => acc + (Number(row.volume) || 0), 0);
+  const avgVolume = rowCount ? sumVolume / rowCount : 0;
+  let sumVolumeGen = 0, avgVolumeGen = 0;
+  if (showGenColumns) {
+    sumVolumeGen = localHourPlan.reduce((acc, row) => acc + (Number(row.volume_Gen) || 0), 0);
+    avgVolumeGen = rowCount ? sumVolumeGen / rowCount : 0;
+  }
   const sumP2 = localHourPlan.reduce((acc, row, idx) => {
     const p2 = row.P2 !== 0 ? Number(row.P2) : Number(calculateP2(idx, row.P1)) || 0;
     return acc + p2;
   }, 0);
-  const sumP2Gen = showGenColumns
-    ? localHourPlan.reduce((acc, row, idx) => {
-        const p2Gen = row.P2_Gen
-          ? Number(row.P2_Gen)
-          : Number(calculateP2Gen(idx, row.P1_Gen)) || 0;
-        return acc + p2Gen;
-      }, 0)
-    : 0;
-  const avgP1 = sumP1 / rowCount;
-  const avgP2 = sumP2 / rowCount;
-  const avgP2Gen = showGenColumns ? sumP2Gen / rowCount : 0;
+  const avgP2 = rowCount ? sumP2 / rowCount : 0;
+  let sumP2Gen = 0, avgP2Gen = 0;
+  if (showGenColumns) {
+    sumP2Gen = localHourPlan.reduce((acc, row, idx) => {
+      const p2Gen = row.P2_Gen !== 0 ? Number(row.P2_Gen) : Number(calculateP2Gen(idx, row.P1_Gen)) || 0;
+      return acc + p2Gen;
+    }, 0);
+    avgP2Gen = rowCount ? sumP2Gen / rowCount : 0;
+  }
 
-  // For the object table extra rows, compute sums/averages from the selected object's hours
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  Compute sums and averages for each column in the object table
+  // ─────────────────────────────────────────────────────────────────────────────
   const objectHours = selectedData.selectedObject
     ? objectHoursMap[selectedData.selectedObject] || []
     : [];
-  const objRowCount = objectHours.length || 24;
+  const objRowCount = objectHours.length;
   const objSumP1 = objectHours.reduce((acc, row) => acc + (Number(row.P1) || 0), 0);
+  let objSumP1Gen = 0;
+  if (selectedObject && selectedObject.object_type !== "CONSUMER") {
+    objSumP1Gen = objectHours.reduce((acc, row) => acc + (Number(row.P1_Gen) || 0), 0);
+  }
+  const objSumVolume = objectHours.reduce((acc, row) => acc + (Number(row.volume) || 0), 0);
   const objSumP2 = objectHours.reduce((acc, row) => acc + (Number(row.P2) || 0), 0);
-  const objSumP2Gen =
-    selectedObject && selectedObject.object_type !== "CONSUMER"
-      ? objectHours.reduce((acc, row) => acc + (Number(row.P2_Gen) || 0), 0)
+  let objSumP2Gen = 0;
+  if (selectedObject && selectedObject.object_type !== "CONSUMER") {
+    objSumP2Gen = objectHours.reduce((acc, row) => acc + (Number(row.P2_Gen) || 0), 0);
+  }
+  const objSumP3 = objectHours.reduce((acc, row) => acc + (Number(row.P3) || 0), 0);
+  let objSumP3Gen = 0;
+  if (selectedObject && selectedObject.object_type !== "CONSUMER") {
+    objSumP3Gen = objectHours.reduce((acc, row) => acc + (Number(row.P3_Gen) || 0), 0);
+  }
+  const objSumF1 = objectHours.reduce((acc, row) => acc + (Number(row.F1) || 0), 0);
+  let objSumF1Gen = 0;
+  if (selectedObject && selectedObject.object_type !== "CONSUMER") {
+    objSumF1Gen = objectHours.reduce((acc, row) => acc + (Number(row.F1_Gen) || 0), 0);
+  }
+  const objAvgP1 = objRowCount ? objSumP1 / objRowCount : 0;
+  const objAvgP1Gen =
+    selectedObject && selectedObject.object_type !== "CONSUMER" && objRowCount
+      ? objSumP1Gen / objRowCount
       : 0;
-  const objAvgP1 = objectHours.length ? objSumP1 / objectHours.length : 0;
-  const objAvgP2 = objectHours.length ? objSumP2 / objectHours.length : 0;
+  const objAvgVolume = objRowCount ? objSumVolume / objRowCount : 0;
+  const objAvgP2 = objRowCount ? objSumP2 / objRowCount : 0;
   const objAvgP2Gen =
-    selectedObject &&
-    selectedObject.object_type !== "CONSUMER" &&
-    objectHours.length
-      ? objSumP2Gen / objectHours.length
+    selectedObject && selectedObject.object_type !== "CONSUMER" && objRowCount
+      ? objSumP2Gen / objRowCount
+      : 0;
+  const objAvgP3 = objRowCount ? objSumP3 / objRowCount : 0;
+  const objAvgP3Gen =
+    selectedObject && selectedObject.object_type !== "CONSUMER" && objRowCount
+      ? objSumP3Gen / objRowCount
+      : 0;
+  const objAvgF1 = objRowCount ? objSumF1 / objRowCount : 0;
+  const objAvgF1Gen =
+    selectedObject && selectedObject.object_type !== "CONSUMER" && objRowCount
+      ? objSumF1Gen / objRowCount
       : 0;
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -937,7 +959,6 @@ const CombinedTable = ({
             onChange={handleFileChangeGP1}
           />
 
-          {/* Only show table if a subject is selected */}
           {selectedData.selectedSubject && (
             <table className="w-full text-sm text-center text-gray-500 mb-3">
               <thead className="text-xs text-gray-700 uppercase bg-gray-300">
@@ -960,15 +981,15 @@ const CombinedTable = ({
                 {timeIntervals.map((time, idx) => {
                   const rowData = localHourPlan[idx] || {};
                   const P1 = rowData.P1 || 0;
-                  const P2_msg = rowData.P2_message || "";
-                  const P2_gen_msg = rowData.P2_Gen_message || "";
-                  const P2Val =
+                  const p2Val =
                     rowData.P2 !== 0 ? rowData.P2 : calculateP2(idx, P1);
                   return (
                     <tr key={time}>
                       <td className="border">{time}</td>
                       <td className="border">{P1}</td>
-                      {showGenColumns && <td className="border">{rowData.P1_Gen || 0}</td>}
+                      {showGenColumns && (
+                        <td className="border">{rowData.P1_Gen || 0}</td>
+                      )}
                       <td className="border">
                         <input
                           type="number"
@@ -999,7 +1020,9 @@ const CombinedTable = ({
                         <input
                           type="number"
                           value={rowData.volume ?? ""}
-                          onChange={(e) => handleVolumeChange(idx, e.target.value)}
+                          onChange={(e) =>
+                            handleVolumeChange(idx, e.target.value)
+                          }
                           className="w-full text-center rounded"
                         />
                       </td>
@@ -1015,7 +1038,7 @@ const CombinedTable = ({
                           />
                         </td>
                       )}
-                      <td className="border">{P2Val}</td>
+                      <td className="border">{p2Val}</td>
                       {showGenColumns && (
                         <td className="border">
                           {rowData.P2_Gen
@@ -1023,29 +1046,9 @@ const CombinedTable = ({
                             : calculateP2Gen(idx, rowData.P1_Gen || 0)}
                         </td>
                       )}
-                      <td
-                        className={`border ${
-                          P2_msg
-                            ? P2_msg === "Успешно!"
-                              ? "bg-green-100"
-                              : "bg-red-100"
-                            : ""
-                        }`}
-                      >
-                        {P2_msg}
-                      </td>
+                      <td className="border">{rowData.P2_message || ""}</td>
                       {showGenColumns && (
-                        <td
-                          className={`border ${
-                            P2_gen_msg
-                              ? P2_gen_msg === "Успешно!"
-                                ? "bg-green-100"
-                                : "bg-red-100"
-                              : ""
-                          }`}
-                        >
-                          {P2_gen_msg}
-                        </td>
+                        <td className="border">{rowData.P2_Gen_message || ""}</td>
                       )}
                       {showMessageCol && (
                         <td className="border">
@@ -1062,40 +1065,43 @@ const CombinedTable = ({
                     </tr>
                   );
                 })}
-                {/* Extra rows for summary (only for П1, П2 and (if applicable) ГП2) */}
+                {/* Subject Table Footer: Sums */}
                 <tr>
                   <td className="border font-bold">Сумма</td>
                   <td className="border">{sumP1}</td>
-                  {showGenColumns && <td className="border"></td>}
-                  <td className="border"></td>
-                  {showGenColumns && <td className="border"></td>}
-                  <td className="border"></td>
-                  {showGenColumns && <td className="border"></td>}
+                  {showGenColumns && <td className="border">{sumP1Gen}</td>}
+                  <td className="border">{sumCoefficient.toFixed(2)}</td>
+                  {showGenColumns && (
+                    <td className="border">{sumCoefficientGen.toFixed(2)}</td>
+                  )}
+                  <td className="border">{sumVolume}</td>
+                  {showGenColumns && <td className="border">{sumVolumeGen}</td>}
                   <td className="border">{sumP2.toFixed(2)}</td>
                   {showGenColumns && <td className="border">{sumP2Gen.toFixed(2)}</td>}
-                  <td className="border"></td>
+                  {/** For message columns, leave empty */}
                   {showGenColumns && <td className="border"></td>}
                   {showMessageCol && <td className="border"></td>}
                 </tr>
+                {/* Subject Table Footer: Averages */}
                 <tr>
                   <td className="border font-bold">Среднее</td>
                   <td className="border">{avgP1.toFixed(2)}</td>
-                  {showGenColumns && <td className="border"></td>}
-                  <td className="border"></td>
-                  {showGenColumns && <td className="border"></td>}
-                  <td className="border"></td>
-                  {showGenColumns && <td className="border"></td>}
+                  {showGenColumns && <td className="border">{avgP1Gen.toFixed(2)}</td>}
+                  <td className="border">{avgCoefficient.toFixed(2)}</td>
+                  {showGenColumns && (
+                    <td className="border">{avgCoefficientGen.toFixed(2)}</td>
+                  )}
+                  <td className="border">{avgVolume.toFixed(2)}</td>
+                  {showGenColumns && <td className="border">{avgVolumeGen.toFixed(2)}</td>}
                   <td className="border">{avgP2.toFixed(2)}</td>
                   {showGenColumns && <td className="border">{avgP2Gen.toFixed(2)}</td>}
-                  <td className="border"></td>
                   {showGenColumns && <td className="border"></td>}
                   {showMessageCol && <td className="border"></td>}
                 </tr>
               </tbody>
             </table>
           )}
-
-          {/* Action Buttons (all in one row) */}
+          {/* Action Buttons for subject table */}
           <div className="flex flex-wrap justify-end space-x-2 mt-4">
             <button
               className="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600 transition"
@@ -1144,8 +1150,6 @@ const CombinedTable = ({
               Экспорт полного отчета
             </button>
           </div>
-
-          {/* If disapprove is active, show "Отправить" + "Отмена" */}
           {showMessageCol && (
             <div className="flex justify-end space-x-2 mt-4">
               <button
@@ -1170,8 +1174,10 @@ const CombinedTable = ({
         <div className="w-full md:w-1/3 ml-0 md:ml-2">
           {selectedData.selectedObject && (
             <table className="w-full text-sm text-center text-gray-500 mb-3">
+              {/* Add a first column for row labels */}
               <thead className="text-xs text-gray-700 uppercase bg-gray-300">
                 <tr>
+                  <th></th>
                   <th>П1</th>
                   {selectedObject?.object_type !== "CONSUMER" && <th>ГП1</th>}
                   <th>Объем</th>
@@ -1195,6 +1201,7 @@ const CombinedTable = ({
                     ) || {};
                   return (
                     <tr key={time}>
+                      <td className="border">{time}</td>
                       <td className="border">{hourData.P1 || 0}</td>
                       {selectedObject?.object_type !== "CONSUMER" && (
                         <td className="border">{hourData.P1_Gen || 0}</td>
@@ -1219,51 +1226,55 @@ const CombinedTable = ({
                     </tr>
                   );
                 })}
-                {/* Extra rows for the object table */}
+                {/* Object Table Footer for non-CONSUMER objects */}
                 {selectedObject && selectedObject.object_type !== "CONSUMER" ? (
                   <>
                     <tr>
                       <td className="border font-bold">Сумма</td>
                       <td className="border">{objSumP1}</td>
-                      <td className="border"></td>
+                      <td className="border">{objSumP1Gen}</td>
+                      <td className="border">{objSumVolume}</td>
                       <td className="border">{objSumP2}</td>
                       <td className="border">{objSumP2Gen.toFixed(2)}</td>
-                      <td className="border"></td>
-                      <td className="border"></td>
-                      <td className="border"></td>
-                      <td className="border"></td>
-                      <td className="border"></td>
+                      <td className="border">{objSumP3}</td>
+                      <td className="border">{objSumP3Gen.toFixed(2)}</td>
+                      <td className="border">{objSumF1}</td>
+                      <td className="border">{objSumF1Gen.toFixed(2)}</td>
                       <td className="border"></td>
                     </tr>
                     <tr>
                       <td className="border font-bold">Среднее</td>
                       <td className="border">{objAvgP1.toFixed(2)}</td>
-                      <td className="border"></td>
+                      <td className="border">{objAvgP1Gen.toFixed(2)}</td>
+                      <td className="border">{objAvgVolume.toFixed(2)}</td>
                       <td className="border">{objAvgP2.toFixed(2)}</td>
                       <td className="border">{objAvgP2Gen.toFixed(2)}</td>
-                      <td className="border"></td>
-                      <td className="border"></td>
-                      <td className="border"></td>
-                      <td className="border"></td>
-                      <td className="border"></td>
+                      <td className="border">{objAvgP3.toFixed(2)}</td>
+                      <td className="border">{objAvgP3Gen.toFixed(2)}</td>
+                      <td className="border">{objAvgF1.toFixed(2)}</td>
+                      <td className="border">{objAvgF1Gen.toFixed(2)}</td>
                       <td className="border"></td>
                     </tr>
                   </>
                 ) : selectedObject ? (
-                  // For CONSUMER objects (fewer columns)
+                  // For CONSUMER objects – add an extra header cell for row labels
                   <>
                     <tr>
                       <td className="border font-bold">Сумма</td>
                       <td className="border">{objSumP1}</td>
-                      <td className="border"></td>
+                      <td className="border">{objSumVolume}</td>
                       <td className="border">{objSumP2}</td>
+                      <td className="border">{objSumP3}</td>
+                      <td className="border">{objSumF1}</td>
                       <td className="border"></td>
                     </tr>
                     <tr>
                       <td className="border font-bold">Среднее</td>
-                      <td className="border">{objAvgP1.toFixed(2)}</td>
-                      <td className="border"></td>
-                      <td className="border">{objAvgP2.toFixed(2)}</td>
+                      <td className="border">{objRowCount ? (objSumP1 / objRowCount).toFixed(2) : 0}</td>
+                      <td className="border">{objRowCount ? (objSumVolume / objRowCount).toFixed(2) : 0}</td>
+                      <td className="border">{objRowCount ? (objSumP2 / objRowCount).toFixed(2) : 0}</td>
+                      <td className="border">{objRowCount ? (objSumP3 / objRowCount).toFixed(2) : 0}</td>
+                      <td className="border">{objRowCount ? (objSumF1 / objRowCount).toFixed(2) : 0}</td>
                       <td className="border"></td>
                     </tr>
                   </>
