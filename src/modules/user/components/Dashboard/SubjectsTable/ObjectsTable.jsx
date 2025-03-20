@@ -171,43 +171,43 @@ const ObjectTable = ({
   const rowCount = hourPlan.length;
   const sumP1 = hourPlan.reduce((acc, row) => acc + (Number(row.P1) || 0), 0);
   const sumP1Gen =
-    selectedObject && selectedObject.object_type !== "CONSUMER"
+    selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК"
       ? hourPlan.reduce((acc, row) => acc + (Number(row.P1_Gen) || 0), 0)
       : 0;
   const sumP2 = hourPlan.reduce((acc, row) => acc + (Number(row.P2) || 0), 0);
   const sumP2Gen =
-    selectedObject && selectedObject.object_type !== "CONSUMER"
+    selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК"
       ? hourPlan.reduce((acc, row) => acc + (Number(row.P2_Gen) || 0), 0)
       : 0;
   const sumP3 = hourPlan.reduce((acc, row) => acc + (Number(row.P3) || 0), 0);
   const sumP3Gen =
-    selectedObject && selectedObject.object_type !== "CONSUMER"
+    selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК"
       ? hourPlan.reduce((acc, row) => acc + (Number(row.P3_Gen) || 0), 0)
       : 0;
   const sumF1 = hourPlan.reduce((acc, row) => acc + (Number(row.F1) || 0), 0);
   const sumF1Gen =
-    selectedObject && selectedObject.object_type !== "CONSUMER"
+    selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК"
       ? hourPlan.reduce((acc, row) => acc + (Number(row.F1_Gen) || 0), 0)
       : 0;
 
   const avgP1 = rowCount ? sumP1 / rowCount : 0;
   const avgP1Gen =
-    selectedObject && selectedObject.object_type !== "CONSUMER"
+    selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК"
       ? (rowCount ? sumP1Gen / rowCount : 0)
       : 0;
   const avgP2 = rowCount ? sumP2 / rowCount : 0;
   const avgP2Gen =
-    selectedObject && selectedObject.object_type !== "CONSUMER"
+    selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК"
       ? (rowCount ? sumP2Gen / rowCount : 0)
       : 0;
   const avgP3 = rowCount ? sumP3 / rowCount : 0;
   const avgP3Gen =
-    selectedObject && selectedObject.object_type !== "CONSUMER"
+    selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК"
       ? (rowCount ? sumP3Gen / rowCount : 0)
       : 0;
   const avgF1 = rowCount ? sumF1 / rowCount : 0;
   const avgF1Gen =
-    selectedObject && selectedObject.object_type !== "CONSUMER"
+    selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК"
       ? (rowCount ? sumF1Gen / rowCount : 0)
       : 0;
   // ***********************************************
@@ -275,7 +275,8 @@ const ObjectTable = ({
                 📝
               </button>
             </th>
-            {selectedObject?.object_type !== "CONSUMER" && (
+            {selectedObject?.object_type !== "CONSUMER" && selectedObject?.object_type !== "РЭК"
+ && (
               <th>
                 ГП1
                 <button
@@ -293,7 +294,8 @@ const ObjectTable = ({
               </th>
             )}
             <th>П2</th>
-            {selectedObject?.object_type !== "CONSUMER" && <th>ГП2</th>}
+            {selectedObject?.object_type !== "CONSUMER" && selectedObject?.object_type !== "РЭК"
+ && <th>ГП2</th>}
             <th>
               П3
               <button
@@ -309,7 +311,8 @@ const ObjectTable = ({
                 📝
               </button>
             </th>
-            {selectedObject?.object_type !== "CONSUMER" && (
+            {selectedObject?.object_type !== "CONSUMER" && selectedObject?.object_type !== "РЭК"
+ && (
               <th>
                 ГП3
                 <button
@@ -341,7 +344,8 @@ const ObjectTable = ({
                 📝
               </button>
             </th>
-            {selectedObject?.object_type !== "CONSUMER" && (
+            {selectedObject?.object_type !== "CONSUMER" && selectedObject?.object_type !== "РЭК"
+ && (
               <th>
                 ГФ1
                 <button
@@ -365,19 +369,19 @@ const ObjectTable = ({
             <tr key={time}>
               <td className="border">{time}</td>
               <td className="border">{hourPlan[index]?.P1 || 0}</td>
-              {selectedObject && selectedObject.object_type !== "CONSUMER" && (
+              {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
                 <td className="border">{hourPlan[index]?.P1_Gen || 0}</td>
               )}
               <td className="border">{hourPlan[index]?.P2 || 0}</td>
-              {selectedObject && selectedObject.object_type !== "CONSUMER" && (
+              {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
                 <td className="border">{hourPlan[index]?.P2_Gen || 0}</td>
               )}
               <td className="border">{hourPlan[index]?.P3 || 0}</td>
-              {selectedObject && selectedObject.object_type !== "CONSUMER" && (
+              {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
                 <td className="border">{hourPlan[index]?.P3_Gen || 0}</td>
               )}
               <td className="border">{hourPlan[index]?.F1 || 0}</td>
-              {selectedObject && selectedObject.object_type !== "CONSUMER" && (
+              {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
                 <td className="border">{hourPlan[index]?.F1_Gen || 0}</td>
               )}
             </tr>
@@ -386,38 +390,38 @@ const ObjectTable = ({
           <tr>
             <td className="border font-bold">Сумма</td>
             <td className="border">{sumP1}</td>
-            {selectedObject && selectedObject.object_type !== "CONSUMER" && (
+            {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
               <td className="border">{sumP1Gen.toFixed(2)}</td>
             )}
             <td className="border">{sumP2.toFixed(2)}</td>
-            {selectedObject && selectedObject.object_type !== "CONSUMER" && (
+            {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
               <td className="border">{sumP2Gen.toFixed(2)}</td>
             )}
             <td className="border">{sumP3}</td>
-            {selectedObject && selectedObject.object_type !== "CONSUMER" && (
+            {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
               <td className="border">{sumP3Gen}</td>
             )}
             <td className="border">{sumF1}</td>
-            {selectedObject && selectedObject.object_type !== "CONSUMER" && (
+            {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
               <td className="border">{sumF1Gen}</td>
             )}
           </tr>
           <tr>
             <td className="border font-bold">Среднее</td>
             <td className="border">{avgP1.toFixed(2)}</td>
-            {selectedObject && selectedObject.object_type !== "CONSUMER" && (
+            {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
               <td className="border">{avgP1Gen.toFixed(2)}</td>
             )}
             <td className="border">{avgP2.toFixed(2)}</td>
-            {selectedObject && selectedObject.object_type !== "CONSUMER" && (
+            {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
               <td className="border">{avgP2Gen.toFixed(2)}</td>
             )}
             <td className="border">{avgP3.toFixed(2)}</td>
-            {selectedObject && selectedObject.object_type !== "CONSUMER" && (
+            {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
               <td className="border">{avgP3Gen.toFixed(2)}</td>
             )}
             <td className="border">{avgF1.toFixed(2)}</td>
-            {selectedObject && selectedObject.object_type !== "CONSUMER" && (
+            {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
               <td className="border">{avgF1Gen.toFixed(2)}</td>
             )}
           </tr>

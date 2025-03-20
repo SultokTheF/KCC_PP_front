@@ -138,30 +138,30 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
   // Compute summary for each column (all numeric columns)
   const rowCount = hourPlan.length;
   const sumP1 = hourPlan.reduce((acc, row) => acc + (Number(row.P1) || 0), 0);
-  const sumP1Gen = selectedSubject?.subject_type !== 'CONSUMER'
+  const sumP1Gen = selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК"
     ? hourPlan.reduce((acc, row) => acc + (Number(row.P1_Gen) || 0), 0)
     : null;
   const sumP2 = hourPlan.reduce((acc, row) => acc + (Number(row.P2) || 0), 0);
-  const sumP2Gen = selectedSubject?.subject_type !== 'CONSUMER'
+  const sumP2Gen = selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК"
     ? hourPlan.reduce((acc, row) => acc + (Number(row.P2_Gen) || 0), 0)
     : null;
   const sumP3 = hourPlan.reduce((acc, row) => acc + (Number(row.P3) || 0), 0);
-  const sumP3Gen = selectedSubject?.subject_type !== 'CONSUMER'
+  const sumP3Gen = selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК"
     ? hourPlan.reduce((acc, row) => acc + (Number(row.P3_Gen) || 0), 0)
     : null;
   const sumF1 = hourPlan.reduce((acc, row) => acc + (Number(row.F1) || 0), 0);
-  const sumF1Gen = selectedSubject?.subject_type !== 'CONSUMER'
+  const sumF1Gen = selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК"
     ? hourPlan.reduce((acc, row) => acc + (Number(row.F1_Gen) || 0), 0)
     : null;
 
   const avgP1 = rowCount ? sumP1 / rowCount : 0;
-  const avgP1Gen = selectedSubject?.subject_type !== 'CONSUMER' ? (rowCount ? sumP1Gen / rowCount : 0) : null;
+  const avgP1Gen = selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" ? (rowCount ? sumP1Gen / rowCount : 0) : null;
   const avgP2 = rowCount ? sumP2 / rowCount : 0;
-  const avgP2Gen = selectedSubject?.subject_type !== 'CONSUMER' ? (rowCount ? sumP2Gen / rowCount : 0) : null;
+  const avgP2Gen = selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" ? (rowCount ? sumP2Gen / rowCount : 0) : null;
   const avgP3 = rowCount ? sumP3 / rowCount : 0;
-  const avgP3Gen = selectedSubject?.subject_type !== 'CONSUMER' ? (rowCount ? sumP3Gen / rowCount : 0) : null;
+  const avgP3Gen = selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" ? (rowCount ? sumP3Gen / rowCount : 0) : null;
   const avgF1 = rowCount ? sumF1 / rowCount : 0;
-  const avgF1Gen = selectedSubject?.subject_type !== 'CONSUMER' ? (rowCount ? sumF1Gen / rowCount : 0) : null;
+  const avgF1Gen = selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" ? (rowCount ? sumF1Gen / rowCount : 0) : null;
 
   return (
     <>
@@ -208,13 +208,13 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
           <tr>
             <th></th>
             <th>П1</th>
-            {selectedSubject?.subject_type !== 'CONSUMER' && <th>ГП1</th>}
+            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <th>ГП1</th>}
             <th>П2</th>
-            {selectedSubject?.subject_type !== 'CONSUMER' && <th>ГП2</th>}
+            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <th>ГП2</th>}
             <th>П3</th>
-            {selectedSubject?.subject_type !== 'CONSUMER' && <th>ГП3</th>}
+            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <th>ГП3</th>}
             <th>Ф1</th>
-            {selectedSubject?.subject_type !== 'CONSUMER' && <th>ГФ1</th>}
+            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <th>ГФ1</th>}
           </tr>
         </thead>
         <tbody>
@@ -222,19 +222,19 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
             <tr key={time}>
               <td className="border">{time}</td>
               <td className="border">{hourPlan[index]?.P1 || 0}</td>
-              {selectedSubject?.subject_type !== 'CONSUMER' && (
+              {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && (
                 <td className="border">{hourPlan[index]?.P1_Gen || 0}</td>
               )}
               <td className="border">{hourPlan[index]?.P2 || 0}</td>
-              {selectedSubject?.subject_type !== 'CONSUMER' && (
+              {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && (
                 <td className="border">{hourPlan[index]?.P2_Gen || 0}</td>
               )}
               <td className="border">{hourPlan[index]?.P3 || 0}</td>
-              {selectedSubject?.subject_type !== 'CONSUMER' && (
+              {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && (
                 <td className="border">{hourPlan[index]?.P3_Gen || 0}</td>
               )}
               <td className="border">{hourPlan[index]?.F1 || 0}</td>
-              {selectedSubject?.subject_type !== 'CONSUMER' && (
+              {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && (
                 <td className="border">{hourPlan[index]?.F1_Gen || 0}</td>
               )}
             </tr>
@@ -243,25 +243,25 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
           <tr>
             <td className="border font-bold">Сумма</td>
             <td className="border">{sumP1}</td>
-            {selectedSubject?.subject_type !== 'CONSUMER' && <td className="border">{sumP1Gen}</td>}
+            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <td className="border">{sumP1Gen}</td>}
             <td className="border">{sumP2.toFixed(2)}</td>
-            {selectedSubject?.subject_type !== 'CONSUMER' && <td className="border">{sumP2Gen.toFixed(2)}</td>}
+            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <td className="border">{sumP2Gen.toFixed(2)}</td>}
             <td className="border">{sumP3}</td>
-            {selectedSubject?.subject_type !== 'CONSUMER' && <td className="border">{sumP3Gen}</td>}
+            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <td className="border">{sumP3Gen}</td>}
             <td className="border">{sumF1}</td>
-            {selectedSubject?.subject_type !== 'CONSUMER' && <td className="border">{sumF1Gen}</td>}
+            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <td className="border">{sumF1Gen}</td>}
           </tr>
           {/* Summary Row: Average */}
           <tr>
             <td className="border font-bold">Среднее</td>
             <td className="border">{avgP1.toFixed(2)}</td>
-            {selectedSubject?.subject_type !== 'CONSUMER' && <td className="border">{avgP1Gen.toFixed(2)}</td>}
+            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <td className="border">{avgP1Gen.toFixed(2)}</td>}
             <td className="border">{avgP2.toFixed(2)}</td>
-            {selectedSubject?.subject_type !== 'CONSUMER' && <td className="border">{avgP2Gen.toFixed(2)}</td>}
+            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <td className="border">{avgP2Gen.toFixed(2)}</td>}
             <td className="border">{avgP3.toFixed(2)}</td>
-            {selectedSubject?.subject_type !== 'CONSUMER' && <td className="border">{avgP3Gen.toFixed(2)}</td>}
+            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <td className="border">{avgP3Gen.toFixed(2)}</td>}
             <td className="border">{avgF1.toFixed(2)}</td>
-            {selectedSubject?.subject_type !== 'CONSUMER' && <td className="border">{avgF1Gen.toFixed(2)}</td>}
+            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <td className="border">{avgF1Gen.toFixed(2)}</td>}
           </tr>
         </tbody>
       </table>

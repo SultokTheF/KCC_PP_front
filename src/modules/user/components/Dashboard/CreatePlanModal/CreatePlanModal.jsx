@@ -62,7 +62,9 @@ const PlanModal = ({
         .then((response) => {
           const objectHours = response.data || [];
           const sortedHours = objectHours.sort((a, b) => a.hour - b.hour);
-          const mappedPlan = sortedHours.map((hour) => hour[formData.mode] ?? 0);
+          const mappedPlan = sortedHours.map(
+            (hour) => hour[formData.mode] ?? 0
+          );
           setFormData((prevData) => ({
             ...prevData,
             plan: mappedPlan,
@@ -101,7 +103,10 @@ const PlanModal = ({
 
     try {
       // If the mode is P1 and no plan exists for the current object, create a new plan.
-      if (formData.mode === "P1" && (!existingPlan || existingPlan.length === 0)) {
+      if (
+        formData.mode === "P1" &&
+        (!existingPlan || existingPlan.length === 0)
+      ) {
         const response = await axiosInstance.post(endpoints.DAYS, {
           object: formData.object,
           date: formData.date,
@@ -180,7 +185,9 @@ const PlanModal = ({
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         const parsedData = XLSXUtils.sheet_to_json(worksheet, { header: 1 });
         // Assume data starts at row 3.
-        const planValues = parsedData.slice(2).map((row) => Number(row[1]) || 0);
+        const planValues = parsedData
+          .slice(2)
+          .map((row) => Number(row[1]) || 0);
         setFormData((prevData) => ({
           ...prevData,
           plan: planValues,
@@ -201,7 +208,10 @@ const PlanModal = ({
       .map(Number)
       .map((num) => (isNaN(num) ? 0 : num));
 
-    const updatedPlan = Array.from({ length: 24 }, (_, index) => values[index] || 0);
+    const updatedPlan = Array.from(
+      { length: 24 },
+      (_, index) => values[index] || 0
+    );
     setFormData((prevData) => ({
       ...prevData,
       plan: updatedPlan,
@@ -259,7 +269,10 @@ const PlanModal = ({
               <form onSubmit={handleSubmit}>
                 <div className="mb-4 flex">
                   <div className="w-1/2 pr-4">
-                    <label htmlFor="object" className="block text-gray-700 font-medium mb-2">
+                    <label
+                      htmlFor="object"
+                      className="block text-gray-700 font-medium mb-2"
+                    >
                       Выберите объект
                     </label>
                     <select
@@ -283,7 +296,10 @@ const PlanModal = ({
                       ))}
                     </select>
 
-                    <label htmlFor="mode" className="block text-gray-700 font-medium my-2">
+                    <label
+                      htmlFor="mode"
+                      className="block text-gray-700 font-medium my-2"
+                    >
                       План
                     </label>
                     <select
@@ -300,17 +316,28 @@ const PlanModal = ({
                       required
                     >
                       <option value="P1">Первичный план</option>
-                      {objectList.find((obj) => obj.id === formData.object)?.object_type !== "CONSUMER" && (
-                        <option value="P1_Gen">Первичный план Генерации</option>
-                      )}
+                      {objectList.find((obj) => obj.id === formData.object)
+                        ?.object_type !== "CONSUMER" &&
+                        objectList.find((obj) => obj.id === formData.object)
+                          ?.object_type !== "РЭК" && (
+                          <option value="P1_Gen">
+                            Первичный план Генерации
+                          </option>
+                        )}
                       <option value="P3">План KEGOC</option>
-                      {objectList.find((obj) => obj.id === formData.object)?.object_type !== "CONSUMER" && (
-                        <option value="P3_Gen">План Генерации KEGOC</option>
-                      )}
+                      {objectList.find((obj) => obj.id === formData.object)
+                        ?.object_type !== "CONSUMER" &&
+                        objectList.find((obj) => obj.id === formData.object)
+                          ?.object_type !== "РЭК" && (
+                          <option value="P3_Gen">План Генерации KEGOC</option>
+                        )}
                       <option value="F1">Факт</option>
-                      {objectList.find((obj) => obj.id === formData.object)?.object_type !== "CONSUMER" && (
-                        <option value="F1_Gen">Генерация Факт</option>
-                      )}
+                      {objectList.find((obj) => obj.id === formData.object)
+                        ?.object_type !== "CONSUMER" &&
+                        objectList.find((obj) => obj.id === formData.object)
+                          ?.object_type !== "РЭК" && (
+                          <option value="F1_Gen">Генерация Факт</option>
+                        )}
                     </select>
 
                     {formData.mode === "P3" && (
@@ -350,7 +377,10 @@ const PlanModal = ({
                       </button>
                     )}
 
-                    <label htmlFor="date" className="block text-gray-700 font-medium my-2">
+                    <label
+                      htmlFor="date"
+                      className="block text-gray-700 font-medium my-2"
+                    >
                       Выберите дату
                     </label>
                     <input
@@ -369,7 +399,10 @@ const PlanModal = ({
                     />
 
                     <div className="w-full mr-5 my-4">
-                      <label htmlFor="file-input" className="block text-gray-700 font-medium my-2">
+                      <label
+                        htmlFor="file-input"
+                        className="block text-gray-700 font-medium my-2"
+                      >
                         Выберите файл для импорта
                       </label>
                       <input
@@ -403,7 +436,10 @@ const PlanModal = ({
                     </div>
 
                     <div className="my-3">
-                      <label htmlFor="importArea" className="block text-gray-700 font-medium my-2">
+                      <label
+                        htmlFor="importArea"
+                        className="block text-gray-700 font-medium my-2"
+                      >
                         Введите значения для импорта
                       </label>
                       <textarea
