@@ -125,7 +125,7 @@ const History = () => {
       if (filters.timeEnd) params.time_end = filters.timeEnd;
       if (filters.userRole.length > 0)
         params.user_role = filters.userRole.join(",");
-        params.userId = user.id;
+        // params.userId = user.id;
       if (filters.object.length > 0) params.object = filters.object.join(",");
 
       const historyResponse = await axiosInstance.get("/api/history/", {
