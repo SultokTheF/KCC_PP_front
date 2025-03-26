@@ -2,11 +2,10 @@ import React, { useState, useEffect, useCallback } from "react";
 import DisbalanceTable from "./DisbalancsTable";
 // import DisbalanceSum from "./DisbalanceSum";
 import Sidebar from "../../Sidebar/Sidebar";
+import dayjs from "dayjs";
+import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 import { useAuth } from "../../../../../hooks/useAuth";
 
-import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
-
-// Moved timeIntervals to a separate module or include it here
 const timeIntervals = [
   '00 - 01', '01 - 02', '02 - 03', '03 - 04', '04 - 05', '05 - 06',
   '06 - 07', '07 - 08', '08 - 09', '09 - 10', '10 - 11', '11 - 12',
@@ -18,13 +17,13 @@ const Disbalance = () => {
   const { user } = useAuth();
 
   const [formData, setFormData] = useState({
-    date_from: new Date().toISOString().split('T')[0],
-    date_to: new Date().toISOString().split('T')[0],
-    subject: '',
-    planMode: 'P1',
-    planModeGen: 'P1_Gen',
-    factMode: 'F1',
-    factModeGen: 'F1_Gen',
+    date_from: new Date().toISOString().split("T")[0],
+    date_to: new Date().toISOString().split("T")[0],
+    subject: "",
+    planMode: "P1",
+    planModeGen: "P1_Gen",
+    factMode: "F1",
+    factModeGen: "F1_Gen",
     dateArray: [],
   });
 
@@ -34,45 +33,128 @@ const Disbalance = () => {
   const [objectHours, setObjectHours] = useState({});
   const [hoursList, setHoursList] = useState([]);
 
-  // Fetch subjects and initialize data when subject changes
+  // Fetch subjects and objects when subject changes
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        // Fetch subjects
-        const subjectsResponse = await axiosInstance.get(endpoints.SUBJECTS);
-        const filteredSubjects = subjectsResponse.data.filter(subject => subject.users.includes(user.id));
-        setSubjectsList(filteredSubjects);
+        const subjectsResponse = await axiosInstance.get(endpoints.SUBJECTS, 
+          { params: { user: user.id } }
+        );
+        setSubjectsList(subjectsResponse.data);
 
         if (formData.subject) {
-          // Fetch objects for the selected subject
           const objectsResponse = await axiosInstance.get(endpoints.OBJECTS, {
-            params: {
-              sub: formData.subject,
-            },
+            params: { sub: formData.subject },
           });
-
-          const filteredObjects = objectsResponse.data.filter(object => object.users.includes(user.id));
-          setObjectsList(filteredObjects);
-
+          setObjectsList(objectsResponse.data);
           // By default, select all objects
           const allObjectIds = objectsResponse.data.map((obj) => obj.id);
           setSelectedObjects(allObjectIds);
         } else {
-          // Reset data if no subject is selected
           setObjectsList([]);
           setSelectedObjects([]);
           setObjectHours({});
           setHoursList([]);
         }
       } catch (error) {
-        console.error('Error fetching initial data:', error);
+        console.error("Error fetching initial data:", error);
       }
     };
 
     fetchInitialData();
   }, [formData.subject]);
 
-  // Fetch hours data when date range or selected objects change
+  // Generate an array of dates from start to end date
+  const generateDateArray = (startDate, endDate) => {
+    const dateArray = [];
+    let currentDate = new Date(startDate);
+    const end = new Date(endDate);
+
+    while (currentDate <= end) {
+      dateArray.push(new Date(currentDate).toISOString().split("T")[0]);
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return dateArray;
+  };
+
+  // Fetch day objects for each unique day ID found in the aggregated hours
+  const fetchDayObjects = async (hoursArray) => {
+    const uniqueDayIds = [
+      ...new Set(hoursArray.map((h) => h.day).filter((day) => day))
+    ];
+    const dayMapTemp = {};
+
+    for (const dayId of uniqueDayIds) {
+      try {
+        const response = await axiosInstance.get(`${endpoints.DAYS}${dayId}/`);
+        dayMapTemp[dayId] = response.data;
+      } catch (error) {
+        console.error(`Error fetching day ${dayId}:`, error);
+        dayMapTemp[dayId] = null;
+      }
+    }
+
+    return dayMapTemp;
+  };
+
+  // Aggregate (sum) hours for each corresponding record across selected objects.
+  // Also, if available, capture the "day" property so it can be used for date indexation.
+  const sumHoursForSelectedObjects = (objectHoursData) => {
+    const totalHoursList = [];
+
+    if (Object.keys(objectHoursData).length === 0) {
+      return [];
+    }
+
+    const objIds = Object.keys(objectHoursData);
+    const totalRecords = objectHoursData[objIds[0]].length;
+
+    for (let i = 0; i < totalRecords; i++) {
+      const aggregatedHour = {};
+      let dateSet = false;
+      let timeSet = false;
+
+      objIds.forEach((objId) => {
+        const objHours = objectHoursData[objId];
+        if (objHours && objHours[i]) {
+          const hourData = objHours[i];
+          for (const field in hourData) {
+            if (typeof hourData[field] === "number") {
+              aggregatedHour[field] =
+                (aggregatedHour[field] || 0) + hourData[field];
+            } else {
+              if (!dateSet && field === "date" && hourData[field]) {
+                aggregatedHour[field] = hourData[field];
+                dateSet = true;
+              }
+              if (!timeSet && field === "time" && hourData[field]) {
+                aggregatedHour[field] = hourData[field];
+                timeSet = true;
+              }
+              // Capture the "day" field if present
+              if (!aggregatedHour["day"] && field === "day" && hourData[field]) {
+                aggregatedHour["day"] = hourData[field];
+              }
+            }
+          }
+        }
+      });
+
+      if (!aggregatedHour["date"]) {
+        aggregatedHour["date"] = "Unknown Date";
+      }
+      if (!aggregatedHour["time"]) {
+        aggregatedHour["time"] = "Unknown Time";
+      }
+      totalHoursList.push(aggregatedHour);
+    }
+
+    return totalHoursList;
+  };
+
+  // Fetch hours data for each selected object, then aggregate them,
+  // and finally update each aggregated record’s date using the fetched day objects.
   const fetchHoursData = useCallback(async () => {
     try {
       if (!formData.subject || !formData.date_from || !formData.date_to) {
@@ -80,18 +162,11 @@ const Disbalance = () => {
         return;
       }
 
-      // Generate date array
       const dateArray = generateDateArray(formData.date_from, formData.date_to);
-
-      setFormData((prevData) => ({
-        ...prevData,
-        dateArray: dateArray,
-      }));
+      setFormData((prevData) => ({ ...prevData, dateArray }));
 
       const totalDays = dateArray.length;
-      const totalHours = totalDays * 24;
 
-      // Fetch hours for each object
       const hoursPromises = selectedObjects.map((objId) =>
         axiosInstance
           .get(endpoints.HOURS, {
@@ -103,36 +178,34 @@ const Disbalance = () => {
           })
           .then((response) => {
             const hours = response.data;
-
-            // Process hours to include date and time
+            // Process each hour to include a date and time
             const hoursWithDateTime = hours.map((hourData, index) => {
               const dayIndex = Math.floor(index / 24);
               const hourIndex = index % 24;
-
-              // Safeguard against index out of bounds
-              const date = dateArray[dayIndex] || formData.date_from;
-              const time = timeIntervals[hourIndex] || timeIntervals[0];
-
-              return {
-                ...hourData,
-                date: hourData.date || date,
-                time: hourData.time || time,
-              };
+              // Use the API-provided date if available; otherwise, use the generated date
+              const date =
+                hourData.date || dateArray[dayIndex] || formData.date_from;
+              const time =
+                hourData.time || timeIntervals[hourIndex] || timeIntervals[0];
+              return { ...hourData, date, time };
             });
-
-            return { status: 'fulfilled', objId, hours: hoursWithDateTime };
+            return { status: "fulfilled", objId, hours: hoursWithDateTime };
           })
           .catch((error) => {
-            console.warn(`Error fetching hours for object ${objId}, setting hours to zeros.`);
+            console.warn(
+              `Error fetching hours for object ${objId}, using zeros.`
+            );
+            // Generate a zeros array for this object
             const zeros = [];
             let currentDate = new Date(formData.date_from);
             for (let day = 0; day < totalDays; day++) {
-              const dateString = currentDate.toISOString().split('T')[0];
+              const dateString = currentDate.toISOString().split("T")[0];
               for (let hour = 1; hour <= 24; hour++) {
                 zeros.push({
                   hour: hour,
                   time: timeIntervals[hour - 1],
                   date: dateString,
+                  day: null,
                   P1: 0,
                   P1_Gen: 0,
                   P2: 0,
@@ -151,7 +224,7 @@ const Disbalance = () => {
               }
               currentDate.setDate(currentDate.getDate() + 1);
             }
-            return { status: 'rejected', objId, hours: zeros };
+            return { status: "rejected", objId, hours: zeros };
           })
       );
 
@@ -161,21 +234,45 @@ const Disbalance = () => {
       hoursResults.forEach(({ objId, hours }) => {
         newObjectHours[objId] = hours;
       });
-      setObjectHours(newObjectHours);
 
-      // Sum up the hours for selected objects
-      const totalHoursList = sumHoursForSelectedObjects(newObjectHours);
-      setHoursList(totalHoursList);
+      // Aggregate the hours records across selected objects
+      const aggregatedHours = sumHoursForSelectedObjects(newObjectHours);
+
+      // Fetch day objects using the aggregated hours’ day IDs
+      const dayMapObj = await fetchDayObjects(aggregatedHours);
+
+      // Update each aggregated record's date using the day object (if available)
+      const finalHoursList = aggregatedHours.map((hour) => {
+        if (
+          hour.day &&
+          dayMapObj[hour.day] &&
+          dayMapObj[hour.day].date
+        ) {
+          const dayDate = dayjs(dayMapObj[hour.day].date);
+          hour.date = dayDate.isValid()
+            ? dayDate.format("DD-MM-YYYY")
+            : hour.date;
+          hour.dateRaw = dayDate;
+        }
+        return hour;
+      });
+
+      setHoursList(finalHoursList);
     } catch (error) {
-      console.error('Error fetching hours data:', error);
+      console.error("Error fetching hours data:", error);
     }
-  }, [formData.date_from, formData.date_to, formData.subject, selectedObjects]);
+  }, [
+    formData.date_from,
+    formData.date_to,
+    formData.subject,
+    selectedObjects,
+  ]);
 
   useEffect(() => {
     fetchHoursData();
   }, [fetchHoursData]);
 
-  // Handle object selection
+  // Handle object selection (checkbox)
   const handleObjectSelection = (e) => {
     const value = parseInt(e.target.value);
     if (e.target.checked) {
@@ -185,7 +282,7 @@ const Disbalance = () => {
     }
   };
 
-  // Handle form submission
+  // Handle form submission (also posts a disbalance creation request)
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -203,78 +300,8 @@ const Disbalance = () => {
       // Refetch hours data to refresh the table
       fetchHoursData();
     } catch (error) {
-      console.error('Error submitting data:', error);
+      console.error("Error submitting data:", error);
     }
-  };
-
-  // Generate date array
-  const generateDateArray = (startDate, endDate) => {
-    const dateArray = [];
-    let currentDate = new Date(startDate);
-    const end = new Date(endDate);
-
-    while (currentDate <= end) {
-      dateArray.push(new Date(currentDate).toISOString().split('T')[0]);
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    return dateArray;
-  };
-
-  // Function to sum hours for selected objects
-  const sumHoursForSelectedObjects = (objectHoursData) => {
-    const totalHoursList = [];
-
-    // Check if there is any data
-    if (Object.keys(objectHoursData).length === 0) {
-      return [];
-    }
-
-    // Get the list of object IDs
-    const objIds = Object.keys(objectHoursData);
-
-    // Get the total number of records (assuming all objects have the same length)
-    const totalRecords = objectHoursData[objIds[0]].length;
-
-    for (let i = 0; i < totalRecords; i++) {
-      const aggregatedHour = {};
-      let dateSet = false;
-      let timeSet = false;
-
-      objIds.forEach((objId) => {
-        const objHours = objectHoursData[objId];
-        if (objHours && objHours[i]) {
-          const hourData = objHours[i];
-          for (const field in hourData) {
-            if (typeof hourData[field] === 'number') {
-              aggregatedHour[field] = (aggregatedHour[field] || 0) + hourData[field];
-            } else {
-              // For 'date' and 'time', set them if not already set
-              if (!dateSet && field === 'date' && hourData[field]) {
-                aggregatedHour[field] = hourData[field];
-                dateSet = true;
-              }
-              if (!timeSet && field === 'time' && hourData[field]) {
-                aggregatedHour[field] = hourData[field];
-                timeSet = true;
-              }
-            }
-          }
-        }
-      });
-
-      // Fallback for 'date' and 'time' if they are still undefined
-      if (!aggregatedHour['date']) {
-        aggregatedHour['date'] = 'Unknown Date';
-      }
-      if (!aggregatedHour['time']) {
-        aggregatedHour['time'] = 'Unknown Time';
-      }
-
-      totalHoursList.push(aggregatedHour);
-    }
-
-    return totalHoursList;
   };
 
   return (
@@ -287,7 +314,10 @@ const Disbalance = () => {
             <div className="grid grid-cols-1 gap-6">
               {/* Subject Selector */}
               <div>
-                <label htmlFor="subject" className="block text-gray-700 font-semibold mb-2">
+                <label
+                  htmlFor="subject"
+                  className="block text-gray-700 font-semibold mb-2"
+                >
                   Выберите Субъект
                 </label>
                 <select
@@ -301,7 +331,7 @@ const Disbalance = () => {
                       ...prevData,
                       subject: subjectId,
                     }));
-                    setSelectedObjects([]); // Reset selected objects when subject changes
+                    setSelectedObjects([]); // Reset objects when subject changes
                     setObjectHours({});
                     setHoursList([]);
                   }}
@@ -341,7 +371,10 @@ const Disbalance = () => {
 
               {/* Date Range Selectors */}
               <div>
-                <label htmlFor="date_from" className="block text-gray-700 font-semibold mb-2">
+                <label
+                  htmlFor="date_from"
+                  className="block text-gray-700 font-semibold mb-2"
+                >
                   Дата начала
                 </label>
                 <input
@@ -361,7 +394,10 @@ const Disbalance = () => {
               </div>
 
               <div>
-                <label htmlFor="date_to" className="block text-gray-700 font-semibold mb-2">
+                <label
+                  htmlFor="date_to"
+                  className="block text-gray-700 font-semibold mb-2"
+                >
                   Дата конца
                 </label>
                 <input
@@ -383,7 +419,10 @@ const Disbalance = () => {
               {/* Plan and Fact Selectors */}
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label htmlFor="planMode" className="block text-gray-700 font-semibold mb-2">
+                  <label
+                    htmlFor="planMode"
+                    className="block text-gray-700 font-semibold mb-2"
+                  >
                     План
                   </label>
                   <select
@@ -408,7 +447,10 @@ const Disbalance = () => {
                 </div>
 
                 <div>
-                  <label htmlFor="factMode" className="block text-gray-700 font-semibold mb-2">
+                  <label
+                    htmlFor="factMode"
+                    className="block text-gray-700 font-semibold mb-2"
+                  >
                     Факт
                   </label>
                   <select
@@ -433,11 +475,19 @@ const Disbalance = () => {
                 </div>
               </div>
 
-              {/* Plan Generation and Fact Generation Selectors */}
-              {(["ЭПО", "ВИЭ", "ГП"].includes(subjectsList.find((subj) => subj.id === formData.subject)?.subject_type) && (
+              {/* Plan Generation and Fact Generation (only for certain subject types) */}
+              {(
+                ["ЭПО", "ВИЭ", "ГП"].includes(
+                  subjectsList.find((subj) => subj.id === formData.subject)
+                    ?.subject_type
+                )
+              ) && (
                 <div className="grid grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="planModeGen" className="block text-gray-700 font-semibold mb-2">
+                    <label
+                      htmlFor="planModeGen"
+                      className="block text-gray-700 font-semibold mb-2"
+                    >
                       План Генерации
                     </label>
                     <select
@@ -453,16 +503,29 @@ const Disbalance = () => {
                       }
                       required
                     >
-                      <option value="P1_Gen">Первичный план генерации (P1)</option>
-                      <option value="P2_Gen">План генерации KCC PP (P2)</option>
-                      <option value="P3_Gen">План генерации KEGOC (P3)</option>
-                      <option value="F1_Gen">Факт генерации оперативный (F1)</option>
-                      <option value="F2_Gen">Факт генерации KEGOC (F2)</option>
+                      <option value="P1_Gen">
+                        Первичный план генерации (P1)
+                      </option>
+                      <option value="P2_Gen">
+                        План генерации KCC PP (P2)
+                      </option>
+                      <option value="P3_Gen">
+                        План генерации KEGOC (P3)
+                      </option>
+                      <option value="F1_Gen">
+                        Факт генерации оперативный (F1)
+                      </option>
+                      <option value="F2_Gen">
+                        Факт генерации KEGOC (F2)
+                      </option>
                     </select>
                   </div>
 
                   <div>
-                    <label htmlFor="factModeGen" className="block text-gray-700 font-semibold mb-2">
+                    <label
+                      htmlFor="factModeGen"
+                      className="block text-gray-700 font-semibold mb-2"
+                    >
                       Факт Генерации
                     </label>
                     <select
@@ -479,21 +542,26 @@ const Disbalance = () => {
                       required
                     >
                       <option value="P1_Gen">Первичный план генерации</option>
-                      <option value="P2_Gen">План генерации KCC PP</option>
+                      <option value="P2_Gen">
+                        План генерации KCC PP
+                      </option>
                       <option value="P3_Gen">План генерации KEGOC</option>
-                      <option value="F1_Gen">Факт генерации оперативный</option>
-                      <option value="F2_Gen">Факт генерации KEGOC</option>
+                      <option value="F1_Gen">
+                        Факт генерации оперативный
+                      </option>
+                      <option value="F2_Gen">
+                        Факт генерации KEGOC
+                      </option>
                     </select>
                   </div>
                 </div>
-              ))}
+              )}
             </div>
           </form>
         </div>
 
-        {/* Right Side: Tables and Disbalance Sum */}
+        {/* Right Side: Tables */}
         <div className="w-2/3 p-6">
-
           <div className="h-[calc(100vh-20rem)] overflow-y-auto">
             <DisbalanceTable
               formData={formData}
@@ -501,6 +569,8 @@ const Disbalance = () => {
               hoursList={hoursList}
             />
           </div>
+          {/* Optionally, include DisbalanceSum here */}
+          {/* <DisbalanceSum hoursList={hoursList} /> */}
         </div>
       </div>
     </div>

@@ -1,5 +1,3 @@
-// src/components/Dashboard/SubjectsTable/SubjectTable.jsx
-
 import React, { useState, useEffect } from 'react';
 import { axiosInstance, endpoints } from '../../../../../services/apiConfig';
 import useDataFetching from '../../../../../hooks/useDataFetching';
@@ -16,14 +14,12 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
     subject => subject.id === selectedData.selectedSubject
   );
 
-  // Fetch data for the selected subject
   const { daysList, hoursList } = useDataFetching(
     selectedDate,
     selectedData.selectedSubject,
     'subject'
   );
 
-  // Find the relevant dayPlan and sort hours by hour
   const dayPlan = daysList?.find(
     day =>
       day.subject === selectedSubject?.id &&
@@ -32,7 +28,6 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
   const unsortedHourPlan = hoursList?.filter(hour => hour.day === dayPlan?.id) || [];
   const hourPlan = [...unsortedHourPlan].sort((a, b) => a.hour - b.hour);
 
-  // Statuses
   const [statusMap, setStatusMap] = useState({});
   const [loadingStatuses, setLoadingStatuses] = useState(true);
   const [statusError, setStatusError] = useState(null);
@@ -80,50 +75,70 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
     }
   }, [selectedDate, subjectsList]);
 
-  const generateStatusDisplayComponents = (statuses) => {
+  // Updated generateStatusDisplayComponents:
+  // - If isCombined is true (non-CONSUMER/РЭК) show a combined label,
+  // - Otherwise, show only the regular statuses (omitting Gen plans).
+  const generateStatusDisplayComponents = (statuses, isCombined) => {
     if (!statuses || Object.keys(statuses).length === 0) {
       return 'Нет данных';
     }
-    const planKeys = [
-      'P1_Status',
-      'P1_Gen_Status',
-      'P2_Status',
-      'P2_Gen_Status',
-      'P3_Status',
-      'P3_Gen_Status',
-      'F1_Status',
-      'F1_Gen_Status',
-    ];
-    const planAbbreviations = {
-      P1_Status: 'П1',
-      P1__GenStatus: 'ГП1',
-      P2_Status: 'П2',
-      P2__GenStatus: 'ГП2',
-      P3_Status: 'П3',
-      P3__GenStatus: 'ГП3',
-      F1_Status: 'Ф',
-      F1__GenStatus: 'ГФ1',
-    };
-    const statusColors = {
-      COMPLETED: 'text-green-500',
-      IN_PROGRESS: 'text-orange-500',
-      OUTDATED: 'text-red-500',
-      NOT_STARTED: 'text-black',
-    };
-    return (
-      <div>
-        {planKeys.map(key => {
-          const planStatus = statuses[key];
-          const planName = planAbbreviations[key];
-          const colorClass = statusColors[planStatus] || '';
-          return (
-            <span key={key} className={`${colorClass} mx-1`}>
-              {planName}
-            </span>
-          );
-        })}
-      </div>
-    );
+    if (isCombined) {
+      const plans = ["P1", "P2", "P3", "F1"];
+      return (
+        <div>
+          {plans.map(plan => {
+            const mainStatus = statuses[`${plan}_Status`];
+            const genStatus = statuses[`${plan}_Gen_Status`];
+            let colorClass = "";
+            if (mainStatus === "STARTED" && genStatus === "STARTED") {
+              colorClass = "text-green-500";
+            } else {
+              const originalMapping = {
+                COMPLETED: "text-green-500",
+                IN_PROGRESS: "text-orange-500",
+                OUTDATED: "text-red-500",
+                NOT_STARTED: "text-black",
+              };
+              colorClass = originalMapping[mainStatus] || "";
+            }
+            return (
+              <span key={plan} className={`${colorClass} mx-1`}>
+                {plan === "F1" ? "Ф" : plan}
+              </span>
+            );
+          })}
+        </div>
+      );
+    } else {
+      // For CONSUMER/РЭК types, show only the non-Gen statuses.
+      const planKeys = ["P1_Status", "P2_Status", "P3_Status", "F1_Status"];
+      const planAbbreviations = {
+        P1_Status: "П1",
+        P2_Status: "П2",
+        P3_Status: "П3",
+        F1_Status: "Ф",
+      };
+      const statusColors = {
+        COMPLETED: "text-green-500",
+        IN_PROGRESS: "text-orange-500",
+        OUTDATED: "text-red-500",
+        NOT_STARTED: "text-black",
+      };
+      return (
+        <div>
+          {planKeys.map(key => {
+            const planStatus = statuses[key];
+            const planName = planAbbreviations[key];
+            const colorClass = statusColors[planStatus] || "";
+            return (
+              <span key={key} className={`${colorClass} mx-1`}>
+                {planName}
+              </span>
+            );
+          })}
+        </div>
+      );
+    }
   };
 
   useEffect(() => {
@@ -135,33 +150,68 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
     }
   }, [subjectsList, setSelectedData, selectedData.selectedSubject]);
 
-  // Compute summary for each column (all numeric columns)
+  // ***********************************************
+  // Compute summary for each column
+  // ***********************************************
   const rowCount = hourPlan.length;
   const sumP1 = hourPlan.reduce((acc, row) => acc + (Number(row.P1) || 0), 0);
-  const sumP1Gen = selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК"
-    ? hourPlan.reduce((acc, row) => acc + (Number(row.P1_Gen) || 0), 0)
-    : null;
+  const sumP1Gen =
+    selectedSubject?.subject_type !== "CONSUMER" &&
+    selectedSubject?.subject_type !== "РЭК"
+      ? hourPlan.reduce((acc, row) => acc + (Number(row.P1_Gen) || 0), 0)
+      : null;
   const sumP2 = hourPlan.reduce((acc, row) => acc + (Number(row.P2) || 0), 0);
-  const sumP2Gen = selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК"
-    ? hourPlan.reduce((acc, row) => acc + (Number(row.P2_Gen) || 0), 0)
-    : null;
+  const sumP2Gen =
+    selectedSubject?.subject_type !== "CONSUMER" &&
+    selectedSubject?.subject_type !== "РЭК"
+      ? hourPlan.reduce((acc, row) => acc + (Number(row.P2_Gen) || 0), 0)
+      : null;
   const sumP3 = hourPlan.reduce((acc, row) => acc + (Number(row.P3) || 0), 0);
-  const sumP3Gen = selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК"
-    ? hourPlan.reduce((acc, row) => acc + (Number(row.P3_Gen) || 0), 0)
-    : null;
+  const sumP3Gen =
+    selectedSubject?.subject_type !== "CONSUMER" &&
+    selectedSubject?.subject_type !== "РЭК"
+      ? hourPlan.reduce((acc, row) => acc + (Number(row.P3_Gen) || 0), 0)
+      : null;
   const sumF1 = hourPlan.reduce((acc, row) => acc + (Number(row.F1) || 0), 0);
-  const sumF1Gen = selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК"
-    ? hourPlan.reduce((acc, row) => acc + (Number(row.F1_Gen) || 0), 0)
-    : null;
+  const sumF1Gen =
+    selectedSubject?.subject_type !== "CONSUMER" &&
+    selectedSubject?.subject_type !== "РЭК"
+      ? hourPlan.reduce((acc, row) => acc + (Number(row.F1_Gen) || 0), 0)
+      : null;
 
   const avgP1 = rowCount ? sumP1 / rowCount : 0;
-  const avgP1Gen = selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" ? (rowCount ? sumP1Gen / rowCount : 0) : null;
+  const avgP1Gen =
+    selectedSubject?.subject_type !== "CONSUMER" &&
+    selectedSubject?.subject_type !== "РЭК"
+      ? rowCount
+        ? sumP1Gen / rowCount
+        : 0
+      : null;
   const avgP2 = rowCount ? sumP2 / rowCount : 0;
-  const avgP2Gen = selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" ? (rowCount ? sumP2Gen / rowCount : 0) : null;
+  const avgP2Gen =
+    selectedSubject?.subject_type !== "CONSUMER" &&
+    selectedSubject?.subject_type !== "РЭК"
+      ? rowCount
+        ? sumP2Gen / rowCount
+        : 0
+      : null;
   const avgP3 = rowCount ? sumP3 / rowCount : 0;
-  const avgP3Gen = selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" ? (rowCount ? sumP3Gen / rowCount : 0) : null;
+  const avgP3Gen =
+    selectedSubject?.subject_type !== "CONSUMER" &&
+    selectedSubject?.subject_type !== "РЭК"
+      ? rowCount
+        ? sumP3Gen / rowCount
+        : 0
+      : null;
   const avgF1 = rowCount ? sumF1 / rowCount : 0;
-  const avgF1Gen = selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" ? (rowCount ? sumF1Gen / rowCount : 0) : null;
+  const avgF1Gen =
+    selectedSubject?.subject_type !== "CONSUMER" &&
+    selectedSubject?.subject_type !== "РЭК"
+      ? rowCount
+        ? sumF1Gen / rowCount
+        : 0
+      : null;
+  // ***********************************************
 
   return (
     <>
@@ -195,7 +245,11 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
                   ? 'Загрузка...'
                   : statusError
                   ? statusError
-                  : generateStatusDisplayComponents(statusMap[subject.id])}
+                  : generateStatusDisplayComponents(
+                      statusMap[subject.id],
+                      subject.subject_type !== "CONSUMER" &&
+                        subject.subject_type !== "РЭК"
+                    )}
               </td>
             ))}
           </tr>
@@ -208,13 +262,17 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
           <tr>
             <th></th>
             <th>П1</th>
-            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <th>ГП1</th>}
+            {selectedSubject?.subject_type !== "CONSUMER" &&
+              selectedSubject?.subject_type !== "РЭК" && <th>ГП1</th>}
             <th>П2</th>
-            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <th>ГП2</th>}
+            {selectedSubject?.subject_type !== "CONSUMER" &&
+              selectedSubject?.subject_type !== "РЭК" && <th>ГП2</th>}
             <th>П3</th>
-            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <th>ГП3</th>}
+            {selectedSubject?.subject_type !== "CONSUMER" &&
+              selectedSubject?.subject_type !== "РЭК" && <th>ГП3</th>}
             <th>Ф1</th>
-            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <th>ГФ1</th>}
+            {selectedSubject?.subject_type !== "CONSUMER" &&
+              selectedSubject?.subject_type !== "РЭК" && <th>ГФ1</th>}
           </tr>
         </thead>
         <tbody>
@@ -222,46 +280,74 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
             <tr key={time}>
               <td className="border">{time}</td>
               <td className="border">{hourPlan[index]?.P1 || 0}</td>
-              {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && (
-                <td className="border">{hourPlan[index]?.P1_Gen || 0}</td>
-              )}
+              {selectedSubject?.subject_type !== "CONSUMER" &&
+                selectedSubject?.subject_type !== "РЭК" && (
+                  <td className="border">{hourPlan[index]?.P1_Gen || 0}</td>
+                )}
               <td className="border">{hourPlan[index]?.P2 || 0}</td>
-              {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && (
-                <td className="border">{hourPlan[index]?.P2_Gen || 0}</td>
-              )}
+              {selectedSubject?.subject_type !== "CONSUMER" &&
+                selectedSubject?.subject_type !== "РЭК" && (
+                  <td className="border">{hourPlan[index]?.P2_Gen || 0}</td>
+                )}
               <td className="border">{hourPlan[index]?.P3 || 0}</td>
-              {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && (
-                <td className="border">{hourPlan[index]?.P3_Gen || 0}</td>
-              )}
+              {selectedSubject?.subject_type !== "CONSUMER" &&
+                selectedSubject?.subject_type !== "РЭК" && (
+                  <td className="border">{hourPlan[index]?.P3_Gen || 0}</td>
+                )}
               <td className="border">{hourPlan[index]?.F1 || 0}</td>
-              {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && (
-                <td className="border">{hourPlan[index]?.F1_Gen || 0}</td>
-              )}
+              {selectedSubject?.subject_type !== "CONSUMER" &&
+                selectedSubject?.subject_type !== "РЭК" && (
+                  <td className="border">{hourPlan[index]?.F1_Gen || 0}</td>
+                )}
             </tr>
           ))}
           {/* Summary Row: Sum */}
           <tr>
             <td className="border font-bold">Сумма</td>
             <td className="border">{sumP1}</td>
-            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <td className="border">{sumP1Gen}</td>}
+            {selectedSubject?.subject_type !== "CONSUMER" &&
+              selectedSubject?.subject_type !== "РЭК" && (
+                <td className="border">{sumP1Gen}</td>
+              )}
             <td className="border">{sumP2.toFixed(2)}</td>
-            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <td className="border">{sumP2Gen.toFixed(2)}</td>}
+            {selectedSubject?.subject_type !== "CONSUMER" &&
+              selectedSubject?.subject_type !== "РЭК" && (
+                <td className="border">{sumP2Gen.toFixed(2)}</td>
+              )}
             <td className="border">{sumP3}</td>
-            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <td className="border">{sumP3Gen}</td>}
+            {selectedSubject?.subject_type !== "CONSUMER" &&
+              selectedSubject?.subject_type !== "РЭК" && (
+                <td className="border">{sumP3Gen}</td>
+              )}
             <td className="border">{sumF1}</td>
-            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <td className="border">{sumF1Gen}</td>}
+            {selectedSubject?.subject_type !== "CONSUMER" &&
+              selectedSubject?.subject_type !== "РЭК" && (
+                <td className="border">{sumF1Gen}</td>
+              )}
           </tr>
           {/* Summary Row: Average */}
           <tr>
             <td className="border font-bold">Среднее</td>
             <td className="border">{avgP1.toFixed(2)}</td>
-            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <td className="border">{avgP1Gen.toFixed(2)}</td>}
+            {selectedSubject?.subject_type !== "CONSUMER" &&
+              selectedSubject?.subject_type !== "РЭК" && (
+                <td className="border">{avgP1Gen.toFixed(2)}</td>
+              )}
             <td className="border">{avgP2.toFixed(2)}</td>
-            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <td className="border">{avgP2Gen.toFixed(2)}</td>}
+            {selectedSubject?.subject_type !== "CONSUMER" &&
+              selectedSubject?.subject_type !== "РЭК" && (
+                <td className="border">{avgP2Gen.toFixed(2)}</td>
+              )}
             <td className="border">{avgP3.toFixed(2)}</td>
-            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <td className="border">{avgP3Gen.toFixed(2)}</td>}
+            {selectedSubject?.subject_type !== "CONSUMER" &&
+              selectedSubject?.subject_type !== "РЭК" && (
+                <td className="border">{avgP3Gen.toFixed(2)}</td>
+              )}
             <td className="border">{avgF1.toFixed(2)}</td>
-            {selectedSubject?.subject_type !== "CONSUMER" && selectedSubject?.subject_type !== "РЭК" && <td className="border">{avgF1Gen.toFixed(2)}</td>}
+            {selectedSubject?.subject_type !== "CONSUMER" &&
+              selectedSubject?.subject_type !== "РЭК" && (
+                <td className="border">{avgF1Gen.toFixed(2)}</td>
+              )}
           </tr>
         </tbody>
       </table>

@@ -6,6 +6,7 @@ import pdfMake from "pdfmake/build/pdfmake";
 import * as pdfFonts from "pdfmake/build/vfs_fonts";
 import * as XLSX from "xlsx";
 import { useAuth } from "../../../../hooks/useAuth";
+import dayjs from "dayjs";
 
 pdfMake.vfs = pdfFonts.pdfMake
   ? pdfFonts.pdfMake.vfs
@@ -26,7 +27,7 @@ const History = () => {
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [logsStartDate, setLogsStartDate] = useState("");
   const [logsEndDate, setLogsEndDate] = useState("");
-  const [logsCount, setLogsCount] = useState(0); // State to hold count of logs
+  const [logsCount, setLogsCount] = useState(0); // Count of logs
 
   // Set initial dates to current date
   const currentDate = new Date().toISOString().split("T")[0];
@@ -58,14 +59,12 @@ const History = () => {
     { value: "P3", label: "P3" },
     { value: "F1", label: "F1" },
     { value: "F2", label: "F2" },
-    // Add more plans if necessary
   ];
 
   const userRoleOptions = [
     { value: "ADMIN", label: "Администратор" },
     { value: "USER", label: "Пользователь" },
     { value: "DISPATCHER", label: "Диспетчер" },
-    // Add more roles if necessary
   ];
 
   const userRoleMapping = {
@@ -108,6 +107,7 @@ const History = () => {
     label: obj.object_name,
   }));
 
+  // Fetch history data
   const fetchData = async () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
@@ -125,6 +125,7 @@ const History = () => {
       if (filters.timeEnd) params.time_end = filters.timeEnd;
       if (filters.userRole.length > 0)
         params.user_role = filters.userRole.join(",");
+        params.userId = user.id;
       if (filters.object.length > 0) params.object = filters.object.join(",");
 
       const historyResponse = await axiosInstance.get("/api/history/", {
@@ -159,40 +160,79 @@ const History = () => {
     }));
   };
 
+  // Use dayjs to format a date/time pair (for export)
   const formatDateTime = (dateStr, timeStr) => {
     const date = new Date(`${dateStr}T${timeStr}`);
     return {
-      date: date.toLocaleDateString(),
-      time: date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      date: dayjs(date).format("DD-MM-YYYY"),
+      time: dayjs(date).format("HH:mm"),
     };
   };
 
+  // --- New Export Helpers --- //
+
+  // Group history logs by formatted date (using dayjs)
+  const groupHistoryByDate = (logsArray) => {
+    const grouped = {};
+    logsArray.forEach((log) => {
+      const formattedDate = dayjs(log.date).format("DD-MM-YYYY");
+      if (!grouped[formattedDate]) {
+        grouped[formattedDate] = [];
+      }
+      grouped[formattedDate].push(log);
+    });
+    return grouped;
+  };
+
+  // Export to PDF using grouped data (new table format)
   const exportPDF = () => {
-    // Prepare the data
-    const data = history.map((historyItem) => {
-      const objectName =
-        objects.find((obj) => obj.id === historyItem.object)?.object_name ||
-        "Неизвестно";
+    const groupedLogs = groupHistoryByDate(history);
+    const sortedDates = Object.keys(groupedLogs).sort((a, b) =>
+      dayjs(a, "DD-MM-YYYY").isBefore(dayjs(b, "DD-MM-YYYY")) ? -1 : 1
+    );
 
-      const { date, time } = formatDateTime(historyItem.date, historyItem.time);
+    // Build table rows: first row of each group shows the date
+    const bodyRows = [];
+    // Header row
+    bodyRows.push([
+      "Дата",
+      "Пользователь",
+      "Роль",
+      "Действие",
+      "План",
+      "Сумма плана",
+      "Дата дня",
+      "Время",
+      "Объект",
+      "IP",
+    ]);
 
-      // Get user role based on email
-      const user = users.find((u) => u.email === historyItem.user);
-      const userRole = user
-        ? userRoleMapping[user.role] || "Неизвестно"
-        : "Неизвестно";
-
-      return [
-        historyItem.user,
-        userRole,
-        historyItem.action,
-        historyItem.plan,
-        historyItem.sum_plan,
-        historyItem.date_day,
-        date,
-        time,
-        objectName,
-      ];
+    sortedDates.forEach((dateKey) => {
+      const logsForDate = groupedLogs[dateKey];
+      logsForDate.forEach((log, index) => {
+        const objectName =
+          objects.find((obj) => obj.id === log.object)?.object_name ||
+          "Неизвестно";
+        const { date, time } = formatDateTime(log.date, log.time);
+        // Get user details
+        const logUser = users.find((u) => u.id === log.user);
+        const userEmail = logUser ? logUser.email : log.user;
+        const userRole = logUser
+          ? userRoleMapping[logUser.role] || "Неизвестно"
+          : "Неизвестно";
+        bodyRows.push([
+          index === 0 ? dateKey : "",
+          userEmail,
+          userRole,
+          log.action,
+          log.plan,
+          log.sum_plan,
+          log.date_day,
+          time,
+          objectName,
+          log.ip || "89.218.87.98",
+        ]);
+      });
     });
 
     const docDefinition = {
@@ -200,31 +240,8 @@ const History = () => {
         {
           table: {
             headerRows: 1,
-            widths: [
-              "auto",
-              "auto",
-              "auto",
-              "auto",
-              "auto",
-              "auto",
-              "auto",
-              "auto",
-              "auto",
-            ],
-            body: [
-              [
-                "Пользователь",
-                "Роль",
-                "Действие",
-                "План",
-                "Сумма плана",
-                "Дата дня",
-                "Дата",
-                "Время",
-                "Объект",
-              ],
-              ...data,
-            ],
+            widths: ["auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto", "auto"],
+            body: bodyRows,
           },
         },
       ],
@@ -237,41 +254,47 @@ const History = () => {
     pdfMake.createPdf(docDefinition).download("history.pdf");
   };
 
-  // Export to Excel function
+  // Export to Excel using grouped data (new table format)
   const exportExcel = () => {
-    // Prepare the data
-    const data = history.map((historyItem) => {
-      const objectName =
-        objects.find((obj) => obj.id === historyItem.object)?.object_name ||
-        "Неизвестно";
-
-      const { date, time } = formatDateTime(historyItem.date, historyItem.time);
-
-      // Get user role based on email
-      const user = users.find((u) => u.email === historyItem.user);
-      const userRole = user
-        ? userRoleMapping[user.role] || "Неизвестно"
-        : "Неизвестно";
-
-      return {
-        Пользователь: historyItem.user,
-        Роль: userRole,
-        Действие: historyItem.action,
-        План: historyItem.plan,
-        "Сумма плана": historyItem.sum_plan,
-        "Дата дня": historyItem.date_day,
-        Дата: date,
-        Время: time,
-        Объект: objectName,
-      };
+    const groupedLogs = groupHistoryByDate(history);
+    const sortedDates = Object.keys(groupedLogs).sort((a, b) =>
+      dayjs(a, "DD-MM-YYYY").isBefore(dayjs(b, "DD-MM-YYYY")) ? -1 : 1
+    );
+    const data = [];
+    sortedDates.forEach((dateKey) => {
+      const logsForDate = groupedLogs[dateKey];
+      logsForDate.forEach((log, index) => {
+        const objectName =
+          objects.find((obj) => obj.id === log.object)?.object_name ||
+          "Неизвестно";
+        const { date, time } = formatDateTime(log.date, log.time);
+        const logUser = users.find((u) => u.id === log.user);
+        const userEmail = logUser ? logUser.email : log.user;
+        const userRole = logUser
+          ? userRoleMapping[logUser.role] || "Неизвестно"
+          : "Неизвестно";
+        data.push({
+          Дата: index === 0 ? dateKey : "",
+          Пользователь: userEmail,
+          Роль: userRole,
+          Действие: log.action,
+          План: log.plan,
+          "Сумма плана": log.sum_plan,
+          "Дата дня": log.date_day,
+          Время: time,
+          Объект: objectName,
+          IP: log.ip || "89.218.87.98",
+        });
+      });
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(data);
+    const worksheet = XLSX.utils.json_to_sheet(data, { skipHeader: false });
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "History");
-
     XLSX.writeFile(workbook, "history.xlsx");
   };
+
+  // --- End Export Helpers --- //
 
   // Fetch logs function with start_date and end_date
   const fetchLogs = async (start_date, end_date) => {
@@ -287,10 +310,10 @@ const History = () => {
         params: params,
       });
       setLogs(response.data);
-      setLogsCount(response.data.length); // Set the count of logs
+      setLogsCount(response.data.length);
     } catch (error) {
       console.error("Error fetching logs:", error);
-      setLogsCount(0); // Reset count on error
+      setLogsCount(0);
     } finally {
       setIsLoadingLogs(false);
     }
@@ -298,7 +321,6 @@ const History = () => {
 
   // Open logs modal
   const openLogsModal = () => {
-    // Initialize modal dates with current filter dates
     setLogsStartDate(filters.dateDayStart);
     setLogsEndDate(filters.dateDayEnd);
     setIsLogsModalOpen(true);
@@ -324,7 +346,6 @@ const History = () => {
 
   // Handle fetching logs with updated dates
   const handleFetchLogs = () => {
-    // Validate dates
     if (logsStartDate > logsEndDate) {
       alert("Начальная дата не может быть позже конечной даты.");
       return;
@@ -338,8 +359,6 @@ const History = () => {
       alert("Нет логов для скачивания.");
       return;
     }
-
-    // Convert logs to a readable string format
     const logsText = logs
       .map((log, index) => {
         return `Log ${index + 1}:
@@ -356,11 +375,7 @@ user: ${log.user}
 ----------------------------------------`;
       })
       .join("\n");
-
-    // Create a Blob from the logs text
     const blob = new Blob([logsText], { type: "text/plain;charset=utf-8" });
-
-    // Create a link to download the Blob as a file
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = `logs_${logsStartDate}_to_${logsEndDate}.txt`;
@@ -456,8 +471,7 @@ user: ${log.user}
                 value={filters.sumPlanMin}
                 onChange={handleInputChange}
                 placeholder="Минимальная сумма"
-                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                      focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
             {/* Sum Plan Max Filter */}
@@ -471,8 +485,7 @@ user: ${log.user}
                 value={filters.sumPlanMax}
                 onChange={handleInputChange}
                 placeholder="Максимальная сумма"
-                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                      focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
             {/* Date Day Start Filter */}
@@ -485,8 +498,7 @@ user: ${log.user}
                 name="dateDayStart"
                 value={filters.dateDayStart}
                 onChange={handleInputChange}
-                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                      focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
             {/* Date Day End Filter */}
@@ -499,8 +511,7 @@ user: ${log.user}
                 name="dateDayEnd"
                 value={filters.dateDayEnd}
                 onChange={handleInputChange}
-                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                      focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
             {/* Date Start Filter */}
@@ -513,8 +524,7 @@ user: ${log.user}
                 name="dateStart"
                 value={filters.dateStart}
                 onChange={handleInputChange}
-                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
             {/* Date End Filter */}
@@ -527,8 +537,7 @@ user: ${log.user}
                 name="dateEnd"
                 value={filters.dateEnd}
                 onChange={handleInputChange}
-                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
             {/* Time Start Filter */}
@@ -544,8 +553,7 @@ user: ${log.user}
                 value={filters.timeStart}
                 onChange={handleInputChange}
                 placeholder="1-24"
-                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                      focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
             {/* Time End Filter */}
@@ -561,8 +569,7 @@ user: ${log.user}
                 value={filters.timeEnd}
                 onChange={handleInputChange}
                 placeholder="1-24"
-                className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                      focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
           </div>
@@ -612,22 +619,19 @@ user: ${log.user}
                 const objectName =
                   objects.find((obj) => obj.id === historyItem.object)
                     ?.object_name || "Неизвестно";
-
                 const { date, time } = formatDateTime(
                   historyItem.date,
                   historyItem.time
                 );
-
-                // Get user role based on email
-                const user = users.find((u) => u.email === historyItem.user);
-                const userRole = user
-                  ? userRoleMapping[user.role] || "Неизвестно"
+                const logUser = users.find((u) => u.id === historyItem.user);
+                const userEmail = logUser ? logUser.email : historyItem.user;
+                const userRole = logUser
+                  ? userRoleMapping[logUser.role] || "Неизвестно"
                   : "Неизвестно";
-
                 return (
                   <tr key={index} className="hover:bg-gray-100">
-                    <td className="border px-4 py-2">{users.find(u => u.id === historyItem.user).email}</td>
-                    <td className="border px-4 py-2">{users.find(u => u.id === historyItem.user).role}</td>
+                    <td className="border px-4 py-2">{userEmail}</td>
+                    <td className="border px-4 py-2">{userRole}</td>
                     <td className="border px-4 py-2">{historyItem.action}</td>
                     <td className="border px-4 py-2">{historyItem.plan}</td>
                     <td className="border px-4 py-2">{historyItem.sum_plan}</td>
@@ -636,8 +640,7 @@ user: ${log.user}
                     <td className="border px-4 py-2">{time}</td>
                     <td className="border px-4 py-2">{objectName}</td>
                     <td className="border px-4 py-2">
-                      {historyItem.ip ??
-                        "89.218.87.98"}
+                      {historyItem.ip ?? "89.218.87.98"}
                     </td>
                   </tr>
                 );
@@ -674,8 +677,7 @@ user: ${log.user}
                       name="logsStartDate"
                       value={logsStartDate}
                       onChange={handleLogsDateChange}
-                      className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                            focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                     />
                   </div>
                   {/* End Date */}
@@ -688,8 +690,7 @@ user: ${log.user}
                       name="logsEndDate"
                       value={logsEndDate}
                       onChange={handleLogsDateChange}
-                      className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                            focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                     />
                   </div>
                 </div>

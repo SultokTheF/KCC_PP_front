@@ -1,4 +1,3 @@
-// src/components/Dashboard/SubjectsTable/ObjectsTable.jsx
 import React, { useState, useEffect } from "react";
 import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 import useDataFetching from "../../../../../hooks/useDataFetching";
@@ -35,8 +34,8 @@ const ObjectTable = ({
       day.date.split("T")[0] === selectedDate.split("T")[0]
   );
 
-  // Filter hours for the chosen object/day, then sort by hour
-  const unsortedHourPlan = hoursList?.filter((hour) => hour.day === dayPlan?.id) || [];
+  const unsortedHourPlan =
+    hoursList?.filter((hour) => hour.day === dayPlan?.id) || [];
   const hourPlan = [...unsortedHourPlan].sort((a, b) => a.hour - b.hour);
 
   const [planData, setPlanData] = useState({
@@ -44,12 +43,10 @@ const ObjectTable = ({
     isGen: false,
   });
 
-  // State for statuses
   const [statusMap, setStatusMap] = useState({});
   const [loadingStatuses, setLoadingStatuses] = useState(true);
   const [statusError, setStatusError] = useState(null);
 
-  // Asynchronous Function to Fetch Status
   const getPlanStatus = async (date, object) => {
     try {
       const response = await axiosInstance.get(endpoints.GET_STATUS, {
@@ -65,7 +62,6 @@ const ObjectTable = ({
     }
   };
 
-  // Fetch statuses for all objects
   useEffect(() => {
     const fetchAllStatuses = async () => {
       setLoadingStatuses(true);
@@ -99,55 +95,71 @@ const ObjectTable = ({
     }
   }, [selectedDate, objectsList]);
 
-  // Helper to generate status display
-  const generateStatusDisplayComponents = (statuses) => {
+  // Updated generateStatusDisplayComponents:
+  // - If isCombined is true (i.e. not CONSUMER/РЭК), show a combined label using both statuses.
+  // - Otherwise (CONSUMER/РЭК), show only the regular status (without Gen).
+  const generateStatusDisplayComponents = (statuses, isCombined) => {
     if (!statuses || Object.keys(statuses).length === 0) {
       return "Нет данных";
     }
-
-    const planKeys = [
-      "P1_Status",
-      "P1_Gen_Status",
-      "P2_Status",
-      "P2_Gen_Status",
-      "P3_Status",
-      "P3_Gen_Status",
-      "F1_Status",
-      "F1_Gen_Status",
-    ];
-
-    const planAbbreviations = {
-      P1_Status: "П1",
-      P1__GenStatus: "ГП1",
-      P2_Status: "П2",
-      P2__GenStatus: "ГП2",
-      P3_Status: "П3",
-      P3__GenStatus: "ГП3",
-      F1_Status: "Ф",
-      F1__GenStatus: "ГФ1",
-    };
-
-    const statusColors = {
-      COMPLETED: "text-green-500",
-      IN_PROGRESS: "text-orange-500",
-      OUTDATED: "text-red-500",
-      NOT_STARTED: "text-black",
-    };
-
-    return (
-      <div>
-        {planKeys.map((key) => {
-          const planStatus = statuses[key];
-          const planName = planAbbreviations[key];
-          const colorClass = statusColors[planStatus] || "";
-          return (
-            <span key={key} className={`${colorClass} mx-1`}>
-              {planName}
-            </span>
-          );
-        })}
-      </div>
-    );
+    if (isCombined) {
+      // Combined mode: show one label per plan, green only if both statuses are "STARTED"
+      const plans = ["P1", "P2", "P3", "F1"];
+      return (
+        <div>
+          {plans.map((plan) => {
+            const mainStatus = statuses[`${plan}_Status`];
+            const genStatus = statuses[`${plan}_Gen_Status`];
+            let colorClass = "";
+            if (mainStatus === "STARTED" && genStatus === "STARTED") {
+              colorClass = "text-green-500";
+            } else {
+              const originalMapping = {
+                COMPLETED: "text-green-500",
+                IN_PROGRESS: "text-orange-500",
+                OUTDATED: "text-red-500",
+                NOT_STARTED: "text-black",
+              };
+              colorClass = originalMapping[mainStatus] || "";
+            }
+            return (
+              <span key={plan} className={`${colorClass} mx-1`}>
+                {plan === "F1" ? "Ф" : plan}
+              </span>
+            );
+          })}
+        </div>
+      );
+    } else {
+      // For CONSUMER/РЭК types, do not show Gen statuses—only display the regular statuses.
+      const planKeys = ["P1_Status", "P2_Status", "P3_Status", "F1_Status"];
+      const planAbbreviations = {
+        P1_Status: "П1",
+        P2_Status: "П2",
+        P3_Status: "П3",
+        F1_Status: "Ф",
+      };
+      const statusColors = {
+        COMPLETED: "text-green-500",
+        IN_PROGRESS: "text-orange-500",
+        OUTDATED: "text-red-500",
+        NOT_STARTED: "text-black",
+      };
+      return (
+        <div>
+          {planKeys.map((key) => {
+            const planStatus = statuses[key];
+            const planName = planAbbreviations[key];
+            const colorClass = statusColors[planStatus] || "";
+            return (
+              <span key={key} className={`${colorClass} mx-1`}>
+                {planName}
+              </span>
+            );
+          })}
+        </div>
+      );
+    }
   };
 
   // Filter objects for the chosen subject
@@ -155,7 +167,6 @@ const ObjectTable = ({
     (object) => object.subject === selectedData.selectedSubject
   );
 
-  // Set default selected object if not set
   useEffect(() => {
     if (!selectedData.selectedObject && objects.length > 0) {
       setSelectedData((prevData) => ({
@@ -171,44 +182,68 @@ const ObjectTable = ({
   const rowCount = hourPlan.length;
   const sumP1 = hourPlan.reduce((acc, row) => acc + (Number(row.P1) || 0), 0);
   const sumP1Gen =
-    selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК"
+    selectedObject &&
+    selectedObject.object_type !== "CONSUMER" &&
+    selectedObject.object_type !== "РЭК"
       ? hourPlan.reduce((acc, row) => acc + (Number(row.P1_Gen) || 0), 0)
       : 0;
   const sumP2 = hourPlan.reduce((acc, row) => acc + (Number(row.P2) || 0), 0);
   const sumP2Gen =
-    selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК"
+    selectedObject &&
+    selectedObject.object_type !== "CONSUMER" &&
+    selectedObject.object_type !== "РЭК"
       ? hourPlan.reduce((acc, row) => acc + (Number(row.P2_Gen) || 0), 0)
       : 0;
   const sumP3 = hourPlan.reduce((acc, row) => acc + (Number(row.P3) || 0), 0);
   const sumP3Gen =
-    selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК"
+    selectedObject &&
+    selectedObject.object_type !== "CONSUMER" &&
+    selectedObject.object_type !== "РЭК"
       ? hourPlan.reduce((acc, row) => acc + (Number(row.P3_Gen) || 0), 0)
       : 0;
   const sumF1 = hourPlan.reduce((acc, row) => acc + (Number(row.F1) || 0), 0);
   const sumF1Gen =
-    selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК"
+    selectedObject &&
+    selectedObject.object_type !== "CONSUMER" &&
+    selectedObject.object_type !== "РЭК"
       ? hourPlan.reduce((acc, row) => acc + (Number(row.F1_Gen) || 0), 0)
       : 0;
 
   const avgP1 = rowCount ? sumP1 / rowCount : 0;
   const avgP1Gen =
-    selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК"
-      ? (rowCount ? sumP1Gen / rowCount : 0)
+    selectedObject &&
+    selectedObject.object_type !== "CONSUMER" &&
+    selectedObject.object_type !== "РЭК"
+      ? rowCount
+        ? sumP1Gen / rowCount
+        : 0
       : 0;
   const avgP2 = rowCount ? sumP2 / rowCount : 0;
   const avgP2Gen =
-    selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК"
-      ? (rowCount ? sumP2Gen / rowCount : 0)
+    selectedObject &&
+    selectedObject.object_type !== "CONSUMER" &&
+    selectedObject.object_type !== "РЭК"
+      ? rowCount
+        ? sumP2Gen / rowCount
+        : 0
       : 0;
   const avgP3 = rowCount ? sumP3 / rowCount : 0;
   const avgP3Gen =
-    selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК"
-      ? (rowCount ? sumP3Gen / rowCount : 0)
+    selectedObject &&
+    selectedObject.object_type !== "CONSUMER" &&
+    selectedObject.object_type !== "РЭК"
+      ? rowCount
+        ? sumP3Gen / rowCount
+        : 0
       : 0;
   const avgF1 = rowCount ? sumF1 / rowCount : 0;
   const avgF1Gen =
-    selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК"
-      ? (rowCount ? sumF1Gen / rowCount : 0)
+    selectedObject &&
+    selectedObject.object_type !== "CONSUMER" &&
+    selectedObject.object_type !== "РЭК"
+      ? rowCount
+        ? sumF1Gen / rowCount
+        : 0
       : 0;
   // ***********************************************
 
@@ -248,7 +283,11 @@ const ObjectTable = ({
                   ? "Загрузка..."
                   : statusError
                   ? statusError
-                  : generateStatusDisplayComponents(statusMap[object.id])}
+                  : generateStatusDisplayComponents(
+                      statusMap[object.id],
+                      object.object_type !== "CONSUMER" &&
+                        object.object_type !== "РЭК"
+                    )}
               </td>
             ))}
           </tr>
@@ -257,7 +296,7 @@ const ObjectTable = ({
 
       {/* Plan Table */}
       <table className="w-full text-sm text-center text-gray-500 mb-3">
-      <thead className="text-xs text-gray-700 uppercase bg-gray-300">
+        <thead className="text-xs text-gray-700 uppercase bg-gray-300">
           <tr>
             <th></th>
             <th>
@@ -275,27 +314,29 @@ const ObjectTable = ({
                 📝
               </button>
             </th>
-            {selectedObject?.object_type !== "CONSUMER" && selectedObject?.object_type !== "РЭК"
- && (
-              <th>
-                ГП1
-                <button
-                  className="text-base mx-1"
-                  onClick={() => {
-                    setIsModalOpen(true);
-                    setPlanData({
-                      planMode: "P1_Gen",
-                      isGen: true,
-                    });
-                  }}
-                >
-                  📝
-                </button>
-              </th>
-            )}
+            {selectedObject &&
+              selectedObject.object_type !== "CONSUMER" &&
+              selectedObject.object_type !== "РЭК" && (
+                <th>
+                  ГП1
+                  <button
+                    className="text-base mx-1"
+                    onClick={() => {
+                      setIsModalOpen(true);
+                      setPlanData({
+                        planMode: "P1_Gen",
+                        isGen: true,
+                      });
+                    }}
+                  >
+                    📝
+                  </button>
+                </th>
+              )}
             <th>П2</th>
-            {selectedObject?.object_type !== "CONSUMER" && selectedObject?.object_type !== "РЭК"
- && <th>ГП2</th>}
+            {selectedObject &&
+              selectedObject.object_type !== "CONSUMER" &&
+              selectedObject.object_type !== "РЭК" && <th>ГП2</th>}
             <th>
               П3
               <button
@@ -311,24 +352,25 @@ const ObjectTable = ({
                 📝
               </button>
             </th>
-            {selectedObject?.object_type !== "CONSUMER" && selectedObject?.object_type !== "РЭК"
- && (
-              <th>
-                ГП3
-                <button
-                  className="text-base mx-1"
-                  onClick={() => {
-                    setIsModalOpen(true);
-                    setPlanData({
-                      planMode: "P3_Gen",
-                      isGen: true,
-                    });
-                  }}
-                >
-                  📝
-                </button>
-              </th>
-            )}
+            {selectedObject &&
+              selectedObject.object_type !== "CONSUMER" &&
+              selectedObject.object_type !== "РЭК" && (
+                <th>
+                  ГП3
+                  <button
+                    className="text-base mx-1"
+                    onClick={() => {
+                      setIsModalOpen(true);
+                      setPlanData({
+                        planMode: "P3_Gen",
+                        isGen: true,
+                      });
+                    }}
+                  >
+                    📝
+                  </button>
+                </th>
+              )}
             <th>
               Ф1
               <button
@@ -344,24 +386,25 @@ const ObjectTable = ({
                 📝
               </button>
             </th>
-            {selectedObject?.object_type !== "CONSUMER" && selectedObject?.object_type !== "РЭК"
- && (
-              <th>
-                ГФ1
-                <button
-                  className="text-base mx-1"
-                  onClick={() => {
-                    setIsModalOpen(true);
-                    setPlanData({
-                      planMode: "F1_Gen",
-                      isGen: true,
-                    });
-                  }}
-                >
-                  📝
-                </button>
-              </th>
-            )}
+            {selectedObject &&
+              selectedObject.object_type !== "CONSUMER" &&
+              selectedObject.object_type !== "РЭК" && (
+                <th>
+                  ГФ1
+                  <button
+                    className="text-base mx-1"
+                    onClick={() => {
+                      setIsModalOpen(true);
+                      setPlanData({
+                        planMode: "F1_Gen",
+                        isGen: true,
+                      });
+                    }}
+                  >
+                    📝
+                  </button>
+                </th>
+              )}
           </tr>
         </thead>
         <tbody>
@@ -369,61 +412,85 @@ const ObjectTable = ({
             <tr key={time}>
               <td className="border">{time}</td>
               <td className="border">{hourPlan[index]?.P1 || 0}</td>
-              {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
-                <td className="border">{hourPlan[index]?.P1_Gen || 0}</td>
-              )}
+              {selectedObject &&
+                selectedObject.object_type !== "CONSUMER" &&
+                selectedObject.object_type !== "РЭК" && (
+                  <td className="border">{hourPlan[index]?.P1_Gen || 0}</td>
+                )}
               <td className="border">{hourPlan[index]?.P2 || 0}</td>
-              {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
-                <td className="border">{hourPlan[index]?.P2_Gen || 0}</td>
-              )}
+              {selectedObject &&
+                selectedObject.object_type !== "CONSUMER" &&
+                selectedObject.object_type !== "РЭК" && (
+                  <td className="border">{hourPlan[index]?.P2_Gen || 0}</td>
+                )}
               <td className="border">{hourPlan[index]?.P3 || 0}</td>
-              {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
-                <td className="border">{hourPlan[index]?.P3_Gen || 0}</td>
-              )}
+              {selectedObject &&
+                selectedObject.object_type !== "CONSUMER" &&
+                selectedObject.object_type !== "РЭК" && (
+                  <td className="border">{hourPlan[index]?.P3_Gen || 0}</td>
+                )}
               <td className="border">{hourPlan[index]?.F1 || 0}</td>
-              {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
-                <td className="border">{hourPlan[index]?.F1_Gen || 0}</td>
-              )}
+              {selectedObject &&
+                selectedObject.object_type !== "CONSUMER" &&
+                selectedObject.object_type !== "РЭК" && (
+                  <td className="border">{hourPlan[index]?.F1_Gen || 0}</td>
+                )}
             </tr>
           ))}
-          {/* New Summary Rows */}
+          {/* Summary Rows */}
           <tr>
             <td className="border font-bold">Сумма</td>
             <td className="border">{sumP1}</td>
-            {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
-              <td className="border">{sumP1Gen.toFixed(2)}</td>
-            )}
+            {selectedObject &&
+              selectedObject.object_type !== "CONSUMER" &&
+              selectedObject.object_type !== "РЭК" && (
+                <td className="border">{sumP1Gen.toFixed(2)}</td>
+              )}
             <td className="border">{sumP2.toFixed(2)}</td>
-            {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
-              <td className="border">{sumP2Gen.toFixed(2)}</td>
-            )}
+            {selectedObject &&
+              selectedObject.object_type !== "CONSUMER" &&
+              selectedObject.object_type !== "РЭК" && (
+                <td className="border">{sumP2Gen.toFixed(2)}</td>
+              )}
             <td className="border">{sumP3}</td>
-            {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
-              <td className="border">{sumP3Gen}</td>
-            )}
+            {selectedObject &&
+              selectedObject.object_type !== "CONSUMER" &&
+              selectedObject.object_type !== "РЭК" && (
+                <td className="border">{sumP3Gen}</td>
+              )}
             <td className="border">{sumF1}</td>
-            {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
-              <td className="border">{sumF1Gen}</td>
-            )}
+            {selectedObject &&
+              selectedObject.object_type !== "CONSUMER" &&
+              selectedObject.object_type !== "РЭК" && (
+                <td className="border">{sumF1Gen}</td>
+              )}
           </tr>
           <tr>
             <td className="border font-bold">Среднее</td>
             <td className="border">{avgP1.toFixed(2)}</td>
-            {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
-              <td className="border">{avgP1Gen.toFixed(2)}</td>
-            )}
+            {selectedObject &&
+              selectedObject.object_type !== "CONSUMER" &&
+              selectedObject.object_type !== "РЭК" && (
+                <td className="border">{avgP1Gen.toFixed(2)}</td>
+              )}
             <td className="border">{avgP2.toFixed(2)}</td>
-            {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
-              <td className="border">{avgP2Gen.toFixed(2)}</td>
-            )}
+            {selectedObject &&
+              selectedObject.object_type !== "CONSUMER" &&
+              selectedObject.object_type !== "РЭК" && (
+                <td className="border">{avgP2Gen.toFixed(2)}</td>
+              )}
             <td className="border">{avgP3.toFixed(2)}</td>
-            {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
-              <td className="border">{avgP3Gen.toFixed(2)}</td>
-            )}
+            {selectedObject &&
+              selectedObject.object_type !== "CONSUMER" &&
+              selectedObject.object_type !== "РЭК" && (
+                <td className="border">{avgP3Gen.toFixed(2)}</td>
+              )}
             <td className="border">{avgF1.toFixed(2)}</td>
-            {selectedObject && selectedObject.object_type !== "CONSUMER" && selectedObject.object_type !== "РЭК" && (
-              <td className="border">{avgF1Gen.toFixed(2)}</td>
-            )}
+            {selectedObject &&
+              selectedObject.object_type !== "CONSUMER" &&
+              selectedObject.object_type !== "РЭК" && (
+                <td className="border">{avgF1Gen.toFixed(2)}</td>
+              )}
           </tr>
         </tbody>
       </table>

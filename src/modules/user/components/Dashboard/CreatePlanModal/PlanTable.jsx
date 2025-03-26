@@ -1,4 +1,4 @@
-// PlanTable.jsx
+// src/components/Dashboard/SubjectsTable/PlanTable.jsx
 import React, { useState, useEffect } from "react";
 
 const PlanTable = ({ date, object, mode, handleTableChange, plansP }) => {
@@ -9,7 +9,7 @@ const PlanTable = ({ date, object, mode, handleTableChange, plansP }) => {
     "18 - 19", "19 - 20", "20 - 21", "21 - 22", "22 - 23", "23 - 00",
   ];
 
-  // Local state for input fields
+  // Local state for input fields.
   const [plans, setPlans] = useState(Array(24).fill(""));
 
   useEffect(() => {
@@ -27,6 +27,9 @@ const PlanTable = ({ date, object, mode, handleTableChange, plansP }) => {
     setPlans(updatedPlans);
     handleTableChange(object, date, updatedPlans, mode);
   };
+
+  // Calculate the total sum of the plan values.
+  const totalSum = plans.reduce((acc, curr) => acc + Number(curr), 0);
 
   return (
     <div className="relative overflow-x-auto sm:rounded-lg">
@@ -46,7 +49,7 @@ const PlanTable = ({ date, object, mode, handleTableChange, plansP }) => {
                     min={0}
                     required
                   />
-                  <label htmlFor={index}>МВт</label>
+                  <label htmlFor={index}>КВт</label>
                 </div>
                 <div className="border px-3 bg-gray-200 mx-3 my-1 rounded-lg text-center">
                   <label htmlFor={index + 12}>
@@ -61,12 +64,16 @@ const PlanTable = ({ date, object, mode, handleTableChange, plansP }) => {
                     min={0}
                     required
                   />
-                  <label htmlFor={index + 12}>МВт</label>
+                  <label htmlFor={index + 12}>КВт</label>
                 </div>
               </div>
             )}
           </React.Fragment>
         ))}
+      </div>
+      {/* New sum display below the plan table */}
+      <div className="mt-4 text-center text-lg font-bold">
+        Сумма: {totalSum} КВт
       </div>
     </div>
   );
