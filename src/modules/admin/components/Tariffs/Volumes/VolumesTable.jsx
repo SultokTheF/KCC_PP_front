@@ -10,25 +10,26 @@ const Spinner = () => (
 const VolumesTable = ({ data, setData, loading }) => {
   const [editingCell, setEditingCell] = useState({ day: null, hour: null });
   const [inputValue, setInputValue] = useState("");
-
   const numberOfHours = 24;
 
   const handleDoubleClick = (day, hour) => {
     setEditingCell({ day, hour });
-
-    // Find the current value in the cell
-    const existingValue = data.tableData.find((d) => Object.keys(d)[0] === day)?.[day]?.[hour] || 0;
-    setInputValue(existingValue); // Set input value with the existing cell value
+    // Find the current value in the cell (index corresponds to the hour column)
+    const existingValue =
+      data.tableData.find((d) => Object.keys(d)[0] === day)?.[day]?.[hour] || 0;
+    setInputValue(existingValue);
   };
 
   const handleChange = (e) => {
-    setInputValue(e.target.value); // Update inputValue state on input change
+    setInputValue(e.target.value);
   };
 
   const handleBlur = () => {
     setData((prevData) => {
       const newTableData = [...prevData.tableData];
-      const dayData = newTableData.find((d) => Object.keys(d)[0] === editingCell.day);
+      const dayData = newTableData.find(
+        (d) => Object.keys(d)[0] === editingCell.day
+      );
 
       if (dayData) {
         // Update the specific cell with the new input value
@@ -41,11 +42,10 @@ const VolumesTable = ({ data, setData, loading }) => {
       };
     });
 
-    // Clear the editing cell state after update
     setEditingCell({ day: null, hour: null });
   };
 
-  // Render the spinner if data is still being fetched
+  // Render spinner while loading
   if (loading) {
     return <Spinner />;
   }
@@ -65,20 +65,28 @@ const VolumesTable = ({ data, setData, loading }) => {
             </tr>
           </thead>
           <tbody>
-            {data.tableData.map((dayData, index) => {
+            {data.tableData.map((dayData) => {
               const day = Object.keys(dayData)[0];
               return (
                 <tr key={day} className="bg-white hover:bg-gray-100">
-                  <td className="px-4 w-20 border-b">{day.split("-").reverse().join(".")}</td>
+                  <td className="px-4 w-20 border-b">
+                    {day.split("-").reverse().join(".")}
+                  </td>
                   {dayData[day].map((hourData, hourIndex) => (
                     <td
                       key={hourIndex}
                       className={`px-4 w-12 border text-center hover:bg-blue-100 ${
-                        editingCell.day === day && editingCell.hour === hourIndex ? "bg-blue-100" : ""
+                        editingCell.day === day &&
+                        editingCell.hour === hourIndex
+                          ? "bg-blue-100"
+                          : ""
                       }`}
-                      onDoubleClick={() => handleDoubleClick(day, hourIndex)}
+                      onDoubleClick={() =>
+                        handleDoubleClick(day, hourIndex)
+                      }
                     >
-                      {editingCell.day === day && editingCell.hour === hourIndex ? (
+                      {editingCell.day === day &&
+                      editingCell.hour === hourIndex ? (
                         <input
                           type="text"
                           value={inputValue}

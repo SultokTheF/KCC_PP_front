@@ -23,7 +23,7 @@ const IndProvTariffs = () => {
     hours: [],
   });
 
-  const [loading, setLoading] = useState(false); // Add loading state
+  const [loading, setLoading] = useState(false); // Loading state
 
   const fetchData = async () => {
     try {
@@ -36,8 +36,8 @@ const IndProvTariffs = () => {
         ...prevData,
         subjects: subjectsResponse.data,
         providers: providersResponse.data,
-        provider: providersResponse.data.length > 0 ? providersResponse?.data[0].id : 0,
-        subject: subjectsResponse.data.length > 0 ? subjectsResponse?.data[0].id : 0,
+        provider: providersResponse.data.length > 0 ? providersResponse.data[0].id : 0,
+        subject: subjectsResponse.data.length > 0 ? subjectsResponse.data[0].id : 0,
       }));
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -47,8 +47,8 @@ const IndProvTariffs = () => {
   const fetchDays = async () => {
     setLoading(true); // Start loading
     try {
-      const startDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-01`;
-      const endDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}-${new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate()}`;
+      const startDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, "0")}-01`;
+      const endDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, "0")}-${new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate()}`;
 
       const daysResponse = await axiosInstance.get(endpoints.DAYS, {
         params: {
@@ -71,13 +71,13 @@ const IndProvTariffs = () => {
         const daysInMonth = new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate();
         const emptyDays = [];
 
-        // Generate an empty list of days to fill with zeroes
+        // Generate empty days for the month
         for (let day = 1; day <= daysInMonth; day++) {
           const formattedDay = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
           emptyDays.push({ date: formattedDay });
         }
 
-        // Generate table data with zeroes
+        // Generate table data with zeroes (hours data is empty)
         generateTableData(emptyDays, []);
       } else {
         console.error("Error fetching days:", error);
@@ -121,31 +121,38 @@ const IndProvTariffs = () => {
   const generateTableData = (days, hours) => {
     const tableData = [];
 
-    // Get the total number of days in the selected month
+    // Get total days in the selected month
     const daysInMonth = new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate();
 
     // Loop through each day of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const formattedDay = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
-      // Find the day data that matches the formatted day
-      const dayData = days.find((d) => d.date.split("T")[0] === formattedDay);
+      // Find the corresponding day data using the normalized date
+      const dayData = days.find((d) => {
+        // Normalize the day date (if it comes with a time part)
+        const normalized = new Date(d.date).toISOString().split("T")[0];
+        return normalized === formattedDay;
+      });
 
-      // Initialize an array of "0" for 24 hours
+      // Initialize an array of zeroes for 24 hours
       const hoursData = new Array(24).fill(0);
 
       if (dayData) {
-        // Find all hours for this specific day
-        const dayHours = hours.filter((hour) => hour.day === dayData.id);
+        // Find all hours for this day by matching the normalized date from the hours data
+        const dayHours = hours.filter((hour) => {
+          const hourDate = new Date(hour.date).toISOString().split("T")[0];
+          return hourDate === formattedDay;
+        });
 
-        // Map the found hours to the correct index in the array
+        // Map the found hours to the correct index in the hoursData array
         dayHours.forEach((hour) => {
           const hourIndex = parseInt(hour.hour) - 1;
           hoursData[hourIndex] = hour.Pred_T;
         });
       }
 
-      // Push the formatted day and its hours data to tableData
+      // Push the formatted day and its hours data to the table data
       tableData.push({
         [formattedDay]: hoursData,
       });

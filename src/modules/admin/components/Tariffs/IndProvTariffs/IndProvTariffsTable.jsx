@@ -15,14 +15,14 @@ const IndProvTariffsTable = ({ data, setData, loading }) => {
 
   const handleDoubleClick = (day, hour) => {
     setEditingCell({ day, hour });
-
-    // Find the current value in the cell
-    const existingValue = data.tableData.find((d) => Object.keys(d)[0] === day)?.[day]?.[hour] || 0;
-    setInputValue(existingValue); // Set input value with the existing cell value
+    // Find the current value in the cell (index matches the hour column)
+    const existingValue =
+      data.tableData.find((d) => Object.keys(d)[0] === day)?.[day]?.[hour] || 0;
+    setInputValue(existingValue);
   };
 
   const handleChange = (e) => {
-    setInputValue(e.target.value); // Update inputValue state on input change
+    setInputValue(e.target.value);
   };
 
   const handleBlur = () => {
@@ -41,7 +41,6 @@ const IndProvTariffsTable = ({ data, setData, loading }) => {
       };
     });
 
-    // Clear the editing cell state after update
     setEditingCell({ day: null, hour: null });
   };
 
@@ -65,11 +64,13 @@ const IndProvTariffsTable = ({ data, setData, loading }) => {
             </tr>
           </thead>
           <tbody>
-            {data.tableData.map((dayData, index) => {
+            {data.tableData.map((dayData) => {
               const day = Object.keys(dayData)[0];
               return (
                 <tr key={day} className="bg-white hover:bg-gray-100">
-                  <td className="px-4 w-20 border-b">{day.split("-").reverse().join(".")}</td>
+                  <td className="px-4 w-20 border-b">
+                    {day.split("-").reverse().join(".")}
+                  </td>
                   {dayData[day].map((hourData, hourIndex) => (
                     <td
                       key={hourIndex}
