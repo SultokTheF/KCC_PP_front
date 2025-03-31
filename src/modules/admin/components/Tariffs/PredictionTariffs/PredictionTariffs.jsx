@@ -1,4 +1,3 @@
-// PredictionTariffs.js
 import { useState, useEffect } from "react";
 import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 
@@ -23,7 +22,7 @@ const PredictionTariffs = () => {
     tariffType: "EZ_T",
   });
 
-  const [loading, setLoading] = useState(false); // Add loading state
+  const [loading, setLoading] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -36,8 +35,8 @@ const PredictionTariffs = () => {
         ...prevData,
         subjects: subjectsResponse.data,
         providers: providersResponse.data,
-        provider: providersResponse.data.length > 0 ? providersResponse?.data[0].id : 0,
-        subject: subjectsResponse.data.length > 0 ? subjectsResponse?.data[0].id : 0,
+        provider: providersResponse.data.length > 0 ? providersResponse.data[0].id : 0,
+        subject: subjectsResponse.data.length > 0 ? subjectsResponse.data[0].id : 0,
       }));
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -45,10 +44,14 @@ const PredictionTariffs = () => {
   };
 
   const fetchTariffs = async () => {
-    setLoading(true); // Start loading
+    setLoading(true);
     try {
       const startDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, "0")}-01`;
-      const endDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, "0")}-${new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate()}`;
+      const endDate = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, "0")}-${new Date(
+        selectedMonth.year,
+        selectedMonth.month + 1,
+        0
+      ).getDate()}`;
 
       const tariffsResponse = await axiosInstance.get(endpoints.BASE_TARIFF, {
         params: {
@@ -65,17 +68,22 @@ const PredictionTariffs = () => {
 
       generateTableData(tariffsResponse.data);
     } catch (error) {
-      if (error.response && error.response.data.error === "No BaseTariffs found with the provided criteria.") {
+      if (
+        error.response &&
+        error.response.data.error === "No BaseTariffs found with the provided criteria."
+      ) {
         console.warn("No BaseTariffs found, filling table data with zeroes.");
         const daysInMonth = new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate();
         const emptyTariffs = [];
 
-        // Generate an empty list of tariffs to fill with zeroes
+        // Generate empty tariffs for each day (using the first hour as a placeholder)
         for (let day = 1; day <= daysInMonth; day++) {
-          const formattedDay = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          const formattedDay = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, "0")}-${String(
+            day
+          ).padStart(2, "0")}`;
           emptyTariffs.push({
             date: formattedDay,
-            hour: 1, // Start hour at 1
+            hour: 1,
             [data.tariffType]: 0,
           });
         }
@@ -85,41 +93,38 @@ const PredictionTariffs = () => {
         console.error("Error fetching tariffs:", error);
       }
     } finally {
-      setLoading(false); // End loading
+      setLoading(false);
     }
   };
 
   const generateTableData = (tariffsData) => {
     const tableData = [];
-    const daysInMonth = new Date(
-      selectedMonth.year,
-      selectedMonth.month + 1,
-      0
-    ).getDate();
+    const daysInMonth = new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate();
 
-    // Create a mapping from date to an array of 24 hours
+    // Create a mapping from date (YYYY-MM-DD) to an array for 24 hours
     const dateToHoursMap = {};
 
-    // Initialize the map with 0 for each hour
     for (let day = 1; day <= daysInMonth; day++) {
-      const formattedDay = `${selectedMonth.year}-${String(
-        selectedMonth.month + 1
-      ).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const formattedDay = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, "0")}-${String(
+        day
+      ).padStart(2, "0")}`;
       dateToHoursMap[formattedDay] = new Array(24).fill(0);
     }
 
-    // Now, fill the dateToHoursMap with the data from tariffsData
+    // Fill the map using the new tariffs schema by validating the date field
     tariffsData.forEach((tariff) => {
-      const date = tariff.date.split("T")[0]; // Assuming date is in ISO format
+      if (!tariff.date) return; // Skip if date is missing
+      // Normalize date format (YYYY-MM-DD)
+      const formattedDate = new Date(tariff.date).toISOString().split("T")[0];
       const hourIndex = tariff.hour - 1;
       const tariffValue = tariff[data.tariffType];
 
-      if (dateToHoursMap[date]) {
-        dateToHoursMap[date][hourIndex] = tariffValue;
+      if (dateToHoursMap.hasOwnProperty(formattedDate)) {
+        dateToHoursMap[formattedDate][hourIndex] = tariffValue;
       }
     });
 
-    // Now, convert dateToHoursMap to tableData array
+    // Convert mapping to table data array
     for (const [date, hours] of Object.entries(dateToHoursMap)) {
       tableData.push({
         [date]: hours,
@@ -159,7 +164,7 @@ const PredictionTariffs = () => {
           selectedMonth={selectedMonth}
           data={data}
           setData={setData}
-          loading={loading} // Pass the loading state to the table
+          loading={loading}
         />
       </div>
     </div>

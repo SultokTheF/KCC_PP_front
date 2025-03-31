@@ -1,4 +1,3 @@
-// PredictionTariffsTable.js
 import React, { useState } from "react";
 
 // Tailwind CSS spinner component
@@ -16,14 +15,12 @@ const PredictionTariffsTable = ({ data, setData, loading }) => {
 
   const handleDoubleClick = (day, hour) => {
     setEditingCell({ day, hour });
-
-    // Find the current value in the cell
     const existingValue = data.tableData.find((d) => Object.keys(d)[0] === day)?.[day]?.[hour - 1] || 0;
-    setInputValue(existingValue); // Set input value with the existing cell value
+    setInputValue(existingValue);
   };
 
   const handleChange = (e) => {
-    setInputValue(e.target.value); // Update inputValue state on input change
+    setInputValue(e.target.value);
   };
 
   const handleBlur = () => {
@@ -32,7 +29,6 @@ const PredictionTariffsTable = ({ data, setData, loading }) => {
       const dayData = newTableData.find((d) => Object.keys(d)[0] === editingCell.day);
 
       if (dayData) {
-        // Update the specific cell with the new input value
         const value = parseFloat(inputValue);
         dayData[editingCell.day][editingCell.hour - 1] = isNaN(value) ? 0 : value;
       }
@@ -43,11 +39,9 @@ const PredictionTariffsTable = ({ data, setData, loading }) => {
       };
     });
 
-    // Clear the editing cell state after update
     setEditingCell({ day: null, hour: null });
   };
 
-  // Render the spinner if data is still being fetched
   if (loading) {
     return <Spinner />;
   }
@@ -67,7 +61,7 @@ const PredictionTariffsTable = ({ data, setData, loading }) => {
             </tr>
           </thead>
           <tbody>
-            {data.tableData.map((dayData, index) => {
+            {data.tableData.map((dayData) => {
               const day = Object.keys(dayData)[0];
               return (
                 <tr key={day} className="bg-white hover:bg-gray-100">

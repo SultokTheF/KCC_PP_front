@@ -188,7 +188,7 @@ const ObjectTable = ({
       ? hourPlan.reduce((acc, row) => acc + (Number(row.P1_Gen) || 0), 0)
       : 0;
   const sumP2 = hourPlan.reduce((acc, row) => acc + (Number(row.P2) || 0), 0);
-  const sumP2Gen =
+  const sumP2Gen =  
     selectedObject &&
     selectedObject.object_type !== "CONSUMER" &&
     selectedObject.object_type !== "РЭК"

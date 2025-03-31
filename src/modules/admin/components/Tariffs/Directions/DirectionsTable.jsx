@@ -1,5 +1,4 @@
-// DirectionsTable.js
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
 // Tailwind CSS spinner component
 const Spinner = () => (
@@ -16,11 +15,12 @@ const DirectionsTable = ({ data, setData, loading }) => {
   const toggleCellValue = (day, hour) => {
     setData((prevData) => {
       const newTableData = [...prevData.tableData];
-      const dayData = newTableData.find(d => Object.keys(d)[0] === day);
+      const dayData = newTableData.find((d) => Object.keys(d)[0] === day);
 
       if (dayData) {
         const currentValue = dayData[day][hour - 1];
-        dayData[day][hour - 1] = currentValue === 'UP' ? 'DOWN' : 'UP';
+        // Toggle the value between 'UP' and 'DOWN'
+        dayData[day][hour - 1] = currentValue === "UP" ? "DOWN" : "UP";
       }
 
       return {
@@ -34,16 +34,15 @@ const DirectionsTable = ({ data, setData, loading }) => {
   };
 
   const handleDoubleClick = (day, hour) => {
-    setEditingCell({ day, hour }); // Set the cell as being edited
-    toggleCellValue(day, hour); // Toggle the cell value
+    setEditingCell({ day, hour }); // Mark cell as being edited
+    toggleCellValue(day, hour); // Toggle cell value on double-click
   };
 
-  // Render the spinner if data is still being fetched
+  // Render spinner while loading
   if (loading) {
     return <Spinner />;
   }
 
-  // Render the table after loading is complete
   return (
     <div className="overflow-x-auto mt-5">
       <div className="w-full">
@@ -51,9 +50,13 @@ const DirectionsTable = ({ data, setData, loading }) => {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-4 w-20 border-b">День</th>
-              {Array.from({ length: numberOfHours }, (_, i) => i + 1).map((hour) => (
-                <th key={hour} className="px-4 w-12 border-b">{hour}</th>
-              ))}
+              {Array.from({ length: numberOfHours }, (_, i) => i + 1).map(
+                (hour) => (
+                  <th key={hour} className="px-4 w-12 border-b">
+                    {hour}
+                  </th>
+                )
+              )}
             </tr>
           </thead>
           <tbody>
@@ -61,20 +64,35 @@ const DirectionsTable = ({ data, setData, loading }) => {
               const day = Object.keys(dayData)[0];
               return (
                 <tr key={day} className="bg-white hover:bg-gray-100">
-                  <td className="px-4 w-20 border-b">{day.split('-').reverse().join('.')}</td>
+                  <td className="px-4 w-20 border-b">
+                    {day.split("-").reverse().join(".")}
+                  </td>
                   {dayData[day].map((hourData, hourIndex) => (
                     <td
                       key={hourIndex}
                       className={`px-4 w-12 border text-center hover:bg-blue-100 ${
-                        hourData === 'DOWN' ? 'bg-green-100' : hourData === 'UP' ? 'bg-red-100' : ''
+                        hourData === "DOWN"
+                          ? "bg-green-100"
+                          : hourData === "UP"
+                          ? "bg-red-100"
+                          : ""
                       } ${
-                        editingCell.day === day && editingCell.hour === hourIndex + 1
-                          ? 'bg-blue-100'
-                          : ''
+                        editingCell.day === day &&
+                        editingCell.hour === hourIndex + 1
+                          ? "bg-blue-100"
+                          : ""
                       }`}
-                      onDoubleClick={() => handleDoubleClick(day, hourIndex + 1)}
+                      onDoubleClick={() =>
+                        handleDoubleClick(day, hourIndex + 1)
+                      }
                     >
-                      {hourData === 'UP' ? '↑' : hourData === 'DOWN' ? '↓' : hourData === 'NONE' ? '—' : ''}
+                      {hourData === "UP"
+                        ? "↑"
+                        : hourData === "DOWN"
+                        ? "↓"
+                        : hourData === "NONE"
+                        ? "—"
+                        : ""}
                     </td>
                   ))}
                 </tr>
