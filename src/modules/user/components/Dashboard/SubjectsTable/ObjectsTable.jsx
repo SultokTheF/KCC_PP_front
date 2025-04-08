@@ -113,11 +113,11 @@ const ObjectTable = ({
             const mainStatus = statuses[`${plan}_Status`];
             const genStatus = statuses[`${plan}_Gen_Status`];
             let colorClass = "";
-            if (mainStatus === "STARTED" && genStatus === "STARTED") {
+            if (mainStatus === "COMPLETED" && genStatus === "COMPLETED") {
               colorClass = "text-green-500";
             } else {
               const originalMapping = {
-                COMPLETED: "text-green-500",
+                COMPLETED: "text-black",
                 IN_PROGRESS: "text-orange-500",
                 OUTDATED: "text-red-500",
                 NOT_STARTED: "text-black",
@@ -126,7 +126,7 @@ const ObjectTable = ({
             }
             return (
               <span key={plan} className={`${colorClass} mx-1`}>
-                {plan === "F1" ? "Ф" : plan}
+                {plan === "F1" ? "Ф" : plan === "P1" ? "П1" : plan === "P2" ? "П2" : "П3"}
               </span>
             );
           })}
