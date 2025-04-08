@@ -1,3 +1,5 @@
+/* eslint-disable react/prop-types */
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
 import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 import useDataFetching from "../../../../../hooks/useDataFetching";
@@ -174,7 +176,7 @@ const ObjectTable = ({
         selectedObject: objects[0]?.id || 0,
       }));
     }
-  }, [selectedData.selectedSubject, objects, setSelectedData]);
+  }, [selectedData.selectedSubject, objects, setSelectedData, selectedData.selectedObject]);
 
   // ***********************************************
   // Calculate sum and average for each column

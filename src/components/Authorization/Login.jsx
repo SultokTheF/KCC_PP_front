@@ -1,6 +1,6 @@
+// eslint-disable-next-line no-unused-vars
 import React, { useState } from 'react';
 import { Button } from "@material-tailwind/react";
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 

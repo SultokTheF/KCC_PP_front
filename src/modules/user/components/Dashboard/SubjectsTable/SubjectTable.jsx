@@ -1,3 +1,5 @@
+/* eslint-disable react/prop-types */
+// eslint-disable-next-line no-unused-vars
 import React, { useState, useEffect } from 'react';
 import { axiosInstance, endpoints } from '../../../../../services/apiConfig';
 import useDataFetching from '../../../../../hooks/useDataFetching';

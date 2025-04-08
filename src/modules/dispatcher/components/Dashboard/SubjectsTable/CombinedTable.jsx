@@ -585,6 +585,7 @@ const CombinedTable = ({
     });
 
     try {
+      handleSave();
       const response = await axiosInstance.post(endpoints.CALCULATE_P2, {
         call: "calculate",
         subject: selectedData.selectedSubject,
