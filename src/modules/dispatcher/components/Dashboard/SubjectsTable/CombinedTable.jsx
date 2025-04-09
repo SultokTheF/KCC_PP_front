@@ -276,37 +276,94 @@ const CombinedTable = ({
   // ─────────────────────────────────────────────────────────────────────────────
   //  Utility / Display
   // ─────────────────────────────────────────────────────────────────────────────
-  const generateStatusDisplayComponents = (statuses) => {
+  const generateStatusDisplayComponents = (statuses, isCombined, is_res) => {
     if (!statuses || Object.keys(statuses).length === 0) {
       return "Нет данных";
     }
-    const planKeys = ["P1_Status", "P2_Status", "P3_Status", "F1_Status"];
-    const planAbbreviations = {
-      P1_Status: "П1",
-      P2_Status: "П2",
-      P3_Status: "П3",
-      F1_Status: "Ф",
-    };
-    const statusColors = {
-      COMPLETED: "text-green-500",
-      IN_PROGRESS: "text-orange-500",
-      OUTDATED: "text-red-500",
-      NOT_STARTED: "text-black",
-    };
-    return (
-      <div>
-        {planKeys.map((key) => {
-          const planStatus = statuses[key];
-          const planName = planAbbreviations[key];
-          const colorClass = statusColors[planStatus] || "";
-          return (
-            <span key={key} className={`${colorClass} mx-1`}>
-              {planName}
-            </span>
-          );
-        })}
-      </div>
-    );
+    if (isCombined) {
+      // Combined mode: show one label per plan, green only if both statuses are "STARTED"
+      const plans = ["P1", "P2", "P3", "F1"];
+      return (
+        <div>
+          {plans.map((plan) => {
+            const mainStatus = statuses[`${plan}_Status`];
+            const genStatus = statuses[`${plan}_Gen_Status`];
+            let colorClass = "";
+            if (mainStatus === "COMPLETED" && genStatus === "COMPLETED") {
+              colorClass = "text-green-500";
+            } else {
+              const originalMapping = {
+                COMPLETED: "text-black",
+                IN_PROGRESS: "text-orange-500",
+                OUTDATED: "text-red-500",
+                NOT_STARTED: "text-black",
+              };
+              colorClass = originalMapping[mainStatus] || "";
+            }
+            return (
+              <span key={plan} className={`${colorClass} mx-1`}>
+                {plan === "F1" ? "Ф" : plan === "P1" ? "П1" : plan === "P2" ? "П2" : "П3"}
+              </span>
+            );
+          })}
+        </div>
+      );
+    } else if (is_res) {
+      const plans = ["P1", "P2", "P3", "F1"];
+      return (
+        <div>
+          {plans.map((plan) => {
+            const mainStatus = statuses[`${plan}_Gen_Status`];
+            let colorClass = "";
+            if (mainStatus === "COMPLETED") {
+              colorClass = "text-green-500";
+            } else {
+              const originalMapping = {
+                COMPLETED: "text-black",
+                IN_PROGRESS: "text-orange-500",
+                OUTDATED: "text-red-500",
+                NOT_STARTED: "text-black",
+              };
+              colorClass = originalMapping[mainStatus] || "";
+            }
+            return (
+              <span key={plan} className={`${colorClass} mx-1`}>
+                {plan === "F1" ? "Ф" : plan === "P1" ? "П1" : plan === "P2" ? "П2" : "П3"}
+              </span>
+            );
+          })}
+        </div>
+      );
+    } else {
+      // For CONSUMER/РЭК types, do not show Gen statuses—only display the regular statuses.
+      const planKeys = ["P1_Status", "P2_Status", "P3_Status", "F1_Status"];
+      const planAbbreviations = {
+        P1_Status: "П1",
+        P2_Status: "П2",
+        P3_Status: "П3",
+        F1_Status: "Ф",
+      };
+      const statusColors = {
+        COMPLETED: "text-green-500",
+        IN_PROGRESS: "text-orange-500",
+        OUTDATED: "text-red-500",
+        NOT_STARTED: "text-black",
+      };
+      return (
+        <div>
+          {planKeys.map((key) => {
+            const planStatus = statuses[key];
+            const planName = planAbbreviations[key];
+            const colorClass = statusColors[planStatus] || "";
+            return (
+              <span key={key} className={`${colorClass} mx-1`}>
+                {planName}
+              </span>
+            );
+          })}
+        </div>
+      );
+    }
   };
 
   const selectedSubject = subjectsList.find(
@@ -976,7 +1033,11 @@ const CombinedTable = ({
                       : subjectStatusError
                       ? subjectStatusError
                       : generateStatusDisplayComponents(
-                          subjectStatusMap[subject.id]
+                          subjectStatusMap[subject.id],
+                          (subject.subject_type !== "CONSUMER" &&
+                            subject.subject_type !== "РЭК" &&
+                            subject.subject_type !== "ВИЭ"),
+                          subject.subject_type === "ВИЭ"
                         )}
                   </td>
                 ))}
@@ -1027,7 +1088,11 @@ const CombinedTable = ({
                         : objectStatusError
                         ? objectStatusError
                         : generateStatusDisplayComponents(
-                            objectStatusMap[object.id]
+                            objectStatusMap[object.id],
+                            (object.object_type !== "CONSUMER" &&
+                              object.object_type !== "РЭК" &&
+                              object.object_type !== "ВИЭ"),
+                            object.object_type === "ВИЭ"
                           )}
                     </td>
                   ))}

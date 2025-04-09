@@ -80,23 +80,24 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
   // Updated generateStatusDisplayComponents:
   // - If isCombined is true (non-CONSUMER/РЭК) show a combined label,
   // - Otherwise, show only the regular statuses (omitting Gen plans).
-  const generateStatusDisplayComponents = (statuses, isCombined) => {
+  const generateStatusDisplayComponents = (statuses, isCombined, is_res) => {
     if (!statuses || Object.keys(statuses).length === 0) {
-      return 'Нет данных';
+      return "Нет данных";
     }
     if (isCombined) {
+      // Combined mode: show one label per plan, green only if both statuses are "STARTED"
       const plans = ["P1", "P2", "P3", "F1"];
       return (
         <div>
-          {plans.map(plan => {
+          {plans.map((plan) => {
             const mainStatus = statuses[`${plan}_Status`];
             const genStatus = statuses[`${plan}_Gen_Status`];
             let colorClass = "";
-            if (mainStatus === "STARTED" && genStatus === "STARTED") {
+            if (mainStatus === "COMPLETED" && genStatus === "COMPLETED") {
               colorClass = "text-green-500";
             } else {
               const originalMapping = {
-                COMPLETED: "text-green-500",
+                COMPLETED: "text-black",
                 IN_PROGRESS: "text-orange-500",
                 OUTDATED: "text-red-500",
                 NOT_STARTED: "text-black",
@@ -105,14 +106,40 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
             }
             return (
               <span key={plan} className={`${colorClass} mx-1`}>
-                {plan === "F1" ? "Ф" : plan}
+                {plan === "F1" ? "Ф" : plan === "P1" ? "П1" : plan === "P2" ? "П2" : "П3"}
+              </span>
+            );
+          })}
+        </div>
+      );
+    } else if (is_res) {
+      const plans = ["P1", "P2", "P3", "F1"];
+      return (
+        <div>
+          {plans.map((plan) => {
+            const mainStatus = statuses[`${plan}_Gen_Status`];
+            let colorClass = "";
+            if (mainStatus === "COMPLETED") {
+              colorClass = "text-green-500";
+            } else {
+              const originalMapping = {
+                COMPLETED: "text-black",
+                IN_PROGRESS: "text-orange-500",
+                OUTDATED: "text-red-500",
+                NOT_STARTED: "text-black",
+              };
+              colorClass = originalMapping[mainStatus] || "";
+            }
+            return (
+              <span key={plan} className={`${colorClass} mx-1`}>
+                {plan === "F1" ? "Ф" : plan === "P1" ? "П1" : plan === "P2" ? "П2" : "П3"}
               </span>
             );
           })}
         </div>
       );
     } else {
-      // For CONSUMER/РЭК types, show only the non-Gen statuses.
+      // For CONSUMER/РЭК types, do not show Gen statuses—only display the regular statuses.
       const planKeys = ["P1_Status", "P2_Status", "P3_Status", "F1_Status"];
       const planAbbreviations = {
         P1_Status: "П1",
@@ -128,7 +155,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
       };
       return (
         <div>
-          {planKeys.map(key => {
+          {planKeys.map((key) => {
             const planStatus = statuses[key];
             const planName = planAbbreviations[key];
             const colorClass = statusColors[planStatus] || "";
@@ -159,32 +186,32 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
   const sumP1 = hourPlan.reduce((acc, row) => acc + (Number(row.P1) || 0), 0);
   const sumP1Gen =
     selectedSubject?.subject_type !== "CONSUMER" &&
-    selectedSubject?.subject_type !== "РЭК"
+      selectedSubject?.subject_type !== "РЭК"
       ? hourPlan.reduce((acc, row) => acc + (Number(row.P1_Gen) || 0), 0)
       : null;
   const sumP2 = hourPlan.reduce((acc, row) => acc + (Number(row.P2) || 0), 0);
   const sumP2Gen =
     selectedSubject?.subject_type !== "CONSUMER" &&
-    selectedSubject?.subject_type !== "РЭК"
+      selectedSubject?.subject_type !== "РЭК"
       ? hourPlan.reduce((acc, row) => acc + (Number(row.P2_Gen) || 0), 0)
       : null;
   const sumP3 = hourPlan.reduce((acc, row) => acc + (Number(row.P3) || 0), 0);
   const sumP3Gen =
     selectedSubject?.subject_type !== "CONSUMER" &&
-    selectedSubject?.subject_type !== "РЭК"
+      selectedSubject?.subject_type !== "РЭК"
       ? hourPlan.reduce((acc, row) => acc + (Number(row.P3_Gen) || 0), 0)
       : null;
   const sumF1 = hourPlan.reduce((acc, row) => acc + (Number(row.F1) || 0), 0);
   const sumF1Gen =
     selectedSubject?.subject_type !== "CONSUMER" &&
-    selectedSubject?.subject_type !== "РЭК"
+      selectedSubject?.subject_type !== "РЭК"
       ? hourPlan.reduce((acc, row) => acc + (Number(row.F1_Gen) || 0), 0)
       : null;
 
   const avgP1 = rowCount ? sumP1 / rowCount : 0;
   const avgP1Gen =
     selectedSubject?.subject_type !== "CONSUMER" &&
-    selectedSubject?.subject_type !== "РЭК"
+      selectedSubject?.subject_type !== "РЭК"
       ? rowCount
         ? sumP1Gen / rowCount
         : 0
@@ -192,7 +219,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
   const avgP2 = rowCount ? sumP2 / rowCount : 0;
   const avgP2Gen =
     selectedSubject?.subject_type !== "CONSUMER" &&
-    selectedSubject?.subject_type !== "РЭК"
+      selectedSubject?.subject_type !== "РЭК"
       ? rowCount
         ? sumP2Gen / rowCount
         : 0
@@ -200,7 +227,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
   const avgP3 = rowCount ? sumP3 / rowCount : 0;
   const avgP3Gen =
     selectedSubject?.subject_type !== "CONSUMER" &&
-    selectedSubject?.subject_type !== "РЭК"
+      selectedSubject?.subject_type !== "РЭК"
       ? rowCount
         ? sumP3Gen / rowCount
         : 0
@@ -208,7 +235,7 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
   const avgF1 = rowCount ? sumF1 / rowCount : 0;
   const avgF1Gen =
     selectedSubject?.subject_type !== "CONSUMER" &&
-    selectedSubject?.subject_type !== "РЭК"
+      selectedSubject?.subject_type !== "РЭК"
       ? rowCount
         ? sumF1Gen / rowCount
         : 0
@@ -246,11 +273,13 @@ const SubjectTable = ({ selectedData, setSelectedData, subjectsList, selectedDat
                 {loadingStatuses
                   ? 'Загрузка...'
                   : statusError
-                  ? statusError
-                  : generateStatusDisplayComponents(
+                    ? statusError
+                    : generateStatusDisplayComponents(
                       statusMap[subject.id],
-                      subject.subject_type !== "CONSUMER" &&
-                        subject.subject_type !== "РЭК"
+                      (subject.subject_type !== "CONSUMER" &&
+                      subject.subject_type !== "РЭК" &&
+                      subject.subject_type !== "ВИЭ"),
+                      subject.subject_type === "ВИЭ"
                     )}
               </td>
             ))}

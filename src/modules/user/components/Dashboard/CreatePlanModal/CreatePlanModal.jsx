@@ -1,6 +1,7 @@
+/* eslint-disable react/prop-types */
 // src/components/Dashboard/SubjectsTable/PlanModal.jsx
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@material-tailwind/react";
 import Modal from "react-modal";
 import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
@@ -21,7 +22,6 @@ const PlanModal = ({
   objectList,
   plans, // no longer used for submission logic
   planMode,
-  isGen,
 }) => {
   const [importedData, setImportedData] = useState(null);
   const [textareaInput, setTextareaInput] = useState("");

@@ -100,7 +100,7 @@ const ObjectTable = ({
   // Updated generateStatusDisplayComponents:
   // - If isCombined is true (i.e. not CONSUMER/РЭК), show a combined label using both statuses.
   // - Otherwise (CONSUMER/РЭК), show only the regular status (without Gen).
-  const generateStatusDisplayComponents = (statuses, isCombined) => {
+  const generateStatusDisplayComponents = (statuses, isCombined, is_res) => {
     if (!statuses || Object.keys(statuses).length === 0) {
       return "Нет данных";
     }
@@ -114,6 +114,32 @@ const ObjectTable = ({
             const genStatus = statuses[`${plan}_Gen_Status`];
             let colorClass = "";
             if (mainStatus === "COMPLETED" && genStatus === "COMPLETED") {
+              colorClass = "text-green-500";
+            } else {
+              const originalMapping = {
+                COMPLETED: "text-black",
+                IN_PROGRESS: "text-orange-500",
+                OUTDATED: "text-red-500",
+                NOT_STARTED: "text-black",
+              };
+              colorClass = originalMapping[mainStatus] || "";
+            }
+            return (
+              <span key={plan} className={`${colorClass} mx-1`}>
+                {plan === "F1" ? "Ф" : plan === "P1" ? "П1" : plan === "P2" ? "П2" : "П3"}
+              </span>
+            );
+          })}
+        </div>
+      );
+    } else if (is_res) {
+      const plans = ["P1", "P2", "P3", "F1"];
+      return (
+        <div>
+          {plans.map((plan) => {
+            const mainStatus = statuses[`${plan}_Gen_Status`];
+            let colorClass = "";
+            if (mainStatus === "COMPLETED") {
               colorClass = "text-green-500";
             } else {
               const originalMapping = {
@@ -287,8 +313,10 @@ const ObjectTable = ({
                   ? statusError
                   : generateStatusDisplayComponents(
                       statusMap[object.id],
-                      object.object_type !== "CONSUMER" &&
-                        object.object_type !== "РЭК"
+                      (object.object_type !== "CONSUMER" &&
+                        object.object_type !== "РЭК" &&
+                        object.object_type !== "ВИЭ"),
+                      object.object_type === "ВИЭ"
                     )}
               </td>
             ))}
