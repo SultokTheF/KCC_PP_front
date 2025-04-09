@@ -61,87 +61,69 @@ const Navbar = ({ date, setDate, data, setData }) => {
   };
 
   const importFromXLSX = (event) => {
-    setLoading(prev => ({ ...prev, import: true }));
-    console.log('Импорт данных...');
+      setLoading(prev => ({ ...prev, import: true }));
+      console.log('Импорт данных...');
   
-    const file = event.target.files[0];
-    const reader = new FileReader();
+      const file = event.target.files[0];
+      const reader = new FileReader();
   
-    reader.onload = (e) => {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const firstSheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[firstSheetName];
-      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      reader.onload = (e) => {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
   
-      // Get the first row date, assuming the date is in the first row and first column
-      let firstDay = rows[1][0];  // Assuming that the first date is in the second row
-      let month, year;
+        const newTableData = rows.slice(1).map(row => {
+          let [day, ...hours] = row;
   
-      // Handle both string and number dates
-      if (typeof firstDay === 'string') {
-        // Extract year and month from the date string (e.g., "2024-01-01")
-        const firstDate = new Date(firstDay);
-        month = firstDate.getMonth() + 2;  // Add 1 to move to the next month
-        year = firstDate.getFullYear();
-        if (month > 12) {
-          month = 1; // Wrap to January if the month is December
-          year += 1; // Increment the year
-        }
-      } else if (typeof firstDay === 'number') {
-        // Handle Excel serial date format (numeric)
-        const excelStartDate = new Date(1899, 11, 30);  // Excel's base date
-        const firstDate = new Date(excelStartDate.getTime() + (firstDay - 1) * 24 * 60 * 60 * 1000);
-        month = firstDate.getMonth() + 2;  // Add 1 to move to the next month
-        year = firstDate.getFullYear();
-        if (month > 12) {
-          month = 1; // Wrap to January if the month is December
-          year += 1; // Increment the year
-        }
-      }
+          // If `day` is a number (Excel serialized date), convert it to a JS Date object
+          if (typeof day === 'number') {
+            const excelStartDate = new Date(1900, 0, 1); // Excel's start date
+            day = new Date(excelStartDate.getTime() + (day - 1) * 24 * 60 * 60 * 1000);
+          }
   
-      // Generate all dates for this next month
-      const daysInMonth = new Date(year, month, 0).getDate();  // Get number of days in the month
-      const dateArray = [];
+          // Convert Date object to `YYYY-MM-DD` format
+          if (day instanceof Date) {
+            const dayNumber = String(day.getDate()).padStart(2, '0');
+            const monthNumber = String(day.getMonth() + 1).padStart(2, '0'); // Months are zero-indexed
+            const yearNumber = day.getFullYear();
+            day = `${yearNumber}-${monthNumber}-${dayNumber}`;
+          } else if (typeof day === 'string') {
+            // If `day` is a string in `dd.mm.yyyy` format, convert it to `YYYY-MM-DD`
+            if (day.includes('.')) {
+              const [dayNumber, monthNumber, yearNumber] = day.split('.').map(Number);
+              day = `${yearNumber}-${String(monthNumber).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
+            }
+            // If already in `YYYY-MM-DD`, no conversion needed
+          } else {
+            console.error('Не удалось обработать дату:', day);
+            return null;
+          }
   
-      // Correct date generation for each day in the next month
-      for (let day = 1; day <= daysInMonth; day++) {
-        const formattedDay = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        dateArray.push(formattedDay);
-      }
+          // Create an object for each day's data
+          return { [day]: hours };
+        }).filter(row => row !== null); // Filter out any rows that failed to process
   
-      // Now map the tariff data to the generated dates
-      const newTableData = dateArray.map((date, index) => {
-        const row = rows[index + 1];  // Skip the header row
+        // Update table data
+        setData(prevData => ({
+          ...prevData,
+          tableData: newTableData
+        }));
   
-        if (row) {
-          // Extract the hourly data (assuming hours start from column 2)
-          const hours = row.slice(1);
-          return { [date]: hours };
-        } else {
-          return { [date]: new Array(24).fill(0) };  // If no data, fill with 0
-        }
-      });
+        console.log('Импорт завершен');
+      };
   
-      // Update table data
-      setData(prevData => ({
-        ...prevData,
-        tableData: newTableData
-      }));
+      reader.onerror = () => {
+        console.error('Ошибка при импорте файла');
+      };
   
-      console.log('Импорт завершен');
+      reader.onloadend = () => {
+        setLoading(prev => ({ ...prev, import: false }));
+      };
+  
+      reader.readAsArrayBuffer(file);
     };
-  
-    reader.onerror = () => {
-      console.error('Ошибка при импорте файла');
-    };
-  
-    reader.onloadend = () => {
-      setLoading(prev => ({ ...prev, import: false }));
-    };
-  
-    reader.readAsArrayBuffer(file);
-  };
   
   
 
