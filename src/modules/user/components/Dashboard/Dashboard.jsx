@@ -50,7 +50,7 @@ const Dashboard = () => {
     fetchData();
   }, []);
 
-  // Updated Full Export Function
+  // Updated Full Export Function with subject & corresponding objects exported together
   const handleFullExport = async () => {
     try {
       const timeIntervals = [
@@ -78,26 +78,27 @@ const Dashboard = () => {
         // Insert one empty column between the two halves.
         const combinedHeader = leftHeader.concat([""], rightHeader);
 
-        // For each data row: duplicate the row (convert numeric values for right part).
+        // For each data row: duplicate the row (converting numeric values for the right part).
         const combinedRows = rows.map(row => {
           const leftRow = row;
           const rightRow = row.map((cell, index) =>
             index === 0 ? cell : Number(cell) / 1000
           );
-          // Insert an empty cell between.
+          // Insert an empty cell between left and right.
           return leftRow.concat([""], rightRow);
         });
 
         return [combinedHeader, ...combinedRows];
       };
 
-      // Process subjects
+      // Process each subject along with its objects
       for (const subject of subjectsList) {
+        // ----- Subject Table -----
         // Fetch subject hours
-        const response = await axiosInstance.get(endpoints.HOURS, {
+        const subjectResponse = await axiosInstance.get(endpoints.HOURS, {
           params: { day: selectedDate, sub: subject.id },
         });
-        const subjectHours = response.data || [];
+        const subjectHours = subjectResponse.data || [];
 
         // Build table headers for the subject.
         const subjectTableHeaders = [
@@ -134,68 +135,63 @@ const Dashboard = () => {
 
         const combinedSubjectTableData = buildCombinedTable(subjectTableHeaders, subjectRows);
 
+        // Append subject section header and table.
         combinedData.push(['Subject:', subject.subject_name]);
-        combinedData.push([]);
-        // Add header row for the subject table (for clarity)
-        // combinedData.push(['Subject Table', 'кВт']);
         combinedData.push(...combinedSubjectTableData);
         combinedData.push([]);
-      }
 
-      // Process objects
-      for (const object of objectsList) {
-        // Only process objects that belong to a subject (or you can adjust this filter as needed)
-        // Fetch object hours
-        const response = await axiosInstance.get(endpoints.HOURS, {
-          params: { day: selectedDate, obj: object.id },
-        });
-        const objectHours = response.data || [];
+        // ----- Subject's Objects -----
+        // Filter objects that belong to the current subject.
+        const objectsForSubject = objectsList.filter(object => object.subject === subject.id);
 
-        const objectTableHeaders = [
-          'Time',
-          'P1',
-          ...(object?.object_type === 'ЭПО' ? ['P1_Gen'] : []),
-          'P2',
-          ...(object?.object_type === 'ЭПО' ? ['P2_Gen'] : []),
-          'P3',
-          ...(object?.object_type === 'ЭПО' ? ['P3_Gen'] : []),
-          'F1',
-          ...(object?.object_type === 'ЭПО' ? ['F1_Gen'] : [])
-        ];
+        for (const object of objectsForSubject) {
+          // Fetch object hours
+          const objectResponse = await axiosInstance.get(endpoints.HOURS, {
+            params: { day: selectedDate, obj: object.id },
+          });
+          const objectHours = objectResponse.data || [];
 
-        const objectRows = timeIntervals.map((time, index) => {
-          const hourData = objectHours.find((hour) => hour.hour === index + 1) || {};
-          return [
-            time,
-            hourData.P1 || 0,
-            ...(object?.object_type === 'ЭПО' ? [hourData.P1_Gen || 0] : []),
-            hourData.P2 || 0,
-            ...(object?.object_type === 'ЭПО' ? [hourData.P2_Gen || 0] : []),
-            hourData.P3 || 0,
-            ...(object?.object_type === 'ЭПО' ? [hourData.P3_Gen || 0] : []),
-            hourData.F1 || 0,
-            ...(object?.object_type === 'ЭПО' ? [hourData.F1_Gen || 0] : [])
+          const objectTableHeaders = [
+            'Time',
+            'P1',
+            ...(object?.object_type === 'ЭПО' ? ['P1_Gen'] : []),
+            'P2',
+            ...(object?.object_type === 'ЭПО' ? ['P2_Gen'] : []),
+            'P3',
+            ...(object?.object_type === 'ЭПО' ? ['P3_Gen'] : []),
+            'F1',
+            ...(object?.object_type === 'ЭПО' ? ['F1_Gen'] : [])
           ];
-        });
 
-        const combinedObjectTableData = buildCombinedTable(objectTableHeaders, objectRows);
+          const objectRows = timeIntervals.map((time, index) => {
+            const hourData = objectHours.find((hour) => hour.hour === index + 1) || {};
+            return [
+              time,
+              hourData.P1 || 0,
+              ...(object?.object_type === 'ЭПО' ? [hourData.P1_Gen || 0] : []),
+              hourData.P2 || 0,
+              ...(object?.object_type === 'ЭПО' ? [hourData.P2_Gen || 0] : []),
+              hourData.P3 || 0,
+              ...(object?.object_type === 'ЭПО' ? [hourData.P3_Gen || 0] : []),
+              hourData.F1 || 0,
+              ...(object?.object_type === 'ЭПО' ? [hourData.F1_Gen || 0] : [])
+            ];
+          });
 
-        combinedData.push(['Object:', object.object_name]);
-        combinedData.push([]);
-        // Updated header for the object table: notice 'мВт'
-        // combinedData.push(['Object Table', 'мВт']);
-        combinedData.push(...combinedObjectTableData);
-        combinedData.push([]);
+          const combinedObjectTableData = buildCombinedTable(objectTableHeaders, objectRows);
+
+          // Append object section header and table.
+          combinedData.push(['Object:', object.object_name]);
+          combinedData.push(...combinedObjectTableData);
+          combinedData.push([]);
+        }
       }
 
       // Generate Excel file
       const worksheet = XLSX.utils.aoa_to_sheet(combinedData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Full Export');
-      const excelBuffer = XLSX.write(workbook, {
-        bookType: 'xlsx',
-        type: 'array',
-      });
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
 
       // Save file to the browser
       const data = new Blob([excelBuffer], { type: 'application/octet-stream' });
