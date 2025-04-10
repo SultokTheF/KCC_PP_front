@@ -378,6 +378,9 @@ const CombinedTable = ({
     selectedSubject?.subject_type !== "CONSUMER" &&
     selectedSubject?.subject_type !== "РЭК";
 
+  const showConColumns =
+    selectedObject?.object_type !== "ВИЭ";
+
   // Calculation functions used in the table
   const calculateP2 = (index, P1) => {
     const c = localHourPlan[index]?.coefficient || 0;
@@ -525,9 +528,8 @@ const CombinedTable = ({
     const url = URL.createObjectURL(blobData);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `coefficients_volumes_${
-      selectedSubject?.subject_name || "subject"
-    }_${selectedDate}.xlsx`;
+    link.download = `coefficients_volumes_${selectedSubject?.subject_name || "subject"
+      }_${selectedDate}.xlsx`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -949,34 +951,34 @@ const CombinedTable = ({
   const objAvgP1 = objRowCount ? objSumP1 / objRowCount : 0;
   const objAvgP1Gen =
     selectedObject &&
-    selectedObject.object_type !== "CONSUMER" &&
-    selectedObject.object_type !== "РЭК" &&
-    objRowCount
+      selectedObject.object_type !== "CONSUMER" &&
+      selectedObject.object_type !== "РЭК" &&
+      objRowCount
       ? objSumP1Gen / objRowCount
       : 0;
   const objAvgVolume = objRowCount ? objSumVolume / objRowCount : 0;
   const objAvgP2 = objRowCount ? objSumP2 / objRowCount : 0;
   const objAvgP2Gen =
     selectedObject &&
-    selectedObject.object_type !== "CONSUMER" &&
-    selectedObject.object_type !== "РЭК" &&
-    objRowCount
+      selectedObject.object_type !== "CONSUMER" &&
+      selectedObject.object_type !== "РЭК" &&
+      objRowCount
       ? objSumP2Gen / objRowCount
       : 0;
   const objAvgP3 = objRowCount ? objSumP3 / objRowCount : 0;
   const objAvgP3Gen =
     selectedObject &&
-    selectedObject.object_type !== "CONSUMER" &&
-    selectedObject.object_type !== "РЭК" &&
-    objRowCount
+      selectedObject.object_type !== "CONSUMER" &&
+      selectedObject.object_type !== "РЭК" &&
+      objRowCount
       ? objSumP3Gen / objRowCount
       : 0;
   const objAvgF1 = objRowCount ? objSumF1 / objRowCount : 0;
   const objAvgF1Gen =
     selectedObject &&
-    selectedObject.object_type !== "CONSUMER" &&
-    selectedObject.object_type !== "РЭК" &&
-    objRowCount
+      selectedObject.object_type !== "CONSUMER" &&
+      selectedObject.object_type !== "РЭК" &&
+      objRowCount
       ? objSumF1Gen / objRowCount
       : 0;
 
@@ -1003,11 +1005,10 @@ const CombinedTable = ({
                 {subjectsList.map((subject) => (
                   <th
                     key={subject.id}
-                    className={`cursor-pointer ${
-                      selectedData.selectedSubject === subject.id
-                        ? "bg-blue-500 text-white"
-                        : ""
-                    }`}
+                    className={`cursor-pointer ${selectedData.selectedSubject === subject.id
+                      ? "bg-blue-500 text-white"
+                      : ""
+                      }`}
                     onClick={() =>
                       setSelectedData({
                         ...selectedData,
@@ -1031,8 +1032,8 @@ const CombinedTable = ({
                     {loadingSubjectStatuses
                       ? "Загрузка..."
                       : subjectStatusError
-                      ? subjectStatusError
-                      : generateStatusDisplayComponents(
+                        ? subjectStatusError
+                        : generateStatusDisplayComponents(
                           subjectStatusMap[subject.id],
                           (subject.subject_type !== "CONSUMER" &&
                             subject.subject_type !== "РЭК" &&
@@ -1057,11 +1058,10 @@ const CombinedTable = ({
                   .map((object) => (
                     <th
                       key={object.id}
-                      className={`cursor-pointer ${
-                        selectedData.selectedObject === object.id
-                          ? "bg-blue-500 text-white"
-                          : ""
-                      }`}
+                      className={`cursor-pointer ${selectedData.selectedObject === object.id
+                        ? "bg-blue-500 text-white"
+                        : ""
+                        }`}
                       onClick={() =>
                         setSelectedData({
                           ...selectedData,
@@ -1086,8 +1086,8 @@ const CombinedTable = ({
                       {loadingObjectStatuses
                         ? "Загрузка..."
                         : objectStatusError
-                        ? objectStatusError
-                        : generateStatusDisplayComponents(
+                          ? objectStatusError
+                          : generateStatusDisplayComponents(
                             objectStatusMap[object.id],
                             (object.object_type !== "CONSUMER" &&
                               object.object_type !== "РЭК" &&
@@ -1128,17 +1128,21 @@ const CombinedTable = ({
               <thead className="text-xs text-gray-700 uppercase bg-gray-300">
                 <tr>
                   <th className="w-[50px]">Время</th>
-                  <th className="w-[80px]">П1</th>
+                  {showConColumns && <th className="w-[50px]">П1</th>}
                   {showGenColumns && <th className="w-[80px]">ГП1</th>}
-                  <th className="w-[100px]">Коэффициент</th>
+                  {showConColumns && (
+                    <th className="w-[120px]">Коэффициент</th>
+                  )}
                   {showGenColumns && (
                     <th className="w-[120px]">Коэф. Генерации</th>
                   )}
-                  <th className="w-[80px]">Объем</th>
+                  {showConColumns && <th className="w-[80px]">Объем</th>}
                   {showGenColumns && <th className="w-[110px]">Объем Ген.</th>}
-                  <th className="w-[80px]">П2</th>
+                  {showConColumns && <th className="w-[80px]">П2</th>}
                   {showGenColumns && <th className="w-[80px]">ГП2</th>}
-                  <th className="w-[130px]">Сообщ. П2</th>
+                  {showConColumns && (
+                    <th className="w-[150px]">Сообщ. П2</th>
+                  )}
                   {showGenColumns && (
                     <th className="w-[140px]">Сообщ. П2 Ген.</th>
                   )}
@@ -1154,22 +1158,24 @@ const CombinedTable = ({
                   return (
                     <tr key={time}>
                       <td className="border">{time}</td>
-                      <td className="border">{P1}</td>
+                      {showConColumns && <td className="border">{P1}</td>}
                       {showGenColumns && (
                         <td className="border">{rowData.P1_Gen || 0}</td>
                       )}
-                      <td className="border">
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={rowData.coefficient ?? ""}
-                          onChange={(e) =>
-                            handleCoefficientChange(idx, e.target.value)
-                          }
-                          className="w-full text-center rounded"
-                        />
-                      </td>
+                      {showConColumns && (
+                        <td className="border">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={rowData.coefficient ?? ""}
+                            onChange={(e) =>
+                              handleCoefficientChange(idx, e.target.value)
+                            }
+                            className="w-full text-center rounded"
+                          />
+                        </td>
+                      )}
                       {showGenColumns && (
                         <td className="border">
                           <input
@@ -1184,16 +1190,18 @@ const CombinedTable = ({
                           />
                         </td>
                       )}
-                      <td className="border">
-                        <input
-                          type="number"
-                          value={rowData.volume ?? ""}
-                          onChange={(e) =>
-                            handleVolumeChange(idx, e.target.value)
-                          }
-                          className="w-full text-center rounded"
-                        />
-                      </td>
+                      {showConColumns && (
+                        <td className="border">
+                          <input
+                            type="number"
+                            value={rowData.volume ?? ""}
+                            onChange={(e) =>
+                              handleVolumeChange(idx, e.target.value)
+                            }
+                            className="w-full text-center rounded"
+                          />
+                        </td>
+                      )}
                       {showGenColumns && (
                         <td className="border">
                           <input
@@ -1206,7 +1214,9 @@ const CombinedTable = ({
                           />
                         </td>
                       )}
-                      <td className="border">{p2Val}</td>
+                      {showConColumns && (
+                        <td className="border">{p2Val}</td>
+                        )}
                       {showGenColumns && (
                         <td className="border">
                           {rowData.P2_Gen
@@ -1214,13 +1224,15 @@ const CombinedTable = ({
                             : calculateP2Gen(idx, rowData.P1_Gen || 0)}
                         </td>
                       )}
-                      <td className="border">{rowData.P2_message || ""}</td>
+                      {showConColumns && (
+                        <td className="border">{rowData.P2_message || ""}</td>
+                      )}
                       {showGenColumns && (
                         <td className="border">
                           {rowData.P2_Gen_message || ""}
                         </td>
                       )}
-                      {showMessageCol && (
+                      {showConColumns && showMessageCol && (
                         <td className="border">
                           <input
                             type="text"
@@ -1238,38 +1250,46 @@ const CombinedTable = ({
                 {/* Subject Table Footer: Sums */}
                 <tr>
                   <td className="border font-bold">Сумма</td>
-                  <td className="border">{sumP1}</td>
+                  {showConColumns && <td className="border">{sumP1}</td>}
                   {showGenColumns && <td className="border">{sumP1Gen}</td>}
-                  <td className="border">{sumCoefficient.toFixed(2)}</td>
+                  {showConColumns && (
+                    <td className="border">{sumCoefficient.toFixed(2)}</td>
+                  )}
                   {showGenColumns && (
                     <td className="border">{sumCoefficientGen.toFixed(2)}</td>
                   )}
-                  <td className="border">{sumVolume}</td>
+                  {showConColumns && (
+                    <td className="border">{sumVolume.toFixed(2)}</td>
+                  )}
                   {showGenColumns && <td className="border">{sumVolumeGen}</td>}
-                  <td className="border">{sumP2.toFixed(2)}</td>
+                  {showConColumns && <td className="border">{sumP2}</td>}
                   {showGenColumns && (
                     <td className="border">{sumP2Gen.toFixed(2)}</td>
                   )}
                   {/** For message columns, leave empty */}
                   {showGenColumns && <td className="border"></td>}
-                  {showMessageCol && <td className="border"></td>}
+                  {showConColumns && showMessageCol && <td className="border"></td>}
                 </tr>
                 {/* Subject Table Footer: Averages */}
                 <tr>
                   <td className="border font-bold">Среднее</td>
-                  <td className="border">{avgP1.toFixed(2)}</td>
+                  {showConColumns && <td className="border">{avgP1.toFixed(2)}</td>}
                   {showGenColumns && (
                     <td className="border">{avgP1Gen.toFixed(2)}</td>
                   )}
-                  <td className="border">{avgCoefficient.toFixed(2)}</td>
+                  {showConColumns && (
+                    <td className="border">{avgCoefficient.toFixed(2)}</td>
+                  )}
                   {showGenColumns && (
                     <td className="border">{avgCoefficientGen.toFixed(2)}</td>
                   )}
-                  <td className="border">{avgVolume.toFixed(2)}</td>
+                  {showConColumns && (
+                    <td className="border">{avgVolume.toFixed(2)}</td>
+                  )}
                   {showGenColumns && (
                     <td className="border">{avgVolumeGen.toFixed(2)}</td>
                   )}
-                  <td className="border">{avgP2.toFixed(2)}</td>
+                  {showConColumns && <td className="border">{avgP2.toFixed(2)}</td>}
                   {showGenColumns && (
                     <td className="border">{avgP2Gen.toFixed(2)}</td>
                   )}
@@ -1418,8 +1438,8 @@ const CombinedTable = ({
                 })}
                 {/* Object Table Footer for non-CONSUMER objects */}
                 {selectedObject &&
-                selectedObject.object_type !== "CONSUMER" &&
-                selectedObject.object_type !== "РЭК" ? (
+                  selectedObject.object_type !== "CONSUMER" &&
+                  selectedObject.object_type !== "РЭК" ? (
                   <>
                     <tr>
                       <td className="border font-bold">Сумма</td>

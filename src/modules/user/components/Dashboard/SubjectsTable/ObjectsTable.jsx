@@ -211,64 +211,84 @@ const ObjectTable = ({
   const sumP1 = hourPlan.reduce((acc, row) => acc + (Number(row.P1) || 0), 0);
   const sumP1Gen =
     selectedObject &&
-    selectedObject.object_type !== "CONSUMER" &&
-    selectedObject.object_type !== "РЭК"
+      selectedObject.object_type !== "CONSUMER" &&
+      selectedObject.object_type !== "РЭК"
       ? hourPlan.reduce((acc, row) => acc + (Number(row.P1_Gen) || 0), 0)
       : 0;
   const sumP2 = hourPlan.reduce((acc, row) => acc + (Number(row.P2) || 0), 0);
-  const sumP2Gen =  
+  const sumP2Gen =
     selectedObject &&
-    selectedObject.object_type !== "CONSUMER" &&
-    selectedObject.object_type !== "РЭК"
+      selectedObject.object_type !== "CONSUMER" &&
+      selectedObject.object_type !== "РЭК"
       ? hourPlan.reduce((acc, row) => acc + (Number(row.P2_Gen) || 0), 0)
       : 0;
   const sumP3 = hourPlan.reduce((acc, row) => acc + (Number(row.P3) || 0), 0);
   const sumP3Gen =
     selectedObject &&
-    selectedObject.object_type !== "CONSUMER" &&
-    selectedObject.object_type !== "РЭК"
+      selectedObject.object_type !== "CONSUMER" &&
+      selectedObject.object_type !== "РЭК"
       ? hourPlan.reduce((acc, row) => acc + (Number(row.P3_Gen) || 0), 0)
       : 0;
   const sumF1 = hourPlan.reduce((acc, row) => acc + (Number(row.F1) || 0), 0);
   const sumF1Gen =
     selectedObject &&
-    selectedObject.object_type !== "CONSUMER" &&
-    selectedObject.object_type !== "РЭК"
+      selectedObject.object_type !== "CONSUMER" &&
+      selectedObject.object_type !== "РЭК"
       ? hourPlan.reduce((acc, row) => acc + (Number(row.F1_Gen) || 0), 0)
       : 0;
 
-  const avgP1 = rowCount ? sumP1 / rowCount : 0;
+  const avgP1 = selectedObject &&
+    selectedObject.object_type !== "ВИЭ"
+    ? rowCount
+      ? sumP1 / rowCount
+      : 0
+    : 0;
   const avgP1Gen =
     selectedObject &&
-    selectedObject.object_type !== "CONSUMER" &&
-    selectedObject.object_type !== "РЭК"
+      selectedObject.object_type !== "CONSUMER" &&
+      selectedObject.object_type !== "РЭК"
       ? rowCount
         ? sumP1Gen / rowCount
         : 0
       : 0;
-  const avgP2 = rowCount ? sumP2 / rowCount : 0;
+  const avgP2 = selectedObject &&
+    selectedObject.object_type !== "ВИЭ"
+    ? rowCount
+      ? sumP2 / rowCount
+      : 0
+    : 0;
   const avgP2Gen =
     selectedObject &&
-    selectedObject.object_type !== "CONSUMER" &&
-    selectedObject.object_type !== "РЭК"
+      selectedObject.object_type !== "CONSUMER" &&
+      selectedObject.object_type !== "РЭК"
       ? rowCount
         ? sumP2Gen / rowCount
         : 0
       : 0;
-  const avgP3 = rowCount ? sumP3 / rowCount : 0;
+  const avgP3 = selectedObject &&
+    selectedObject.object_type !== "ВИЭ"
+    ? rowCount
+      ? sumP3 / rowCount
+      : 0
+    : 0;
   const avgP3Gen =
     selectedObject &&
-    selectedObject.object_type !== "CONSUMER" &&
-    selectedObject.object_type !== "РЭК"
+      selectedObject.object_type !== "CONSUMER" &&
+      selectedObject.object_type !== "РЭК"
       ? rowCount
         ? sumP3Gen / rowCount
         : 0
       : 0;
-  const avgF1 = rowCount ? sumF1 / rowCount : 0;
+  const avgF1 = selectedObject &&
+    selectedObject.object_type !== "ВИЭ"
+    ? rowCount
+      ? sumF1 / rowCount
+      : 0
+    : 0;
   const avgF1Gen =
     selectedObject &&
-    selectedObject.object_type !== "CONSUMER" &&
-    selectedObject.object_type !== "РЭК"
+      selectedObject.object_type !== "CONSUMER" &&
+      selectedObject.object_type !== "РЭК"
       ? rowCount
         ? sumF1Gen / rowCount
         : 0
@@ -295,11 +315,10 @@ const ObjectTable = ({
             {objects.map((object) => (
               <td
                 key={object.id}
-                className={`border hover:bg-blue-100 cursor-pointer ${
-                  selectedData.selectedObject === object.id
-                    ? "bg-blue-500 text-white"
-                    : ""
-                }`}
+                className={`border hover:bg-blue-100 cursor-pointer ${selectedData.selectedObject === object.id
+                  ? "bg-blue-500 text-white"
+                  : ""
+                  }`}
                 onClick={() =>
                   setSelectedData((prevData) => ({
                     ...prevData,
@@ -310,8 +329,8 @@ const ObjectTable = ({
                 {loadingStatuses
                   ? "Загрузка..."
                   : statusError
-                  ? statusError
-                  : generateStatusDisplayComponents(
+                    ? statusError
+                    : generateStatusDisplayComponents(
                       statusMap[object.id],
                       (object.object_type !== "CONSUMER" &&
                         object.object_type !== "РЭК" &&
@@ -329,21 +348,22 @@ const ObjectTable = ({
         <thead className="text-xs text-gray-700 uppercase bg-gray-300">
           <tr>
             <th></th>
-            <th>
-              П1
-              <button
-                className="text-base mx-1"
-                onClick={() => {
-                  setIsModalOpen(true);
-                  setPlanData({
-                    planMode: "P1",
-                    isGen: false,
-                  });
-                }}
-              >
-                📝
-              </button>
-            </th>
+            {selectedObject && selectedObject.object_type !== "ВИЭ" && (
+              <th>
+                П1
+                <button
+                  className="text-base mx-1"
+                  onClick={() => {
+                    setIsModalOpen(true);
+                    setPlanData({
+                      planMode: "P1",
+                      isGen: false,
+                    });
+                  }}
+                >
+                  📝
+                </button>
+              </th>)}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
@@ -363,25 +383,29 @@ const ObjectTable = ({
                   </button>
                 </th>
               )}
-            <th>П2</th>
+            {selectedObject && selectedObject.object_type !== "ВИЭ" && (
+              <th>
+                П2
+              </th>)}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && <th>ГП2</th>}
-            <th>
-              П3
-              <button
-                className="text-base mx-1"
-                onClick={() => {
-                  setIsModalOpen(true);
-                  setPlanData({
-                    planMode: "P3",
-                    isGen: false,
-                  });
-                }}
-              >
-                📝
-              </button>
-            </th>
+            {selectedObject && selectedObject.object_type !== "ВИЭ" && (
+              <th>
+                П3
+                <button
+                  className="text-base mx-1"
+                  onClick={() => {
+                    setIsModalOpen(true);
+                    setPlanData({
+                      planMode: "P3",
+                      isGen: false,
+                    });
+                  }}
+                >
+                  📝
+                </button>
+              </th>)}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
@@ -401,21 +425,22 @@ const ObjectTable = ({
                   </button>
                 </th>
               )}
-            <th>
-              Ф1
-              <button
-                className="text-base mx-1"
-                onClick={() => {
-                  setIsModalOpen(true);
-                  setPlanData({
-                    planMode: "F1",
-                    isGen: false,
-                  });
-                }}
-              >
-                📝
-              </button>
-            </th>
+            {selectedObject && selectedObject.object_type !== "ВИЭ" && (
+              <th>
+                Ф1
+                <button
+                  className="text-base mx-1"
+                  onClick={() => {
+                    setIsModalOpen(true);
+                    setPlanData({
+                      planMode: "F1",
+                      isGen: false,
+                    });
+                  }}
+                >
+                  📝
+                </button>
+              </th>)}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
@@ -441,25 +466,29 @@ const ObjectTable = ({
           {timeIntervals.map((time, index) => (
             <tr key={time}>
               <td className="border">{time}</td>
-              <td className="border">{hourPlan[index]?.P1 || 0}</td>
+              {selectedObject && selectedObject.object_type !== "ВИЭ" && (
+                <td className="border">{hourPlan[index]?.P1 || 0}</td>)}
               {selectedObject &&
                 selectedObject.object_type !== "CONSUMER" &&
                 selectedObject.object_type !== "РЭК" && (
                   <td className="border">{hourPlan[index]?.P1_Gen || 0}</td>
                 )}
-              <td className="border">{hourPlan[index]?.P2 || 0}</td>
+              {selectedObject && selectedObject.object_type !== "ВИЭ" && (
+                <td className="border">{hourPlan[index]?.P2 || 0}</td>)}
               {selectedObject &&
                 selectedObject.object_type !== "CONSUMER" &&
                 selectedObject.object_type !== "РЭК" && (
                   <td className="border">{hourPlan[index]?.P2_Gen || 0}</td>
                 )}
-              <td className="border">{hourPlan[index]?.P3 || 0}</td>
+              {selectedObject && selectedObject.object_type !== "ВИЭ" && (
+                <td className="border">{hourPlan[index]?.P3 || 0}</td>)}
               {selectedObject &&
                 selectedObject.object_type !== "CONSUMER" &&
                 selectedObject.object_type !== "РЭК" && (
                   <td className="border">{hourPlan[index]?.P3_Gen || 0}</td>
                 )}
-              <td className="border">{hourPlan[index]?.F1 || 0}</td>
+              {selectedObject && selectedObject.object_type !== "ВИЭ" && (
+                <td className="border">{hourPlan[index]?.F1 || 0}</td>)}
               {selectedObject &&
                 selectedObject.object_type !== "CONSUMER" &&
                 selectedObject.object_type !== "РЭК" && (
@@ -470,25 +499,30 @@ const ObjectTable = ({
           {/* Summary Rows */}
           <tr>
             <td className="border font-bold">Сумма</td>
-            <td className="border">{sumP1}</td>
+            {selectedObject && selectedObject.object_type !== "ВИЭ" && (
+              <td className="border">{sumP1}</td>)}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
                 <td className="border">{sumP1Gen.toFixed(2)}</td>
               )}
-            <td className="border">{sumP2.toFixed(2)}</td>
+            {selectedObject && selectedObject.object_type !== "ВИЭ" && (
+              <td className="border">{sumP2.toFixed(2)}</td>)}
+
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
                 <td className="border">{sumP2Gen.toFixed(2)}</td>
               )}
-            <td className="border">{sumP3}</td>
+            {selectedObject && selectedObject.object_type !== "ВИЭ" && (
+              <td className="border">{sumP3}</td>)}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
                 <td className="border">{sumP3Gen}</td>
               )}
-            <td className="border">{sumF1}</td>
+            {selectedObject && selectedObject.object_type !== "ВИЭ" && (
+              <td className="border">{sumF1}</td>)}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
@@ -497,25 +531,29 @@ const ObjectTable = ({
           </tr>
           <tr>
             <td className="border font-bold">Среднее</td>
-            <td className="border">{avgP1.toFixed(2)}</td>
+            {selectedObject && selectedObject.object_type !== "ВИЭ" && (
+              <td className="border">{avgP1.toFixed(2)}</td>)}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
                 <td className="border">{avgP1Gen.toFixed(2)}</td>
               )}
-            <td className="border">{avgP2.toFixed(2)}</td>
+            {selectedObject && selectedObject.object_type !== "ВИЭ" && (
+              <td className="border">{avgP2.toFixed(2)}</td>)}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
                 <td className="border">{avgP2Gen.toFixed(2)}</td>
               )}
-            <td className="border">{avgP3.toFixed(2)}</td>
+            {selectedObject && selectedObject.object_type !== "ВИЭ" && (
+              <td className="border">{avgP3.toFixed(2)}</td>)}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
                 <td className="border">{avgP3Gen.toFixed(2)}</td>
               )}
-            <td className="border">{avgF1.toFixed(2)}</td>
+            {selectedObject && selectedObject.object_type !== "ВИЭ" && (
+              <td className="border">{avgF1.toFixed(2)}</td>)}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
