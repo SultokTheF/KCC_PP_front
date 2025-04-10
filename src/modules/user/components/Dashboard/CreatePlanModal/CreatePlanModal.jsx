@@ -1,6 +1,3 @@
-/* eslint-disable react/prop-types */
-// src/components/Dashboard/SubjectsTable/PlanModal.jsx
-
 import { useState, useEffect } from "react";
 import { Button } from "@material-tailwind/react";
 import Modal from "react-modal";
