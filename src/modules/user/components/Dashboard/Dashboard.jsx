@@ -18,7 +18,6 @@ const Dashboard = () => {
   const [holidaysList, setHolidaysList] = useState([]);
 
   const [selectedDate, setSelectedDate] = useState(() => {
-    // Initialize selectedDate from localStorage or default to today
     return localStorage.getItem('selectedDate') || new Date().toISOString().split('T')[0];
   });
 
@@ -51,7 +50,7 @@ const Dashboard = () => {
     fetchData();
   }, []);
 
-  // Handle Full Export Function
+  // Updated Full Export Function
   const handleFullExport = async () => {
     try {
       const timeIntervals = [
@@ -61,9 +60,38 @@ const Dashboard = () => {
         '18 - 19', '19 - 20', '20 - 21', '21 - 22', '22 - 23', '23 - 00',
       ];
 
-      // Prepare combined data
+      // This array will hold all the exported data.
       const combinedData = [];
 
+      // Helper function to process a table (subject or object)
+      // headers: array of column names (first column is Time)
+      // rows: array of rows (each row is an array corresponding to headers)
+      const buildCombinedTable = (headers, rows) => {
+        // Build left header: add unit (кВт) for all columns except Time.
+        const leftHeader = headers.map((cell, index) =>
+          index === 0 ? cell : `${cell} (кВт)`
+        );
+        // Build right header: include all columns (Time is copied) with unit (мВт) for numeric ones.
+        const rightHeader = headers.map((cell, index) =>
+          index === 0 ? cell : `${cell} (мВт)`
+        );
+        // Insert one empty column between the two halves.
+        const combinedHeader = leftHeader.concat([""], rightHeader);
+
+        // For each data row: duplicate the row (convert numeric values for right part).
+        const combinedRows = rows.map(row => {
+          const leftRow = row;
+          const rightRow = row.map((cell, index) =>
+            index === 0 ? cell : Number(cell) / 1000
+          );
+          // Insert an empty cell between.
+          return leftRow.concat([""], rightRow);
+        });
+
+        return [combinedHeader, ...combinedRows];
+      };
+
+      // Process subjects
       for (const subject of subjectsList) {
         // Fetch subject hours
         const response = await axiosInstance.get(endpoints.HOURS, {
@@ -71,7 +99,7 @@ const Dashboard = () => {
         });
         const subjectHours = response.data || [];
 
-        // Prepare subject table headers
+        // Build table headers for the subject.
         const subjectTableHeaders = [
           'Time',
           'P1',
@@ -83,83 +111,81 @@ const Dashboard = () => {
           'F1',
           ...(subject?.subject_type === 'ЭПО' ? ['F1_Gen'] : []),
           'F2',
-          ...(subject?.subject_type === 'ЭПО' ? ['F2_Gen'] : []),
+          ...(subject?.subject_type === 'ЭПО' ? ['F2_Gen'] : [])
         ];
 
-        // Prepare subject table data
-        const subjectTableData = [
-          subjectTableHeaders,
-          ...timeIntervals.map((time, index) => {
-            const hourData = subjectHours.find((hour) => hour.hour === index + 1) || {};
-            return [
-              time,
-              hourData.P1 || 0,
-              ...(subject?.subject_type === 'ЭПО' ? [hourData.P1_Gen || 0] : []),
-              hourData.P2 || 0,
-              ...(subject?.subject_type === 'ЭПО' ? [hourData.P2_Gen || 0] : []),
-              hourData.P3 || 0,
-              ...(subject?.subject_type === 'ЭПО' ? [hourData.P3_Gen || 0] : []),
-              hourData.F1 || 0,
-              ...(subject?.subject_type === 'ЭПО' ? [hourData.F1_Gen || 0] : []),
-              hourData.F2 || 0,
-              ...(subject?.subject_type === 'ЭПО' ? [hourData.F2_Gen || 0] : [])
-            ];
-          }),
-        ];
+        // Build rows: one row per time interval.
+        const subjectRows = timeIntervals.map((time, index) => {
+          const hourData = subjectHours.find((hour) => hour.hour === index + 1) || {};
+          return [
+            time,
+            hourData.P1 || 0,
+            ...(subject?.subject_type === 'ЭПО' ? [hourData.P1_Gen || 0] : []),
+            hourData.P2 || 0,
+            ...(subject?.subject_type === 'ЭПО' ? [hourData.P2_Gen || 0] : []),
+            hourData.P3 || 0,
+            ...(subject?.subject_type === 'ЭПО' ? [hourData.P3_Gen || 0] : []),
+            hourData.F1 || 0,
+            ...(subject?.subject_type === 'ЭПО' ? [hourData.F1_Gen || 0] : []),
+            hourData.F2 || 0,
+            ...(subject?.subject_type === 'ЭПО' ? [hourData.F2_Gen || 0] : [])
+          ];
+        });
+
+        const combinedSubjectTableData = buildCombinedTable(subjectTableHeaders, subjectRows);
 
         combinedData.push(['Subject:', subject.subject_name]);
         combinedData.push([]);
-        combinedData.push(['Subject Table']);
-        combinedData.push(...subjectTableData);
+        // Add header row for the subject table (for clarity)
+        // combinedData.push(['Subject Table', 'кВт']);
+        combinedData.push(...combinedSubjectTableData);
         combinedData.push([]);
+      }
 
-        // Fetch objects for this subject
-        const objectsForSubject = objectsList.filter(
-          (object) => object.subject === subject.id
-        );
+      // Process objects
+      for (const object of objectsList) {
+        // Only process objects that belong to a subject (or you can adjust this filter as needed)
+        // Fetch object hours
+        const response = await axiosInstance.get(endpoints.HOURS, {
+          params: { day: selectedDate, obj: object.id },
+        });
+        const objectHours = response.data || [];
 
-        for (const object of objectsForSubject) {
-          // Fetch object hours
-          const response = await axiosInstance.get(endpoints.HOURS, {
-            params: { day: selectedDate, obj: object.id },
-          });
-          const objectHours = response.data || [];
+        const objectTableHeaders = [
+          'Time',
+          'P1',
+          ...(object?.object_type === 'ЭПО' ? ['P1_Gen'] : []),
+          'P2',
+          ...(object?.object_type === 'ЭПО' ? ['P2_Gen'] : []),
+          'P3',
+          ...(object?.object_type === 'ЭПО' ? ['P3_Gen'] : []),
+          'F1',
+          ...(object?.object_type === 'ЭПО' ? ['F1_Gen'] : [])
+        ];
 
-          const objectTableHeaders = [
-            'Time',
-            'P1',
-            ...(object?.object_type === 'ЭПО' ? ['P1_Gen'] : []),
-            'P2',
-            ...(object?.object_type === 'ЭПО' ? ['P2_Gen'] : []),
-            'P3',
-            ...(object?.object_type === 'ЭПО' ? ['P3_Gen'] : []),
-            'F1',
-            ...(object?.object_type === 'ЭПО' ? ['F1_Gen'] : [])
+        const objectRows = timeIntervals.map((time, index) => {
+          const hourData = objectHours.find((hour) => hour.hour === index + 1) || {};
+          return [
+            time,
+            hourData.P1 || 0,
+            ...(object?.object_type === 'ЭПО' ? [hourData.P1_Gen || 0] : []),
+            hourData.P2 || 0,
+            ...(object?.object_type === 'ЭПО' ? [hourData.P2_Gen || 0] : []),
+            hourData.P3 || 0,
+            ...(object?.object_type === 'ЭПО' ? [hourData.P3_Gen || 0] : []),
+            hourData.F1 || 0,
+            ...(object?.object_type === 'ЭПО' ? [hourData.F1_Gen || 0] : [])
           ];
+        });
 
-          const objectTableData = [
-            objectTableHeaders,
-            ...timeIntervals.map((time, index) => {
-              const hourData = objectHours.find((hour) => hour.hour === index + 1) || {};
-              return [
-                time,
-                hourData.P1 || 0,
-                ...(object?.object_type === 'ЭПО' ? [hourData.P1_Gen || 0] : []),
-                hourData.P2 || 0,
-                ...(object?.object_type === 'ЭПО' ? [hourData.P2_Gen || 0] : []),
-                hourData.P3 || 0,
-                ...(object?.object_type === 'ЭПО' ? [hourData.P3_Gen || 0] : []),
-                hourData.F1 || 0,
-                ...(object?.object_type === 'ЭПО' ? [hourData.F1_Gen || 0] : [])
-              ];
-            }),
-          ];
+        const combinedObjectTableData = buildCombinedTable(objectTableHeaders, objectRows);
 
-          combinedData.push(['Object:', object.object_name]);
-          combinedData.push([]);
-          combinedData.push(...objectTableData);
-          combinedData.push([]);
-        }
+        combinedData.push(['Object:', object.object_name]);
+        combinedData.push([]);
+        // Updated header for the object table: notice 'мВт'
+        // combinedData.push(['Object Table', 'мВт']);
+        combinedData.push(...combinedObjectTableData);
+        combinedData.push([]);
       }
 
       // Generate Excel file
@@ -171,7 +197,7 @@ const Dashboard = () => {
         type: 'array',
       });
 
-      // Save file
+      // Save file to the browser
       const data = new Blob([excelBuffer], { type: 'application/octet-stream' });
       const url = URL.createObjectURL(data);
       const link = document.createElement('a');

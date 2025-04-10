@@ -60,9 +60,10 @@ const PlanTable = ({ date, object, mode, handleTableChange, plansP }) => {
           type="number"
           value={allHoursValue}
           onChange={(e) => setAllHoursValue(e.target.value)}
-          className="border rounded px-2 py-1 mr-2 w-20 focus:outline-none"
+          className="border rounded px-2 py-1 mr-2 w-1/2 focus:outline-none"
           placeholder="Значение"
         />
+        <label className="mr-2 font-medium text-gray-700">МВт</label>
         <button
           onClick={handleAllHoursClick}
           className="border rounded px-4 py-1 bg-gray-200 hover:bg-gray-300"
