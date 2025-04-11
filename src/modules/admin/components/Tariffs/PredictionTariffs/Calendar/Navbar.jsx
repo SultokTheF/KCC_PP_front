@@ -80,7 +80,7 @@ const Navbar = ({ date, setDate, data, setData }) => {
           // If `day` is a number (Excel serialized date), convert it to a JS Date object
           if (typeof day === 'number') {
             const excelStartDate = new Date(1900, 0, 1); // Excel's start date
-            day = new Date(excelStartDate.getTime() + (day - 1) * 24 * 60 * 60 * 1000);
+            day = new Date(excelStartDate.getTime() + (day - 2) * 24 * 60 * 60 * 1000);
           }
   
           // Convert Date object to `YYYY-MM-DD` format

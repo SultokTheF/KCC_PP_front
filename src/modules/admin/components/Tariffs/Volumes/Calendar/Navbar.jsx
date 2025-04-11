@@ -78,7 +78,7 @@ const Navbar = ({ date, setDate, data, setData }) => {
 
         if (typeof day === 'number') {
           const excelStartDate = new Date(1900, 0, 1);
-          day = new Date(excelStartDate.getTime() + (day - 1) * 24 * 60 * 60 * 1000);
+          day = new Date(excelStartDate.getTime() + (day - 2) * 24 * 60 * 60 * 1000);
         }
 
         if (day instanceof Date) {

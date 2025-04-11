@@ -77,7 +77,7 @@ const Navbar = ({ date, setDate, data, setData }) => {
         // Check if day is a serialized Excel date (a number)
         if (typeof day === 'number') {
           const excelStartDate = new Date(1900, 0, 1); // Excel's start date
-          day = new Date(excelStartDate.getTime() + (day - 1) * 24 * 60 * 60 * 1000);
+          day = new Date(excelStartDate.getTime() + (day - 2) * 24 * 60 * 60 * 1000);
           
           // Convert to YYYY-MM-DD format
           const dayNumber = String(day.getDate()).padStart(2, '0');
