@@ -20,6 +20,7 @@ const endpoints = {
 
   // Objects 
   OBJECTS: `api/objects/`,
+  DEPENDED_OBJECTS: `api/dependedobjects/`,
 
   // Providers
   PROVIDERS: `api/provider/`,

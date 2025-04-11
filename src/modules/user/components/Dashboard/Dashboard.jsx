@@ -1,9 +1,7 @@
-// src/components/Dashboard/Dashboard.js
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../../hooks/useAuth';
 import { axiosInstance, endpoints } from '../../../../services/apiConfig';
-import * as XLSX from 'xlsx'; // Import the XLSX library
+import * as XLSX from 'xlsx'; 
 
 import Sidebar from '../Sidebar/Sidebar';
 import Calendar from '../Calendar/Calendar';
@@ -16,6 +14,8 @@ const Dashboard = () => {
   const [subjectsList, setSubjectsList] = useState([]);
   const [objectsList, setObjectsList] = useState([]);
   const [holidaysList, setHolidaysList] = useState([]);
+
+  const [dependedObjectsList, setDependedObjectsList] = useState([]);
 
   const [selectedDate, setSelectedDate] = useState(() => {
     return localStorage.getItem('selectedDate') || new Date().toISOString().split('T')[0];
@@ -49,6 +49,25 @@ const Dashboard = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const fetchDependedObjects = async () => {
+    try {
+      const response = await axiosInstance.get(endpoints.DEPENDED_OBJECTS, {
+        params: { date: selectedDate, root_object: selectedData.selectedObject },
+      });
+      const data = response.data;
+      setDependedObjectsList(data);
+    } catch (error) {
+      console.error('Error fetching depended objects:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedData.selectedObject) {
+      fetchDependedObjects();
+    }
+  }, [selectedData.selectedObject, selectedDate]);
+
 
   // Updated Full Export Function with subject & corresponding objects exported together
   const handleFullExport = async () => {
@@ -240,6 +259,7 @@ const Dashboard = () => {
                 setSelectedData={setSelectedData}
                 objectsList={objectsList}
                 selectedDate={selectedDate}
+                dependedObjects={dependedObjectsList}
               />
             </div>
           </div>

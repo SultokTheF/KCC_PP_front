@@ -4,6 +4,17 @@ import React, { useState, useEffect } from "react";
 import { axiosInstance, endpoints } from "../../../../../services/apiConfig";
 import useDataFetching from "../../../../../hooks/useDataFetching";
 import CreatePlanModal from "../CreatePlanModal/CreatePlanModal";
+import {
+  faEdit,
+  faFolderOpen,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+
+// Helper to prevent NaN/Infinity if rowCount = 0
+const safeAvg = (total, count) => {
+  if (count <= 0) return "0.00";
+  return (total / count).toFixed(2);
+};
 
 const timeIntervals = [
   "00 - 01", "01 - 02", "02 - 03", "03 - 04", "04 - 05", "05 - 06",
@@ -17,8 +28,29 @@ const ObjectTable = ({
   setSelectedData,
   objectsList,
   selectedDate,
+  dependedObjects,
 }) => {
+  // Fixed column width (80px)
+  const fixedStyle = { width: "80px" };
+
+  // Styles for extra depended-sum columns (customize colors as needed)
+  const sumDepP1Style = { backgroundColor: "#e0f7fa" }; // light blue for P1 sum
+  const sumDepF1Style = { backgroundColor: "#ffebee" }; // light red for F1 sum
+
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // Toggle to show/hide depended objects' extra columns
+  const [showDepended, setShowDepended] = useState(false);
+
+  // Extract depended details from the API response (assumes a single monthly entry)
+  const dependedData =
+    dependedObjects && dependedObjects.length > 0
+      ? dependedObjects[0]
+      : null;
+  const dependedDetails = dependedData ? dependedData.depended_objects_details : [];
+
+  // If we do want to show the depended columns, we must ensure we have
+  // at least one depended object to display.
+  const haveDepended = showDepended && dependedDetails.length > 0;
 
   const selectedObject = objectsList.find(
     (object) => object.id === selectedData.selectedObject
@@ -97,15 +129,10 @@ const ObjectTable = ({
     }
   }, [selectedDate, objectsList]);
 
-  // Updated generateStatusDisplayComponents:
-  // - If isCombined is true (i.e. not CONSUMER/РЭК), show a combined label using both statuses.
-  // - Otherwise (CONSUMER/РЭК), show only the regular status (without Gen).
+  // Same status display logic
   const generateStatusDisplayComponents = (statuses, isCombined, is_res) => {
-    if (!statuses || Object.keys(statuses).length === 0) {
-      return "Нет данных";
-    }
+    if (!statuses || Object.keys(statuses).length === 0) return "Нет данных";
     if (isCombined) {
-      // Combined mode: show one label per plan, green only if both statuses are "STARTED"
       const plans = ["P1", "P2", "P3", "F1"];
       return (
         <div>
@@ -125,7 +152,7 @@ const ObjectTable = ({
               colorClass = originalMapping[mainStatus] || "";
             }
             return (
-              <span key={plan} className={`${colorClass} mx-1`}>
+              <span key={plan} className={`${colorClass} mx-1`} style={fixedStyle}>
                 {plan === "F1" ? "Ф" : plan === "P1" ? "П1" : plan === "P2" ? "П2" : "П3"}
               </span>
             );
@@ -151,7 +178,7 @@ const ObjectTable = ({
               colorClass = originalMapping[mainStatus] || "";
             }
             return (
-              <span key={plan} className={`${colorClass} mx-1`}>
+              <span key={plan} className={`${colorClass} mx-1`} style={fixedStyle}>
                 {plan === "F1" ? "Ф" : plan === "P1" ? "П1" : plan === "P2" ? "П2" : "П3"}
               </span>
             );
@@ -159,7 +186,6 @@ const ObjectTable = ({
         </div>
       );
     } else {
-      // For CONSUMER/РЭК types, do not show Gen statuses—only display the regular statuses.
       const planKeys = ["P1_Status", "P2_Status", "P3_Status", "F1_Status"];
       const planAbbreviations = {
         P1_Status: "П1",
@@ -180,7 +206,7 @@ const ObjectTable = ({
             const planName = planAbbreviations[key];
             const colorClass = statusColors[planStatus] || "";
             return (
-              <span key={key} className={`${colorClass} mx-1`}>
+              <span key={key} className={`${colorClass} mx-1`} style={fixedStyle}>
                 {planName}
               </span>
             );
@@ -204,96 +230,109 @@ const ObjectTable = ({
     }
   }, [selectedData.selectedSubject, objects, setSelectedData, selectedData.selectedObject]);
 
-  // ***********************************************
-  // Calculate sum and average for each column
-  // ***********************************************
+  // *********************************
+  // Summaries for depended objects
+  // *********************************
+  // We'll do these only if we have Depended objects:
+  //  -> row sums for each interval’s P1 & F1
+  //  -> total across all intervals (sum of sums)
+  //  -> average across intervals
+  const dependedP1RowSums = timeIntervals.map((_, i) =>
+    dependedDetails.reduce((sum, detail) => {
+      const match = detail.hours.find(
+        (h) => Number(h.hour) === i + 1 && h.date === selectedDate
+      );
+      return sum + (match ? Number(match.P1) : 0);
+    }, 0)
+  );
+  const dependedP1Total = dependedP1RowSums.reduce((acc, curr) => acc + curr, 0);
+
+  const dependedF1RowSums = timeIntervals.map((_, i) =>
+    dependedDetails.reduce((sum, detail) => {
+      const match = detail.hours.find(
+        (h) => Number(h.hour) === i + 1 && h.date === selectedDate
+      );
+      return sum + (match ? Number(match.F1) : 0);
+    }, 0)
+  );
+  const dependedF1Total = dependedF1RowSums.reduce((acc, curr) => acc + curr, 0);
+
+  // rowCount is how many rows the main object has. If rowCount = 0,
+  // we'll do 0 for average to avoid NaN / Infinity.
   const rowCount = hourPlan.length;
+
+  // *********************************
+  // Summaries for the main object
+  // *********************************
   const sumP1 = hourPlan.reduce((acc, row) => acc + (Number(row.P1) || 0), 0);
   const sumP1Gen =
     selectedObject &&
-      selectedObject.object_type !== "CONSUMER" &&
-      selectedObject.object_type !== "РЭК"
+    selectedObject.object_type !== "CONSUMER" &&
+    selectedObject.object_type !== "РЭК"
       ? hourPlan.reduce((acc, row) => acc + (Number(row.P1_Gen) || 0), 0)
       : 0;
   const sumP2 = hourPlan.reduce((acc, row) => acc + (Number(row.P2) || 0), 0);
   const sumP2Gen =
     selectedObject &&
-      selectedObject.object_type !== "CONSUMER" &&
-      selectedObject.object_type !== "РЭК"
+    selectedObject.object_type !== "CONSUMER" &&
+    selectedObject.object_type !== "РЭК"
       ? hourPlan.reduce((acc, row) => acc + (Number(row.P2_Gen) || 0), 0)
       : 0;
   const sumP3 = hourPlan.reduce((acc, row) => acc + (Number(row.P3) || 0), 0);
   const sumP3Gen =
     selectedObject &&
-      selectedObject.object_type !== "CONSUMER" &&
-      selectedObject.object_type !== "РЭК"
+    selectedObject.object_type !== "CONSUMER" &&
+    selectedObject.object_type !== "РЭК"
       ? hourPlan.reduce((acc, row) => acc + (Number(row.P3_Gen) || 0), 0)
       : 0;
   const sumF1 = hourPlan.reduce((acc, row) => acc + (Number(row.F1) || 0), 0);
   const sumF1Gen =
     selectedObject &&
-      selectedObject.object_type !== "CONSUMER" &&
-      selectedObject.object_type !== "РЭК"
+    selectedObject.object_type !== "CONSUMER" &&
+    selectedObject.object_type !== "РЭК"
       ? hourPlan.reduce((acc, row) => acc + (Number(row.F1_Gen) || 0), 0)
       : 0;
 
-  const avgP1 = selectedObject &&
-    selectedObject.object_type !== "ВИЭ"
-    ? rowCount
-      ? sumP1 / rowCount
-      : 0
-    : 0;
+  const avgP1 = selectedObject && selectedObject.object_type !== "ВИЭ"
+    ? safeAvg(sumP1, rowCount)
+    : "0.00";
   const avgP1Gen =
     selectedObject &&
-      selectedObject.object_type !== "CONSUMER" &&
-      selectedObject.object_type !== "РЭК"
-      ? rowCount
-        ? sumP1Gen / rowCount
-        : 0
-      : 0;
-  const avgP2 = selectedObject &&
-    selectedObject.object_type !== "ВИЭ"
-    ? rowCount
-      ? sumP2 / rowCount
-      : 0
-    : 0;
+    selectedObject.object_type !== "CONSUMER" &&
+    selectedObject.object_type !== "РЭК"
+      ? safeAvg(sumP1Gen, rowCount)
+      : "0.00";
+  const avgP2 = selectedObject && selectedObject.object_type !== "ВИЭ"
+    ? safeAvg(sumP2, rowCount)
+    : "0.00";
   const avgP2Gen =
     selectedObject &&
-      selectedObject.object_type !== "CONSUMER" &&
-      selectedObject.object_type !== "РЭК"
-      ? rowCount
-        ? sumP2Gen / rowCount
-        : 0
-      : 0;
-  const avgP3 = selectedObject &&
-    selectedObject.object_type !== "ВИЭ"
-    ? rowCount
-      ? sumP3 / rowCount
-      : 0
-    : 0;
+    selectedObject.object_type !== "CONSUMER" &&
+    selectedObject.object_type !== "РЭК"
+      ? safeAvg(sumP2Gen, rowCount)
+      : "0.00";
+  const avgP3 = selectedObject && selectedObject.object_type !== "ВИЭ"
+    ? safeAvg(sumP3, rowCount)
+    : "0.00";
   const avgP3Gen =
     selectedObject &&
-      selectedObject.object_type !== "CONSUMER" &&
-      selectedObject.object_type !== "РЭК"
-      ? rowCount
-        ? sumP3Gen / rowCount
-        : 0
-      : 0;
-  const avgF1 = selectedObject &&
-    selectedObject.object_type !== "ВИЭ"
-    ? rowCount
-      ? sumF1 / rowCount
-      : 0
-    : 0;
+    selectedObject.object_type !== "CONSUMER" &&
+    selectedObject.object_type !== "РЭК"
+      ? safeAvg(sumP3Gen, rowCount)
+      : "0.00";
+  const avgF1 = selectedObject && selectedObject.object_type !== "ВИЭ"
+    ? safeAvg(sumF1, rowCount)
+    : "0.00";
   const avgF1Gen =
     selectedObject &&
-      selectedObject.object_type !== "CONSUMER" &&
-      selectedObject.object_type !== "РЭК"
-      ? rowCount
-        ? sumF1Gen / rowCount
-        : 0
-      : 0;
-  // ***********************************************
+    selectedObject.object_type !== "CONSUMER" &&
+    selectedObject.object_type !== "РЭК"
+      ? safeAvg(sumF1Gen, rowCount)
+      : "0.00";
+
+  // Similarly, compute average for the entire set of depended objects:
+  const dependedP1Avg = safeAvg(dependedP1Total, rowCount);
+  const dependedF1Avg = safeAvg(dependedF1Total, rowCount);
 
   return (
     <>
@@ -301,24 +340,28 @@ const ObjectTable = ({
       <table className="w-full text-sm text-center text-gray-500 mb-3">
         <thead className="text-xs text-gray-700 uppercase bg-gray-300">
           <tr>
-            <th>Объект</th>
+            <th style={fixedStyle}>Объект</th>
             {objects.map((object) => (
-              <th key={object.id}>{object.object_name}</th>
+              <th key={object.id} style={fixedStyle}>
+                {object.object_name}
+              </th>
             ))}
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td className="border" scope="row">
+            <td className="border" scope="row" style={fixedStyle}>
               Статус
             </td>
             {objects.map((object) => (
               <td
                 key={object.id}
-                className={`border hover:bg-blue-100 cursor-pointer ${selectedData.selectedObject === object.id
-                  ? "bg-blue-500 text-white"
-                  : ""
-                  }`}
+                className={`border hover:bg-blue-100 cursor-pointer ${
+                  selectedData.selectedObject === object.id
+                    ? "bg-blue-500 text-white"
+                    : ""
+                }`}
+                style={fixedStyle}
                 onClick={() =>
                   setSelectedData((prevData) => ({
                     ...prevData,
@@ -329,12 +372,12 @@ const ObjectTable = ({
                 {loadingStatuses
                   ? "Загрузка..."
                   : statusError
-                    ? statusError
-                    : generateStatusDisplayComponents(
+                  ? statusError
+                  : generateStatusDisplayComponents(
                       statusMap[object.id],
-                      (object.object_type !== "CONSUMER" &&
+                      object.object_type !== "CONSUMER" &&
                         object.object_type !== "РЭК" &&
-                        object.object_type !== "ВИЭ"),
+                        object.object_type !== "ВИЭ",
                       object.object_type === "ВИЭ"
                     )}
               </td>
@@ -347,27 +390,60 @@ const ObjectTable = ({
       <table className="w-full text-sm text-center text-gray-500 mb-3">
         <thead className="text-xs text-gray-700 uppercase bg-gray-300">
           <tr>
-            <th></th>
-            {selectedObject && selectedObject.object_type !== "ВИЭ" && (
-              <th>
-                П1
+            <th style={fixedStyle}>
+              {/* Button to toggle showing/hiding depended columns */}
+              {dependedObjects && dependedObjects.length > 0 && (
                 <button
-                  className="text-base mx-1"
-                  onClick={() => {
-                    setIsModalOpen(true);
-                    setPlanData({
-                      planMode: "P1",
-                      isGen: false,
-                    });
-                  }}
+                  onClick={() => setShowDepended(!showDepended)}
+                  className="ml-2 text-blue-500 hover:underline flex items-center"
+                  style={fixedStyle}
                 >
-                  📝
+                  <FontAwesomeIcon icon={faFolderOpen} />
+                  <span className="ml-1" style={fixedStyle}>
+                    {showDepended ? "Скрыть" : "Показать"}
+                  </span>
                 </button>
-              </th>)}
+              )}
+            </th>
+            {selectedObject && selectedObject.object_type !== "ВИЭ" && (
+              <>
+                {/* Main Object P1 */}
+                <th style={fixedStyle}>
+                  П1
+                  <button
+                    className="text-base mx-1"
+                    onClick={() => {
+                      setIsModalOpen(true);
+                      setPlanData({
+                        planMode: "P1",
+                        isGen: false,
+                      });
+                    }}
+                    style={fixedStyle}
+                  >
+                    📝
+                  </button>
+                </th>
+
+                {/* Depended Objects P1 columns */}
+                {haveDepended &&
+                  dependedDetails.map((detail) => (
+                    <th key={`dep-p1-${detail.object_id}`} style={fixedStyle}>
+                      П1 ({detail.object_name})
+                    </th>
+                  ))}
+
+                {/* ΣП1 column (only if haveDepended) */}
+                {haveDepended && (
+                  <th style={{ ...fixedStyle, ...sumDepP1Style }}>ΣП1</th>
+                )}
+              </>
+            )}
+            {/* Main Object P1_Gen */}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
-                <th>
+                <th style={fixedStyle}>
                   ГП1
                   <button
                     className="text-base mx-1"
@@ -378,20 +454,25 @@ const ObjectTable = ({
                         isGen: true,
                       });
                     }}
+                    style={fixedStyle}
                   >
                     📝
                   </button>
                 </th>
-              )}
+            )}
+            {/* Main Object P2 */}
             {selectedObject && selectedObject.object_type !== "ВИЭ" && (
-              <th>
-                П2
-              </th>)}
+              <th style={fixedStyle}>П2</th>
+            )}
+            {/* Main Object P2_Gen */}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
-              selectedObject.object_type !== "РЭК" && <th>ГП2</th>}
+              selectedObject.object_type !== "РЭК" && (
+                <th style={fixedStyle}>ГП2</th>
+              )}
+            {/* Main Object P3 */}
             {selectedObject && selectedObject.object_type !== "ВИЭ" && (
-              <th>
+              <th style={fixedStyle}>
                 П3
                 <button
                   className="text-base mx-1"
@@ -402,14 +483,17 @@ const ObjectTable = ({
                       isGen: false,
                     });
                   }}
+                  style={fixedStyle}
                 >
                   📝
                 </button>
-              </th>)}
+              </th>
+            )}
+            {/* Main Object P3_Gen */}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
-                <th>
+                <th style={fixedStyle}>
                   ГП3
                   <button
                     className="text-base mx-1"
@@ -420,31 +504,51 @@ const ObjectTable = ({
                         isGen: true,
                       });
                     }}
+                    style={fixedStyle}
                   >
                     📝
                   </button>
                 </th>
-              )}
+            )}
+            {/* Main Object F1 */}
             {selectedObject && selectedObject.object_type !== "ВИЭ" && (
-              <th>
-                Ф1
-                <button
-                  className="text-base mx-1"
-                  onClick={() => {
-                    setIsModalOpen(true);
-                    setPlanData({
-                      planMode: "F1",
-                      isGen: false,
-                    });
-                  }}
-                >
-                  📝
-                </button>
-              </th>)}
+              <>
+                <th style={fixedStyle}>
+                  Ф1
+                  <button
+                    className="text-base mx-1"
+                    onClick={() => {
+                      setIsModalOpen(true);
+                      setPlanData({
+                        planMode: "F1",
+                        isGen: false,
+                      });
+                    }}
+                    style={fixedStyle}
+                  >
+                    📝
+                  </button>
+                </th>
+
+                {/* Depended Objects F1 columns */}
+                {haveDepended &&
+                  dependedDetails.map((detail) => (
+                    <th key={`dep-f1-${detail.object_id}`} style={fixedStyle}>
+                      Ф1 ({detail.object_name})
+                    </th>
+                  ))}
+
+                {/* ΣФ1 column (only if haveDepended) */}
+                {haveDepended && (
+                  <th style={{ ...fixedStyle, ...sumDepF1Style }}>ΣФ1</th>
+                )}
+              </>
+            )}
+            {/* Main Object F1_Gen */}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
-                <th>
+                <th style={fixedStyle}>
                   ГФ1
                   <button
                     className="text-base mx-1"
@@ -455,110 +559,371 @@ const ObjectTable = ({
                         isGen: true,
                       });
                     }}
+                    style={fixedStyle}
                   >
                     📝
                   </button>
                 </th>
-              )}
+            )}
           </tr>
         </thead>
         <tbody>
           {timeIntervals.map((time, index) => (
             <tr key={time}>
-              <td className="border">{time}</td>
+              <td className="border" style={fixedStyle}>{time}</td>
               {selectedObject && selectedObject.object_type !== "ВИЭ" && (
-                <td className="border">{hourPlan[index]?.P1 || 0}</td>)}
+                <>
+                  {/* Main P1 */}
+                  <td className="border" style={fixedStyle}>
+                    {hourPlan[index]?.P1 || 0}
+                  </td>
+                  {/* Depended P1 columns */}
+                  {haveDepended &&
+                    dependedDetails.map((detail) => {
+                      const matchingHour = detail.hours.find(
+                        (h) =>
+                          Number(h.hour) === index + 1 &&
+                          h.date === selectedDate
+                      );
+                      const value = matchingHour ? matchingHour.P1 : 0;
+                      return (
+                        <td
+                          key={`dep-p1-${detail.object_id}-${index}`}
+                          className="border"
+                          style={fixedStyle}
+                        >
+                          {value}
+                        </td>
+                      );
+                    })}
+                  {/* ΣП1 cell */}
+                  {haveDepended && (
+                    <td
+                      key={`dep-p1-sum-${index}`}
+                      className="border"
+                      style={{ ...fixedStyle, ...sumDepP1Style }}
+                    >
+                      {dependedDetails.reduce((sum, detail) => {
+                        const mHour = detail.hours.find(
+                          (h) =>
+                            Number(h.hour) === index + 1 &&
+                            h.date === selectedDate
+                        );
+                        return sum + (mHour ? Number(mHour.P1) : 0);
+                      }, 0)}
+                    </td>
+                  )}
+                </>
+              )}
+              {/* Main P1_Gen */}
               {selectedObject &&
                 selectedObject.object_type !== "CONSUMER" &&
                 selectedObject.object_type !== "РЭК" && (
-                  <td className="border">{hourPlan[index]?.P1_Gen || 0}</td>
-                )}
+                  <td className="border" style={fixedStyle}>
+                    {hourPlan[index]?.P1_Gen || 0}
+                  </td>
+              )}
+              {/* Main P2 */}
               {selectedObject && selectedObject.object_type !== "ВИЭ" && (
-                <td className="border">{hourPlan[index]?.P2 || 0}</td>)}
+                <td className="border" style={fixedStyle}>
+                  {hourPlan[index]?.P2 || 0}
+                </td>
+              )}
+              {/* Main P2_Gen */}
               {selectedObject &&
                 selectedObject.object_type !== "CONSUMER" &&
                 selectedObject.object_type !== "РЭК" && (
-                  <td className="border">{hourPlan[index]?.P2_Gen || 0}</td>
-                )}
+                  <td className="border" style={fixedStyle}>
+                    {hourPlan[index]?.P2_Gen || 0}
+                  </td>
+              )}
+              {/* Main P3 */}
               {selectedObject && selectedObject.object_type !== "ВИЭ" && (
-                <td className="border">{hourPlan[index]?.P3 || 0}</td>)}
+                <td className="border" style={fixedStyle}>
+                  {hourPlan[index]?.P3 || 0}
+                </td>
+              )}
+              {/* Main P3_Gen */}
               {selectedObject &&
                 selectedObject.object_type !== "CONSUMER" &&
                 selectedObject.object_type !== "РЭК" && (
-                  <td className="border">{hourPlan[index]?.P3_Gen || 0}</td>
-                )}
+                  <td className="border" style={fixedStyle}>
+                    {hourPlan[index]?.P3_Gen || 0}
+                  </td>
+              )}
+              {/* Main F1 */}
               {selectedObject && selectedObject.object_type !== "ВИЭ" && (
-                <td className="border">{hourPlan[index]?.F1 || 0}</td>)}
+                <>
+                  <td className="border" style={fixedStyle}>
+                    {hourPlan[index]?.F1 || 0}
+                  </td>
+                  {/* Depended F1 columns */}
+                  {haveDepended &&
+                    dependedDetails.map((detail) => {
+                      const matchingHour = detail.hours.find(
+                        (h) =>
+                          Number(h.hour) === index + 1 &&
+                          h.date === selectedDate
+                      );
+                      const value = matchingHour ? matchingHour.F1 : 0;
+                      return (
+                        <td
+                          key={`dep-f1-${detail.object_id}-${index}`}
+                          className="border"
+                          style={fixedStyle}
+                        >
+                          {value}
+                        </td>
+                      );
+                    })}
+                  {/* ΣФ1 cell */}
+                  {haveDepended && (
+                    <td
+                      key={`dep-f1-sum-${index}`}
+                      className="border"
+                      style={{ ...fixedStyle, ...sumDepF1Style }}
+                    >
+                      {dependedDetails.reduce((sum, detail) => {
+                        const mHour = detail.hours.find(
+                          (h) =>
+                            Number(h.hour) === index + 1 &&
+                            h.date === selectedDate
+                        );
+                        return sum + (mHour ? Number(mHour.F1) : 0);
+                      }, 0)}
+                    </td>
+                  )}
+                </>
+              )}
+              {/* Main F1_Gen */}
               {selectedObject &&
                 selectedObject.object_type !== "CONSUMER" &&
                 selectedObject.object_type !== "РЭК" && (
-                  <td className="border">{hourPlan[index]?.F1_Gen || 0}</td>
-                )}
+                  <td className="border" style={fixedStyle}>
+                    {hourPlan[index]?.F1_Gen || 0}
+                  </td>
+              )}
             </tr>
           ))}
-          {/* Summary Rows */}
+          {/* Summary Row: Сумма */}
           <tr>
-            <td className="border font-bold">Сумма</td>
+            <td className="border font-bold" style={fixedStyle}>
+              Сумма
+            </td>
             {selectedObject && selectedObject.object_type !== "ВИЭ" && (
-              <td className="border">{sumP1}</td>)}
+              <>
+                <td className="border" style={fixedStyle}>
+                  {sumP1}
+                </td>
+                {haveDepended &&
+                  dependedDetails.map((detail) => (
+                    <td
+                      key={`dep-sum-p1-${detail.object_id}`}
+                      className="border"
+                      style={fixedStyle}
+                    >
+                      {detail.hours.reduce(
+                        (acc, curr) =>
+                          curr.date === selectedDate
+                            ? acc + (Number(curr.P1) || 0)
+                            : acc,
+                        0
+                      )}
+                    </td>
+                  ))}
+                {haveDepended && (
+                  <td
+                    className="border"
+                    style={{ ...fixedStyle, ...sumDepP1Style }}
+                  >
+                    {dependedP1Total}
+                  </td>
+                )}
+              </>
+            )}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
-                <td className="border">{sumP1Gen.toFixed(2)}</td>
-              )}
+                <td className="border" style={fixedStyle}>
+                  {sumP1Gen.toFixed(2)}
+                </td>
+            )}
             {selectedObject && selectedObject.object_type !== "ВИЭ" && (
-              <td className="border">{sumP2.toFixed(2)}</td>)}
-
+              <td className="border" style={fixedStyle}>
+                {sumP2.toFixed(2)}
+              </td>
+            )}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
-                <td className="border">{sumP2Gen.toFixed(2)}</td>
-              )}
+                <td className="border" style={fixedStyle}>
+                  {sumP2Gen.toFixed(2)}
+                </td>
+            )}
             {selectedObject && selectedObject.object_type !== "ВИЭ" && (
-              <td className="border">{sumP3}</td>)}
+              <td className="border" style={fixedStyle}>
+                {sumP3}
+              </td>
+            )}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
-                <td className="border">{sumP3Gen}</td>
-              )}
+                <td className="border" style={fixedStyle}>
+                  {sumP3Gen}
+                </td>
+            )}
             {selectedObject && selectedObject.object_type !== "ВИЭ" && (
-              <td className="border">{sumF1}</td>)}
+              <>
+                <td className="border" style={fixedStyle}>
+                  {sumF1}
+                </td>
+                {haveDepended &&
+                  dependedDetails.map((detail) => (
+                    <td
+                      key={`dep-sum-f1-${detail.object_id}`}
+                      className="border"
+                      style={fixedStyle}
+                    >
+                      {detail.hours.reduce(
+                        (acc, curr) =>
+                          curr.date === selectedDate
+                            ? acc + (Number(curr.F1) || 0)
+                            : acc,
+                        0
+                      )}
+                    </td>
+                  ))}
+                {haveDepended && (
+                  <td
+                    className="border"
+                    style={{ ...fixedStyle, ...sumDepF1Style }}
+                  >
+                    {dependedF1Total}
+                  </td>
+                )}
+              </>
+            )}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
-                <td className="border">{sumF1Gen}</td>
-              )}
+                <td className="border" style={fixedStyle}>
+                  {sumF1Gen}
+                </td>
+            )}
           </tr>
+          {/* Summary Row: Среднее */}
           <tr>
-            <td className="border font-bold">Среднее</td>
+            <td className="border font-bold" style={fixedStyle}>
+              Среднее
+            </td>
             {selectedObject && selectedObject.object_type !== "ВИЭ" && (
-              <td className="border">{avgP1.toFixed(2)}</td>)}
+              <>
+                <td className="border" style={fixedStyle}>
+                  {avgP1}
+                </td>
+                {haveDepended &&
+                  dependedDetails.map((detail) => {
+                    // Summation for this detail's P1
+                    const detailP1Total = detail.hours.reduce(
+                      (acc, curr) =>
+                        curr.date === selectedDate
+                          ? acc + (Number(curr.P1) || 0)
+                          : acc,
+                      0
+                    );
+                    return (
+                      <td
+                        key={`dep-avg-p1-${detail.object_id}`}
+                        className="border"
+                        style={fixedStyle}
+                      >
+                        {safeAvg(detailP1Total, rowCount)}
+                      </td>
+                    );
+                  })}
+                {haveDepended && (
+                  <td
+                    className="border"
+                    style={{ ...fixedStyle, ...sumDepP1Style }}
+                  >
+                    {dependedP1Avg}
+                  </td>
+                )}
+              </>
+            )}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
-                <td className="border">{avgP1Gen.toFixed(2)}</td>
-              )}
+                <td className="border" style={fixedStyle}>
+                  {avgP1Gen}
+                </td>
+            )}
             {selectedObject && selectedObject.object_type !== "ВИЭ" && (
-              <td className="border">{avgP2.toFixed(2)}</td>)}
+              <td className="border" style={fixedStyle}>
+                {avgP2}
+              </td>
+            )}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
-                <td className="border">{avgP2Gen.toFixed(2)}</td>
-              )}
+                <td className="border" style={fixedStyle}>
+                  {avgP2Gen}
+                </td>
+            )}
             {selectedObject && selectedObject.object_type !== "ВИЭ" && (
-              <td className="border">{avgP3.toFixed(2)}</td>)}
+              <td className="border" style={fixedStyle}>
+                {avgP3}
+              </td>
+            )}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
-                <td className="border">{avgP3Gen.toFixed(2)}</td>
-              )}
+                <td className="border" style={fixedStyle}>
+                  {avgP3Gen}
+                </td>
+            )}
             {selectedObject && selectedObject.object_type !== "ВИЭ" && (
-              <td className="border">{avgF1.toFixed(2)}</td>)}
+              <>
+                <td className="border" style={fixedStyle}>
+                  {avgF1}
+                </td>
+                {haveDepended &&
+                  dependedDetails.map((detail) => {
+                    // Summation for this detail's F1
+                    const detailF1Total = detail.hours.reduce(
+                      (acc, curr) =>
+                        curr.date === selectedDate
+                          ? acc + (Number(curr.F1) || 0)
+                          : acc,
+                      0
+                    );
+                    return (
+                      <td
+                        key={`dep-avg-f1-${detail.object_id}`}
+                        className="border"
+                        style={fixedStyle}
+                      >
+                        {safeAvg(detailF1Total, rowCount)}
+                      </td>
+                    );
+                  })}
+                {haveDepended && (
+                  <td
+                    className="border"
+                    style={{ ...fixedStyle, ...sumDepF1Style }}
+                  >
+                    {dependedF1Avg}
+                  </td>
+                )}
+              </>
+            )}
             {selectedObject &&
               selectedObject.object_type !== "CONSUMER" &&
               selectedObject.object_type !== "РЭК" && (
-                <td className="border">{avgF1Gen.toFixed(2)}</td>
-              )}
+                <td className="border" style={fixedStyle}>
+                  {avgF1Gen}
+                </td>
+            )}
           </tr>
         </tbody>
       </table>
