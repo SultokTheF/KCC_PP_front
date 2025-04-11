@@ -49,7 +49,8 @@ import {
   AdminVolumes,
   AdminFormContructor,
   AdminTableOverview,
-  AdminFormulaConstructor
+  AdminFormulaConstructor,
+  AdminDependedObjects
 } from "./modules";
 
 const Router = ({ userRole }) => {
@@ -117,6 +118,8 @@ const Router = ({ userRole }) => {
           <Route path="/subjects/plan/:subjectId" element={<AdminSubjectPlans />} />
           <Route path="/users" element={<AdminUsersList />} />
           <Route path="/users/:id" element={<AdminSingleUser />} />
+
+          <Route path="/depended-objects" element={<AdminDependedObjects />} />
 
           <Route path="*" element={<PageNotFound />} />
         </>

@@ -42,7 +42,8 @@ import {
   HoursTable as AdminHoursTable,
   FormContructor as AdminFormContructor,
   TableOverview as AdminTableOverview,
-  FormulaConstructor as AdminFormulaConstructor
+  FormulaConstructor as AdminFormulaConstructor,
+  DependedObjects as AdminDependedObjects
 } from "./admin";
 
 export {
@@ -89,5 +90,6 @@ export {
   AdminVolumes,
   AdminFormContructor,
   AdminTableOverview,
-  AdminFormulaConstructor
+  AdminFormulaConstructor,
+  AdminDependedObjects
 }

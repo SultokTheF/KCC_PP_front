@@ -254,6 +254,14 @@ export default function Sidebar() {
                   Добавить праздники
                 </ListItem>
               </a>
+              <a href="/depended-objects">
+                <ListItem>
+                  <ListItemPrefix>
+                    <ChevronRightIcon strokeWidth={3} className="h-3 w-5" />
+                  </ListItemPrefix>
+                  Зависимые объекты
+                </ListItem>
+              </a>
             </List>
           </AccordionBody>
         </Accordion>

@@ -32,6 +32,8 @@ import SubjectPlans from './components/Plans/SubjectPlans';
 import UsersList from './components/Users/UserList';
 import SingleUser from './components/Users/SingleUser';
 
+import DependedObjects from './components/Actions/DependedObjects';
+
 export {
   Profile,
 
@@ -63,5 +65,7 @@ export {
   // Forms
   FormContructor,
   TableOverview,
-  FormulaConstructor
+  FormulaConstructor,
+
+  DependedObjects
 }
